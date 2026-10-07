@@ -122,73 +122,90 @@
 
     const width = 1000;
     const height = 340;
-    const left = 64;
+    const left = 58;
     const right = 24;
     const top = 24;
     const bottom = 54;
     const plotW = width - left - right;
     const plotH = height - top - bottom;
+    const slotW = plotW / rows.length;
+    const barW = Math.max(8, Math.min(24, slotW * 0.58));
 
-    const x = i => left + (rows.length === 1 ? plotW / 2 : plotW * i / (rows.length - 1));
     const y = value => top + plotH - (value / yMax) * plotH;
-
-    const points = rows.map((row, i) => ({
-      x: x(i),
-      y: y(values[i]),
-      value: values[i],
-      day: String(row.day || "").slice(5)
-    }));
-
-    const linePath = points.map((p, i) =>
-      (i ? "L " : "M ") + p.x.toFixed(1) + " " + p.y.toFixed(1)
-    ).join(" ");
-
-    const areaPath =
-      "M " + points[0].x.toFixed(1) + " " + (top + plotH).toFixed(1) + " " +
-      points.map(p => "L " + p.x.toFixed(1) + " " + p.y.toFixed(1)).join(" ") +
-      " L " + points[points.length - 1].x.toFixed(1) + " " + (top + plotH).toFixed(1) + " Z";
 
     const grid = Array.from({ length: 6 }, (_, i) => {
       const value = Math.round(yMax * (5 - i) / 5);
       const yy = y(value);
       return '<line class="chart-grid" x1="' + left + '" y1="' + yy + '" x2="' + (width - right) +
         '" y2="' + yy + '"></line>' +
-        '<text class="chart-y-label" x="' + (left - 12) + '" y="' + (yy + 4) +
+        '<text class="chart-y-label" x="' + (left - 10) + '" y="' + (yy + 4) +
         '" text-anchor="end">' + esc(value) + '</text>';
     }).join("");
 
     const labelIndexes = [];
     const labelCount = Math.min(6, rows.length);
-    if (labelCount === 1) {
-      labelIndexes.push(0);
-    } else {
-      for (let i = 0; i < labelCount; i++) {
-        labelIndexes.push(Math.round(i * (rows.length - 1) / (labelCount - 1)));
-      }
+    for (let i = 0; i < labelCount; i++) {
+      labelIndexes.push(Math.round(i * (rows.length - 1) / Math.max(1, labelCount - 1)));
     }
 
     const labels = labelIndexes.map(i => {
-      const p = points[i];
-      return '<text class="chart-x-label" x="' + p.x + '" y="' + (height - 16) +
-        '" text-anchor="middle">' + esc(p.day) + '</text>';
+      const cx = left + slotW * i + slotW / 2;
+      const day = String(rows[i].day || "").slice(5);
+      return '<text class="chart-x-label" x="' + cx + '" y="' + (height - 16) +
+        '" text-anchor="middle">' + esc(day) + '</text>';
     }).join("");
 
-    const dots = points.map(p =>
-      '<circle class="chart-dot" cx="' + p.x + '" cy="' + p.y + '" r="3.5">' +
-      '<title>' + esc(p.day) + ': ' + esc(p.value) + 'アクセス</title></circle>'
-    ).join("");
+    const bars = rows.map((row, i) => {
+      const value = values[i];
+      const x = left + slotW * i + (slotW - barW) / 2;
+      const barHeight = value === 0 ? 2 : Math.max(2, (value / yMax) * plotH);
+      const barY = top + plotH - barHeight;
+      const day = String(row.day || "");
+      const label = day.replace(/^(\d{4})-/, "$1/");
+      return '<g class="chart-bar-group" tabindex="0" data-day="' + esc(label) +
+        '" data-value="' + esc(value) + '">' +
+        '<rect class="chart-bar-hit" x="' + x.toFixed(1) + '" y="' + top +
+        '" width="' + Math.max(barW, slotW * 0.9).toFixed(1) + '" height="' + plotH +
+        '" transform="translate(' + ((slotW * 0.9 - barW) / -2).toFixed(1) + ' 0)"></rect>' +
+        '<rect class="chart-bar" x="' + x.toFixed(1) + '" y="' + barY.toFixed(1) +
+        '" width="' + barW.toFixed(1) + '" height="' + barHeight.toFixed(1) +
+        '" rx="4"></rect></g>';
+    }).join("");
 
     chart.innerHTML =
       '<div class="chart-head"><div><strong>アクセス数</strong><span>過去30日間</span></div>' +
       '<div class="chart-total">' + esc(values.reduce((a, b) => a + b, 0)) + '<small>アクセス</small></div></div>' +
       '<div class="chart-scroll"><svg viewBox="0 0 ' + width + ' ' + height +
       '" role="img" aria-label="過去30日間のアクセス数">' +
-      grid +
-      '<path class="chart-area" d="' + areaPath + '"></path>' +
-      '<path class="chart-line" d="' + linePath + '"></path>' +
-      dots +
-      labels +
-      '</svg></div>';
+      grid + bars + labels + '</svg>' +
+      '<div class="chart-tooltip" role="status" aria-live="polite"></div></div>';
+
+    const tooltip = chart.querySelector(".chart-tooltip");
+    const groups = chart.querySelectorAll(".chart-bar-group");
+
+    const showTooltip = group => {
+      const day = group.dataset.day || "-";
+      const value = Number(group.dataset.value) || 0;
+      tooltip.innerHTML = '<strong>' + esc(day) + '</strong><span>' + esc(value) + ' アクセス</span>';
+      tooltip.classList.add("visible");
+
+      const chartRect = chart.querySelector(".chart-scroll").getBoundingClientRect();
+      const barRect = group.querySelector(".chart-bar").getBoundingClientRect();
+      const tooltipRect = tooltip.getBoundingClientRect();
+      let leftPos = barRect.left - chartRect.left + (barRect.width / 2) - (tooltipRect.width / 2);
+      leftPos = Math.max(8, Math.min(leftPos, chartRect.width - tooltipRect.width - 8));
+      tooltip.style.left = leftPos + "px";
+      tooltip.style.top = Math.max(4, barRect.top - chartRect.top - tooltipRect.height - 8) + "px";
+    };
+
+    const hideTooltip = () => tooltip.classList.remove("visible");
+
+    groups.forEach(group => {
+      group.addEventListener("mouseenter", () => showTooltip(group));
+      group.addEventListener("mouseleave", hideTooltip);
+      group.addEventListener("focus", () => showTooltip(group));
+      group.addEventListener("blur", hideTooltip);
+    });
   }
 
   async function loadMaintenance() {
