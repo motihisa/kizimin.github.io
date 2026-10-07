@@ -45,7 +45,24 @@ async function loadProfile(){
 ["display","username","bio"].forEach(id=>$(id).addEventListener("input",updatePreview));
 $("avatar-file").addEventListener("change",()=>{const file=$("avatar-file").files?.[0];if(!file)return;if(file.size>MAX_AVATAR_SIZE){alert("画像は2MB以下にしてください。");$("avatar-file").value="";return}if(!["image/jpeg","image/png","image/webp","image/gif"].includes(file.type)){alert("JPG・PNG・WebP・GIFのみアップロードできます。");$("avatar-file").value="";return}const url=URL.createObjectURL(file);avatarUrl=url;updatePreview()});
 $("remove-avatar").onclick=async()=>{if(!uid)return;if(!confirm("プロフィール画像を削除しますか？"))return;const {error}=await sb.from("profiles").update({avatar_url:null}).eq("id",uid);if(error){msg.textContent=friendlyError(error);return}avatarUrl=null;$("avatar-file").value="";updatePreview();try{const cached=JSON.parse(localStorage.getItem(PROFILE_CACHE_PREFIX+uid)||"{}");cached.data={...(cached.data||{}),avatar_url:null};localStorage.setItem(PROFILE_CACHE_PREFIX+uid,JSON.stringify(cached))}catch{}msg.textContent="プロフィール画像を削除しました。"};
-(async()=>{const {data,error}=await sb.auth.getSession();if(error||!data.session){location.href="login.html";return}uid=data.session.user.id;$("email").textContent=data.session.user.email||"";await loadProfile()})();
+(async()=>{
+  const emailBox=$("email");
+  try{
+    const {data,error}=await sb.auth.getSession();
+    if(error||!data.session){location.href="login.html";return}
+    uid=data.session.user.id;
+    let email=data.session.user.email||"";
+    if(!email){
+      const userResult=await sb.auth.getUser(data.session.access_token);
+      email=userResult?.data?.user?.email||"";
+    }
+    emailBox.textContent=email||"メールアドレスを取得できませんでした。";
+    await loadProfile();
+  }catch(e){
+    emailBox.textContent="ログイン情報を読み込めませんでした。ページを再読み込みしてください。";
+    msg.textContent="ログイン情報の取得に失敗しました。";
+  }
+})();
 $("save").onclick=async()=>{const b=$("save"),file=$("avatar-file").files?.[0];b.disabled=true;msg.textContent="保存しています…";let nextAvatarUrl=avatarUrl;
 if(file){if(file.size>MAX_AVATAR_SIZE){msg.textContent="画像は2MB以下にしてください。";b.disabled=false;return}const ext=({image/jpeg:"jpg",image/png:"png",image/webp:"webp",image/gif:"gif"})[file.type];const path=uid+"/avatar."+ext;const {error:upErr}=await sb.storage.from("avatars").upload(path,file,{upsert:true,contentType:file.type,cacheControl:"3600"});if(upErr){msg.textContent="プロフィール画像のアップロードに失敗しました。";b.disabled=false;return}nextAvatarUrl=sb.storage.from("avatars").getPublicUrl(path).data.publicUrl+"?v="+Date.now()}
 const {error}=await sb.from("profiles").update({display_name:$("display").value.trim(),username:$("username").value.trim()||null,bio:$("bio").value.trim()||null,avatar_url:nextAvatarUrl}).eq("id",uid);b.disabled=false;msg.textContent=error?friendlyError(error):"保存しました。";if(!error){avatarUrl=nextAvatarUrl;$("avatar-file").value="";updatePreview();try{localStorage.setItem(PROFILE_CACHE_PREFIX+uid,JSON.stringify({data:{display_name:$("display").value.trim(),username:$("username").value.trim()||null,bio:$("bio").value.trim()||null,avatar_url:nextAvatarUrl},updatedAt:Date.now()}))}catch{}}};
