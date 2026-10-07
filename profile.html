@@ -24,6 +24,7 @@
     .profile-article h3{margin:5px 0}
     .profile-article p{margin:6px 0;color:#666}
     .profile-error{text-align:center;padding:50px 20px}
+    .official-badge{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:999px;background:#111;color:#fff;font-size:.72em;font-weight:700;vertical-align:middle;letter-spacing:.02em}
     @media(max-width:600px){.profile-head{align-items:flex-start}.profile-card{padding:22px}.profile-page{padding-top:28px}}
   </style>
 </head>
@@ -56,6 +57,8 @@ async function load(){
     if(pe) throw pe;
     if(fe||ge||ae) console.warn("プロフィール関連データの一部取得に失敗:",fe||ge||ae);
     if(!p){box.innerHTML='<div class="profile-error">ユーザーが見つかりません。</div>';return;}
+    const {data:titleRow,error:titleError}=await sb.from("profile_titles").select("title").eq("user_id",userId).maybeSingle();
+    if(titleError) console.warn("プロフィール称号の取得に失敗しました:",titleError);
     const me=meResult?.user||null;
     let followingMe=false;
     if(me&&me.id!==userId){
@@ -63,12 +66,13 @@ async function load(){
       followingMe=!!followRow;
     }
     const display=p.display_name||p.username||"ユーザー";
+    const titleBadge=titleRow?.title?'<span class="official-badge">'+esc(titleRow.title)+'</span>':"";
     const avatar=p.avatar_url?'<img class="profile-avatar" src="'+esc(p.avatar_url)+'" alt="">':'<div class="profile-avatar" aria-hidden="true"></div>';
     const action=me&&me.id!==userId
       ? '<button id="follow-button" class="write-button" type="button">'+(followingMe?"フォロー中":"フォロー")+'</button>'
       : "";
     const rows=articles||[];
-    box.innerHTML='<div class="profile-head">'+avatar+'<div><h1 class="profile-name">'+esc(display)+'</h1><p class="profile-username text-muted">'+(p.username?'@'+esc(p.username):'')+'</p></div></div>'+
+    box.innerHTML='<div class="profile-head">'+avatar+'<div><h1 class="profile-name">'+esc(display)+titleBadge+'</h1><p class="profile-username text-muted">'+(p.username?'@'+esc(p.username):'')+'</p></div></div>'+
       '<div class="profile-bio">'+esc(p.bio||"自己紹介はまだありません。")+'</div>'+
       '<div class="profile-actions">'+action+'<a class="login" href="dm.html">💬 DM</a></div>'+
       '<div class="profile-stats"><div class="profile-stat"><strong>'+Number(followers||0)+'</strong><span>フォロワー</span></div><div class="profile-stat"><strong>'+Number(following||0)+'</strong><span>フォロー中</span></div><div class="profile-stat"><strong>'+rows.length+'</strong><span>公開記事</span></div></div>'+
