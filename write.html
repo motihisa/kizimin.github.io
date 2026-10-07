@@ -179,13 +179,20 @@ function renderMarkdown(v){
   let s=escapeHtml(v);
   const code=[];
   s=s.replace(/\`([^\`]+)\`/g,(_,x)=>{code.push(x);return "@@CODE"+(code.length-1)+"@@";});
-  s=s.replace(/^### (.+)$/gm,"<h3>$1</h3>").replace(/^## (.+)$/gm,"<h2>$1</h2>").replace(/^# (.+)$/gm,"<h1>$1</h1>").replace(/^> (.+)$/gm,"<blockquote>$1</blockquote>").replace(/^---$/gm,"<hr>");
-  s=s.replace(/^(?:-|*) (.+)$/gm,"<li>$1</li>");
-  s=s.replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>").replace(/\*([^*]+)\*/g,"<em>$1</em>");
+  s=s.replace(/^### (.+)$/gm,"<h3>$1</h3>")
+   .replace(/^## (.+)$/gm,"<h2>$1</h2>")
+   .replace(/^# (.+)$/gm,"<h1>$1</h1>")
+   .replace(/^> (.+)$/gm,"<blockquote>$1</blockquote>")
+   .replace(/^---$/gm,"<hr>")
+   .replace(/^[-*] (.+)$/gm,"<li>$1</li>")
+   .replace(/^\d+\. (.+)$/gm,"<li>$1</li>");
+  s=s.replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>")
+   .replace(/\*([^*]+)\*/g,"<em>$1</em>");
   s=s.replace(/(?:<li>.*<\/li>\n?)+/g,x=>"<ul>"+x+"</ul>");
   s=s.replace(/\n/g,"<br>");
   return s.replace(/@@CODE(\d+)@@/g,(_,i)=>"<code>"+code[i]+"</code>");
 }
+function renderPreviewBody(v){return renderMarkdown(v);}
 function updatePreview(){ $("previewTitle").textContent=$("title").value||"無題の記事"; $("previewExcerpt").textContent=$("excerpt").value; $("previewExcerpt").style.display=$("excerpt").value?"block":"none"; $("previewBody").innerHTML=$("content").value?renderPreviewBody($("content").value):"本文はまだありません。"; }
 function renderAllowedUsers(){
   const q=($("allowedSearch").value||"").trim().toLowerCase();
