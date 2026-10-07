@@ -75,7 +75,7 @@
       const category = article.categories?.name || "その他";
       const author = article.profiles?.display_name || article.profiles?.username || "ユーザー";
       const authorLink = article.author_id ? 'profile.html?id='+encodeURIComponent(article.author_id) : '#';
-      return '<a class="article" href="article.html?id='+encodeURIComponent(article.id)+'"><div class="article-meta">'+escapeHtml(formatDate(article.published_at || article.created_at))+' · '+escapeHtml(category)+'</div><h3>'+escapeHtml(article.title)+'</h3><p>'+escapeHtml(article.excerpt || String(article.content || "").slice(0,140))+'</p><div class="author" onclick="event.stopPropagation()"><a href="'+authorLink+'">'+escapeHtml(author)+'</a></div></a>';
+      return '<a class="article" href="article.html?id='+encodeURIComponent(article.id)+'"><div class="article-meta">'+escapeHtml(formatDate(article.published_at || article.created_at))+' · '+escapeHtml(category)+'</div><h3>'+escapeHtml(article.title)+'</h3><p>'+escapeHtml(article.excerpt || String(article.content || "").slice(0,140))+'</p><div class="author" role="link" tabindex="0" onclick="event.preventDefault();event.stopPropagation();location.href=\''+authorLink+'\';" onkeydown="if(event.key===\'Enter\'){event.preventDefault();event.stopPropagation();location.href=\''+authorLink+'\';}">'+escapeHtml(author)+'</div></a>';
     }).join("");
   }
 
