@@ -74,7 +74,7 @@
       const category = article.categories?.name || "その他";
       const author = article.profiles?.display_name || article.profiles?.username || "ユーザー";
       return `
-        <a class="article" href="#article?id=${encodeURIComponent(article.id)}">
+        <a class="article" href="article.html?id=${encodeURIComponent(article.id)}">
           <div class="article-meta">${escapeHtml(formatDate(article.published_at || article.created_at))} · ${escapeHtml(category)}</div>
           <h3>${escapeHtml(article.title)}</h3>
           <p>${escapeHtml(article.excerpt || article.content.slice(0, 140))}</p>
@@ -137,11 +137,11 @@
     });
 
     $("#auth-button")?.addEventListener("click", () => {
-      location.hash = state.session?.user ? "#account" : "#login";
+      location.href = state.session?.user ? "account.html" : "login.html";
     });
 
     $("#write-button")?.addEventListener("click", () => {
-      location.hash = state.session?.user ? "#write" : "#login";
+      location.href = state.session?.user ? "write.html" : "login.html";
     });
 
     $("#logout-button")?.addEventListener("click", async () => {
