@@ -1,14 +1,123 @@
 <!doctype html>
-<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ログイン | Kizimin</title><link rel="stylesheet" href="css/style.css"></head>
-<body><main class="container" style="max-width:520px;padding-top:72px;padding-bottom:80px">
-<a class="logo" href="/">Kizimin</a><div class="card" style="padding:28px;margin-top:28px">
-<h1>ログイン</h1><div class="form-group"><label class="form-label">メールアドレス</label><input id="email" class="form-input" type="email" autocomplete="email"></div>
-<div class="form-group"><label class="form-label">パスワード</label><input id="password" class="form-input" type="password" autocomplete="current-password"></div>
-<button id="login" class="write-button">ログイン</button><button id="signup" class="login" style="width:100%;margin-top:10px">新規登録</button><p id="message" class="text-muted"></p></div></main>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>
-const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf");
-const msg=document.querySelector("#message");
-const email=()=>document.querySelector("#email").value.trim(), password=()=>document.querySelector("#password").value;
-document.querySelector("#login").onclick=async()=>{const {error}=await sb.auth.signInWithPassword({email:email(),password:password()});msg.textContent=error?error.message:"ログインしました。";if(!error)location.href="/";};
-document.querySelector("#signup").onclick=async()=>{const {error}=await sb.auth.signUp({email:email(),password:password()});msg.textContent=error?error.message:"登録しました。確認メールが必要な場合があります。";};
-</script></body></html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ログイン・アカウント作成 | Kizimin</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main class="container" style="max-width:520px;padding-top:72px;padding-bottom:80px">
+<a class="logo" href="/">Kizimin</a>
+
+<div class="card" style="padding:28px;margin-top:28px">
+<h1 id="title">ログイン</h1>
+
+<div class="form-group">
+<label class="form-label" for="email">メールアドレス</label>
+<input id="email" class="form-input" type="email" autocomplete="email" required>
+</div>
+
+<div class="form-group">
+<label class="form-label" for="password">パスワード</label>
+<input id="password" class="form-input" type="password" autocomplete="current-password" minlength="6" required>
+</div>
+
+<div id="confirmGroup" class="form-group hidden">
+<label class="form-label" for="passwordConfirm">パスワード（確認）</label>
+<input id="passwordConfirm" class="form-input" type="password" autocomplete="new-password" minlength="6">
+</div>
+
+<button id="submit" class="write-button" type="button">ログイン</button>
+<button id="switch" class="login" style="width:100%;margin-top:10px" type="button">アカウントを作成する</button>
+<p id="message" class="text-muted"></p>
+</div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const sb = supabase.createClient(
+  "https://bimddapbkdakspjaemsm.supabase.co",
+  "sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf"
+);
+
+const title = document.querySelector("#title");
+const submit = document.querySelector("#submit");
+const switchButton = document.querySelector("#switch");
+const confirmGroup = document.querySelector("#confirmGroup");
+const message = document.querySelector("#message");
+let signupMode = false;
+
+function setMessage(text) {
+  message.textContent = text;
+}
+
+function setMode(isSignup) {
+  signupMode = isSignup;
+  title.textContent = isSignup ? "アカウント作成" : "ログイン";
+  submit.textContent = isSignup ? "アカウントを作成" : "ログイン";
+  switchButton.textContent = isSignup ? "ログインに戻る" : "アカウントを作成する";
+  confirmGroup.classList.toggle("hidden", !isSignup);
+  setMessage("");
+}
+
+function values() {
+  return {
+    email: document.querySelector("#email").value.trim(),
+    password: document.querySelector("#password").value,
+    confirm: document.querySelector("#passwordConfirm").value
+  };
+}
+
+submit.addEventListener("click", async () => {
+  const { email, password, confirm } = values();
+
+  if (!email || !password) {
+    setMessage("メールアドレスとパスワードを入力してください。");
+    return;
+  }
+
+  if (password.length < 6) {
+    setMessage("パスワードは6文字以上にしてください。");
+    return;
+  }
+
+  submit.disabled = true;
+
+  try {
+    if (!signupMode) {
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      location.href = "/";
+      return;
+    }
+
+    if (password !== confirm) {
+      setMessage("パスワードが一致していません。");
+      return;
+    }
+
+    const { data, error } = await sb.auth.signUp({ email, password });
+    if (error) throw error;
+
+    if (data.session) {
+      setMessage("アカウントを作成しました。");
+      location.href = "/";
+    } else {
+      setMessage("アカウントを作成しました。確認メールを確認してください。");
+    }
+  } catch (error) {
+    setMessage(error.message || "処理に失敗しました。");
+  } finally {
+    submit.disabled = false;
+  }
+});
+
+switchButton.addEventListener("click", () => setMode(!signupMode));
+
+sb.auth.getSession().then(({ data }) => {
+  if (data.session) location.href = "/";
+});
+</script>
+</body>
+</html>
