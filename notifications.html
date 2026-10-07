@@ -19,17 +19,37 @@ const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","sb_pu
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 const fmt=v=>new Intl.DateTimeFormat("ja-JP",{dateStyle:"medium",timeStyle:"short"}).format(new Date(v));
-async function init(){
- const {data,error}=await sb.auth.getSession();
- if(error||!data.session){location.href="login.html";return}
- const {data:rows,error:e}=await sb.from("notifications").select("id,title,body,type,link_url,created_at,read_at").order("created_at",{ascending:false}).limit(100);
- if(e){$("notify-list").innerHTML='<div class="notify-empty">通知を読み込めませんでした。</div>';return}
- if(!rows?.length){$("notify-list").innerHTML='<div class="notify-empty">通知はありません。</div>';return}
- $("notify-list").innerHTML=rows.map(n=>'<article class="notify-item '+(!n.read_at?"unread":"")+'" data-id="'+esc(n.id)+'"><div class="notify-title">'+esc(n.title)+'</div><div class="notify-body">'+esc(n.body)+'</div><div class="notify-meta">'+esc(fmt(n.created_at))+'</div></article>').join("");
- rows.filter(n=>!n.read_at).forEach(n=>sb.from("notifications").update({read_at:new Date().toISOString()}).eq("id",n.id));
- document.querySelectorAll(".notify-item").forEach((el,i)=>el.addEventListener("click",()=>{const link=rows[i]?.link_url;if(link)location.href=link}));
+async function api(action,extra={}){
+  const {data,error}=await sb.functions.invoke("secure-content",{body:{action,...extra}});
+  if(error) throw new Error(error.message||"FUNCTION_ERROR");
+  if(data?.error) throw new Error(data.error);
+  return data;
 }
-$("read-all").onclick=async()=>{const {data:{session}}=await sb.auth.getSession();if(!session)return;await sb.from("notifications").update({read_at:new Date().toISOString()}).eq("recipient_id",session.user.id).is("read_at",null);location.reload()};
+async function init(){
+  const {data,error}=await sb.auth.getSession();
+  if(error||!data.session){location.href="login.html";return}
+  try{
+    const data=await api("notifications_list");
+    const rows=data.notifications||[];
+    if(!rows.length){$("notify-list").innerHTML='<div class="notify-empty">通知はありません。</div>';return}
+    $("notify-list").innerHTML=rows.map(n=>'<article class="notify-item '+(!n.read_at?"unread":"")+'" data-id="'+esc(n.id)+'"><div class="notify-title">'+esc(n.title)+'</div><div class="notify-body">'+esc(n.body)+'</div><div class="notify-meta">'+esc(fmt(n.created_at))+'</div></article>').join("");
+    document.querySelectorAll(".notify-item").forEach((el,i)=>el.addEventListener("click",async()=>{
+      const n=rows[i];
+      if(!n)return;
+      if(!n.read_at){try{await api("notifications_mark_read",{notification_id:n.id})}catch{}}
+      if(n.link_url)location.href=n.link_url;
+    }));
+    rows.filter(n=>!n.read_at).forEach(n=>api("notifications_mark_read",{notification_id:n.id}).catch(()=>{}));
+  }catch(e){
+    console.error("notifications_list failed:",e);
+    $("notify-list").innerHTML='<div class="notify-empty">通知を読み込めませんでした。<br><small>認証またはサーバー側の処理でエラーが発生しました。</small></div>';
+  }
+}
+$("read-all").onclick=async()=>{
+  try{await api("notifications_mark_read");location.reload()}
+  catch(e){alert("通知を既読にできませんでした。")}
+};
 init();
+</script>
 </script>
 </body></html>
