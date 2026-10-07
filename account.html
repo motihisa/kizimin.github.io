@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>アカウント | Kizimin</title><link rel="stylesheet" href="css/style.css"></head>
+<body><main class="container" style="max-width:700px;padding-top:56px;padding-bottom:80px"><a class="logo" href="/">Kizimin</a><div class="card" style="padding:28px;margin-top:28px"><h1>アカウント</h1><p id="email" class="text-muted">読み込み中…</p><div class="form-group"><label class="form-label">表示名</label><input id="display" class="form-input"></div><div class="form-group"><label class="form-label">ユーザー名</label><input id="username" class="form-input"></div><div class="form-group"><label class="form-label">自己紹介</label><textarea id="bio" class="form-textarea"></textarea></div><button id="save" class="write-button">保存</button><p id="message" class="text-muted"></p></div></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>
+const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf");
+let uid=null; const msg=document.querySelector("#message");
+(async()=>{const {data}=await sb.auth.getSession();if(!data.session){location.href="login.html";return;}uid=data.session.user.id;document.querySelector("#email").textContent=data.session.user.email||"";const {data:p}=await sb.from("profiles").select("display_name,username,bio").eq("id",uid).single();if(p){display.value=p.display_name||"";username.value=p.username||"";bio.value=p.bio||"";}})();
+document.querySelector("#save").onclick=async()=>{const {error}=await sb.from("profiles").update({display_name:display.value.trim(),username:username.value.trim()||null,bio:bio.value.trim()||null}).eq("id",uid);msg.textContent=error?error.message:"保存しました。";};
+</script></body></html>
