@@ -383,11 +383,26 @@
       const button = $("admin-refresh");
       button.disabled = true;
       button.textContent = "↻ 更新中";
+      const loaders = [
+        ["ダッシュボード", loadDashboard],
+        ["ユーザー", loadUsers],
+        ["記事", loadArticles],
+        ["コメント", loadComments],
+        ["通報", loadReports],
+        ["問い合わせ", loadInquiries]
+      ];
+      const failures = [];
       try {
-        await Promise.all([loadDashboard(), loadUsers(), loadArticles(), loadComments(), loadReports(), loadInquiries()]);
-      } catch (e) {
-        console.error("管理画面更新エラー", e);
-        alert("データの更新に失敗しました。");
+        const results = await Promise.allSettled(loaders.map(([, loader]) => loader()));
+        results.forEach((result, i) => {
+          if (result.status === "rejected") {
+            console.error("管理画面更新エラー:", loaders[i][0], result.reason);
+            failures.push(loaders[i][0] + "：" + errorMessage(result.reason));
+          }
+        });
+        if (failures.length) {
+          alert("一部のデータを更新できませんでした。\n\n" + failures.join("\n"));
+        }
       } finally {
         button.disabled = false;
         button.textContent = "↻ 更新";
