@@ -13,7 +13,7 @@
 <script>
 const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf");
 const escapeHtml=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
-const id=new URLSearchParams(location.search).get("id");
+const hashQuery=location.hash.includes("?")?location.hash.split("?")[1]:""; const id=new URLSearchParams(hashQuery || location.search.slice(1)).get("id");
 (async()=>{
  if(!id){article.innerHTML='<div class="empty-state">記事が指定されていません。</div>';return;}
  const {data,error}=await sb.from("articles").select("id,title,content,excerpt,published_at,created_at,profiles:author_id(display_name,username),categories:category_id(name)").eq("id",id).eq("status","published").single();
