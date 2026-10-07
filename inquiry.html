@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>問い合わせ | Kizimin</title><link rel="stylesheet" href="css/style.css"></head>
+<body>
+<main class="container" style="max-width:700px;padding-top:56px;padding-bottom:80px">
+<a class="logo" href="/">Kizimin</a>
+<div class="card" style="padding:28px;margin-top:28px">
+<h1>問い合わせ</h1>
+<p class="text-muted">サイトについての問い合わせを送信できます。</p>
+<div class="form-group"><label class="form-label">名前</label><input id="name" class="form-input"></div>
+<div class="form-group"><label class="form-label">メールアドレス</label><input id="email" class="form-input" type="email"></div>
+<div class="form-group"><label class="form-label">件名</label><input id="subject" class="form-input" maxlength="200" required></div>
+<div class="form-group"><label class="form-label">内容</label><textarea id="messageText" class="form-textarea" maxlength="10000" required></textarea></div>
+<button id="send" class="write-button">送信</button><p id="result" class="text-muted"></p>
+</div></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf");
+const $=id=>document.getElementById(id);
+(async()=>{
+ const {data}=await sb.auth.getSession();
+ if(data.session){ $("email").value=data.session.user.email||""; }
+})();
+$("send").onclick=async()=>{
+ const subject=$("subject").value.trim(), message=$("messageText").value.trim();
+ if(!subject||!message){$("result").textContent="件名と内容を入力してください。";return;}
+ $("send").disabled=true;
+ const {data:{session}}=await sb.auth.getSession();
+ const {error}=await sb.from("inquiries").insert({user_id:session?.user?.id||null,name:$("name").value.trim()||null,email:$("email").value.trim()||null,subject,message});
+ $("result").textContent=error?error.message:"問い合わせを送信しました。";
+ if(!error){$("subject").value="";$("messageText").value="";}
+ $("send").disabled=false;
+};
+</script>
+<script src="js/access.js"></script>
+</body></html>
