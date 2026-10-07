@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ログイン | Kizimin</title><link rel="stylesheet" href="css/style.css"></head>
+<body><main class="container" style="max-width:520px;padding-top:72px;padding-bottom:80px">
+<a class="logo" href="/">Kizimin</a><div class="card" style="padding:28px;margin-top:28px">
+<h1>ログイン</h1><div class="form-group"><label class="form-label">メールアドレス</label><input id="email" class="form-input" type="email" autocomplete="email"></div>
+<div class="form-group"><label class="form-label">パスワード</label><input id="password" class="form-input" type="password" autocomplete="current-password"></div>
+<button id="login" class="write-button">ログイン</button><button id="signup" class="login" style="width:100%;margin-top:10px">新規登録</button><p id="message" class="text-muted"></p></div></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>
+const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf");
+const msg=document.querySelector("#message");
+const email=()=>document.querySelector("#email").value.trim(), password=()=>document.querySelector("#password").value;
+document.querySelector("#login").onclick=async()=>{const {error}=await sb.auth.signInWithPassword({email:email(),password:password()});msg.textContent=error?error.message:"ログインしました。";if(!error)location.href="/";};
+document.querySelector("#signup").onclick=async()=>{const {error}=await sb.auth.signUp({email:email(),password:password()});msg.textContent=error?error.message:"登録しました。確認メールが必要な場合があります。";};
+</script></body></html>
