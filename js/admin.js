@@ -36,6 +36,29 @@
     return true;
   }
 
+  function renderDashboard(stats) {
+    const totals=stats?.totals||{};
+    $("dashboard-stats").innerHTML=[
+      ["今日のアクセス",totals.today||0],["ユーザー",totals.users||0],["記事",totals.articles||0],
+      ["未処理の通報",totals.open_reports||0],["未処理の問い合わせ",totals.open_inquiries||0]
+    ].map(x=>'<div class="stat-card"><div class="stat-number">'+esc(x[1])+'</div><div class="stat-label">'+esc(x[0])+'</div></div>').join("");
+    const rows=stats?.daily||[];
+    if(!rows.length){$("access-chart").innerHTML='<div class="admin-muted">まだアクセスデータがありません。</div>';return;}
+    const max=Math.max(...rows.map(x=>Number(x.visits)||0),1), w=900,h=250,p=36;
+    const pts=rows.map((x,i)=>{const xx=p+(rows.length===1?0:(w-p*2)*i/(rows.length-1));const yy=h-p-(Number(x.visits)||0)/max*(h-p*2);return [xx,yy,x];});
+    const poly=pts.map(x=>x[0]+","+x[1]).join(" ");
+    const circles=pts.map(x=>'<circle cx="'+x[0]+'" cy="'+x[1]+'" r="4"><title>'+esc(x[2].day)+': '+esc(x[2].visits)+'</title></circle>').join("");
+    const labels=pts.map(x=>'<text x="'+x[0]+'" y="'+(h-8)+'" text-anchor="middle" font-size="11">'+esc(String(x[2].day).slice(5))+'</text>').join("");
+    $("access-chart").innerHTML='<svg viewBox="0 0 '+w+' '+h+'" role="img" aria-label="過去30日間のアクセス数"><polyline points="'+poly+'" fill="none" stroke="currentColor" stroke-width="3"/>'+circles+labels+'</svg>';
+  }
+
+  async function loadDashboard() {
+    const {data,error}=await supabase.rpc("admin_dashboard_stats");
+    if(error) throw error;
+    const stats=Array.isArray(data)?data[0]:data;
+    renderDashboard(stats);
+  }
+
   function renderAudit(changes) {
     $("role-audit-summary").innerHTML = changes.length
       ? '<div class="admin-alert"><strong>過去24時間に権限変更があります。</strong><div class="admin-log">' +
@@ -92,6 +115,22 @@
     if (error) { alert("コメント状態の変更に失敗しました: " + error.message); await loadComments(); }
   }
 
+  async function loadInquiries() {
+    const { data, error } = await supabase.from("inquiries")
+      .select("id,name,email,subject,message,status,admin_note,created_at,resolved_at")
+      .order("created_at",{ascending:false});
+    if(error) throw error;
+    $("inquiries-body").innerHTML=data.length?data.map(i=>'<tr><td>'+esc(i.subject)+'</td><td>'+esc(i.name||"-")+'<br>'+esc(i.email||"-")+'</td><td class="inquiry-message">'+esc(i.message)+'</td><td><select class="inquiry-status" data-id="'+esc(i.id)+'">'+["open","reviewing","resolved","closed"].map(s=>'<option value="'+s+'" '+(s===i.status?"selected":"")+'>'+s+'</option>').join("")+'</select><br><textarea class="inquiry-note" data-id="'+esc(i.id)+'" placeholder="管理者メモ">'+esc(i.admin_note||"")+'</textarea><br><button type="button" class="inquiry-save" data-id="'+esc(i.id)+'">保存</button></td><td>'+esc(date(i.created_at))+'</td></tr>').join(""):'<tr><td colspan="6">問い合わせはありません。</td></tr>';
+    document.querySelectorAll(".inquiry-save").forEach(b=>b.onclick=()=>saveInquiry(b.dataset.id));
+  }
+  async function saveInquiry(id){
+    const status=document.querySelector('.inquiry-status[data-id="'+CSS.escape(id)+'"]').value;
+    const note=document.querySelector('.inquiry-note[data-id="'+CSS.escape(id)+'"]').value;
+    const {error}=await supabase.from("inquiries").update({status,admin_note:note,resolved_at:["resolved","closed"].includes(status)?new Date().toISOString():null}).eq("id",id);
+    if(error){alert("問い合わせの更新に失敗しました: "+error.message);return;}
+    await loadInquiries(); await loadDashboard();
+  }
+
   async function loadReports() {
     const { data, error } = await supabase.from("reports")
       .select("id,article_id,comment_id,reason,status,admin_note,created_at").order("created_at",{ascending:false});
@@ -116,7 +155,7 @@
   async function init() {
     if (!(await checkAdmin())) return;
     try {
-      await Promise.all([loadUsers(),loadArticles(),loadComments(),loadReports()]);
+      await Promise.all([loadDashboard(),loadUsers(),loadArticles(),loadComments(),loadReports(),loadInquiries()]);
     } catch (e) {
       console.error(e);
       alert("管理データの読み込みに失敗しました: " + e.message);
