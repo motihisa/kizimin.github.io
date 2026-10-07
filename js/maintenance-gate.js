@@ -5,7 +5,7 @@
 (() => {
   "use strict";
   const URL="https://bimddapbkdakspjaemsm.supabase.co";
-  const KEY="sb_publishable_JSnuaf48KMeQ4sodofBgA8_RGlhFHpf";
+  const KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpbWRkYXBia2Rha3NwamFlbXNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzMTU0MTksImV4cCI6MjEwNjg5MTQxOX0.qezG4VOkyYfaa4DxClk1PSV7bZEne7WEbxj52m1l7iM";
   const GATE="kizimin-maintenance-gate";
   const client=window.supabase?.createClient(URL,KEY);
   if(!client)return;
