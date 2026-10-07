@@ -294,17 +294,52 @@
   }
 
   async function loadArticles() {
-    const { data, error } = await supabase.from("articles")
-      .select("id,title,status,created_at,profiles(username,display_name)").order("created_at",{ascending:false});
-    if (error) throw error;
-    $("articles-body").innerHTML = data.length ? data.map(a => `
-      <tr><td>${esc(a.title)}</td><td>${esc(a.profiles?.display_name || a.profiles?.username || "-")}</td><td><span class="admin-badge">${esc(statusLabel(a.status))}</span></td><td>${esc(date(a.created_at))}</td>
-      <td><select class="article-status" data-id="${esc(a.id)}">${["draft","published","archived"].map(s => `<option value="${s}" ${s===a.status?"selected":""}>${statusLabel(s)}</option>`).join("")}</select></td></tr>`).join("") : '<tr><td colspan="5">記事はありません。</td></tr>';
-    document.querySelectorAll(".article-status").forEach(s => s.onchange = () => updateArticle(s.dataset.id,s.value));
+    const body = $("articles-body");
+    if (!body) return;
+    body.innerHTML = '<tr><td colspan="5"><div class="admin-muted">記事を読み込んでいます...</div></td></tr>';
+    try {
+      const { data, error } = await supabase.from("articles")
+        .select("id,title,status,created_at,profiles(username,display_name)")
+        .order("created_at",{ascending:false});
+      if (error) throw error;
+      const rows = Array.isArray(data) ? data : [];
+      body.innerHTML = rows.length ? rows.map(a => `
+        <tr>
+          <td>${esc(a.title)}</td>
+          <td>${esc(a.profiles?.display_name || a.profiles?.username || "-")}</td>
+          <td><span class="admin-badge">${esc(statusLabel(a.status))}</span></td>
+          <td>${esc(date(a.created_at))}</td>
+          <td>
+            <select class="article-status" data-id="${esc(a.id)}" aria-label="記事状態">
+              ${["draft","published","archived"].map(s => `<option value="${s}" ${s===a.status?"selected":""}>${statusLabel(s)}</option>`).join("")}
+            </select>
+          </td>
+        </tr>`).join("") : '<tr><td colspan="5">記事はありません。</td></tr>';
+      document.querySelectorAll(".article-status").forEach(s => {
+        s.onchange = () => updateArticle(s.dataset.id, s.value, s);
+      });
+    } catch (error) {
+      console.error("記事一覧の読み込みに失敗しました:", error);
+      body.innerHTML = '<tr><td colspan="5"><div class="admin-alert">記事を読み込めませんでした。権限または通信状態を確認してください。</div></td></tr>';
+    }
   }
-  async function updateArticle(id,status) {
-    const { error } = await supabase.from("articles").update({status}).eq("id",id);
-    if (error) { alert("記事状態の変更に失敗しました: " + errorMessage(error)); await loadArticles(); }
+
+  async function updateArticle(id,status,selectEl) {
+    if (!id || !["draft","published","archived"].includes(status)) return;
+    const previous = selectEl?.dataset.previous || selectEl?.querySelector("option:checked")?.value;
+    if (selectEl) selectEl.disabled = true;
+    try {
+      const { data, error } = await supabase.from("articles").update({status}).eq("id",id).select("id,status").single();
+      if (error) throw error;
+      if (!data) throw new Error("記事の更新対象が見つかりませんでした。");
+      if (selectEl) selectEl.dataset.previous = data.status;
+    } catch (error) {
+      console.error("記事状態の変更に失敗しました:", error);
+      alert("記事の状態を更新できませんでした。\n\n" + (error?.message || "権限または通信状態を確認してください。"));
+      if (selectEl && previous) selectEl.value = previous;
+    } finally {
+      if (selectEl) selectEl.disabled = false;
+    }
   }
 
   async function loadComments() {
