@@ -96,19 +96,99 @@
   }
 
   function renderDashboard(stats) {
-    const totals=stats?.totals||{};
-    $("dashboard-stats").innerHTML=[
-      ["今日のアクセス",totals.today||0],["ユーザー",totals.users||0],["記事",totals.articles||0],
-      ["未処理の通報",totals.open_reports||0],["未処理の問い合わせ",totals.open_inquiries||0]
-    ].map(x=>'<div class="stat-card"><div class="stat-number">'+esc(x[1])+'</div><div class="stat-label">'+esc(x[0])+'</div></div>').join("");
-    const rows=stats?.daily||[];
-    if(!rows.length){$("access-chart").innerHTML='<div class="admin-muted">まだアクセスデータがありません。</div>';return;}
-    const max=Math.max(...rows.map(x=>Number(x.visits)||0),1), w=900,h=250,p=36;
-    const pts=rows.map((x,i)=>{const xx=p+(rows.length===1?0:(w-p*2)*i/(rows.length-1));const yy=h-p-(Number(x.visits)||0)/max*(h-p*2);return [xx,yy,x];});
-    const poly=pts.map(x=>x[0]+","+x[1]).join(" ");
-    const circles=pts.map(x=>'<circle cx="'+x[0]+'" cy="'+x[1]+'" r="4"><title>'+esc(x[2].day)+': '+esc(x[2].visits)+'</title></circle>').join("");
-    const labels=pts.map(x=>'<text x="'+x[0]+'" y="'+(h-8)+'" text-anchor="middle" font-size="11">'+esc(String(x[2].day).slice(5))+'</text>').join("");
-    $("access-chart").innerHTML='<svg viewBox="0 0 '+w+' '+h+'" role="img" aria-label="過去30日間のアクセス数"><polyline points="'+poly+'" fill="none" stroke="currentColor" stroke-width="3"/>'+circles+labels+'</svg>';
+    const totals = stats?.totals || {};
+    $("dashboard-stats").innerHTML = [
+      ["今日のアクセス", totals.today || 0],
+      ["ユーザー", totals.users || 0],
+      ["記事", totals.articles || 0],
+      ["未処理の通報", totals.open_reports || 0],
+      ["未処理の問い合わせ", totals.open_inquiries || 0]
+    ].map(x =>
+      '<div class="stat-card"><div class="stat-number">' + esc(x[1]) +
+      '</div><div class="stat-label">' + esc(x[0]) + '</div></div>'
+    ).join("");
+
+    const rows = Array.isArray(stats?.daily) ? stats.daily : [];
+    const chart = $("access-chart");
+
+    if (!rows.length) {
+      chart.innerHTML = '<div class="admin-muted chart-empty">まだアクセスデータがありません。</div>';
+      return;
+    }
+
+    const values = rows.map(x => Math.max(0, Number(x.visits) || 0));
+    const maxValue = Math.max(...values, 1);
+    const yMax = Math.ceil(maxValue / 5) * 5 || 5;
+
+    const width = 1000;
+    const height = 340;
+    const left = 64;
+    const right = 24;
+    const top = 24;
+    const bottom = 54;
+    const plotW = width - left - right;
+    const plotH = height - top - bottom;
+
+    const x = i => left + (rows.length === 1 ? plotW / 2 : plotW * i / (rows.length - 1));
+    const y = value => top + plotH - (value / yMax) * plotH;
+
+    const points = rows.map((row, i) => ({
+      x: x(i),
+      y: y(values[i]),
+      value: values[i],
+      day: String(row.day || "").slice(5)
+    }));
+
+    const linePath = points.map((p, i) =>
+      (i ? "L " : "M ") + p.x.toFixed(1) + " " + p.y.toFixed(1)
+    ).join(" ");
+
+    const areaPath =
+      "M " + points[0].x.toFixed(1) + " " + (top + plotH).toFixed(1) + " " +
+      points.map(p => "L " + p.x.toFixed(1) + " " + p.y.toFixed(1)).join(" ") +
+      " L " + points[points.length - 1].x.toFixed(1) + " " + (top + plotH).toFixed(1) + " Z";
+
+    const grid = Array.from({ length: 6 }, (_, i) => {
+      const value = Math.round(yMax * (5 - i) / 5);
+      const yy = y(value);
+      return '<line class="chart-grid" x1="' + left + '" y1="' + yy + '" x2="' + (width - right) +
+        '" y2="' + yy + '"></line>' +
+        '<text class="chart-y-label" x="' + (left - 12) + '" y="' + (yy + 4) +
+        '" text-anchor="end">' + esc(value) + '</text>';
+    }).join("");
+
+    const labelIndexes = [];
+    const labelCount = Math.min(6, rows.length);
+    if (labelCount === 1) {
+      labelIndexes.push(0);
+    } else {
+      for (let i = 0; i < labelCount; i++) {
+        labelIndexes.push(Math.round(i * (rows.length - 1) / (labelCount - 1)));
+      }
+    }
+
+    const labels = labelIndexes.map(i => {
+      const p = points[i];
+      return '<text class="chart-x-label" x="' + p.x + '" y="' + (height - 16) +
+        '" text-anchor="middle">' + esc(p.day) + '</text>';
+    }).join("");
+
+    const dots = points.map(p =>
+      '<circle class="chart-dot" cx="' + p.x + '" cy="' + p.y + '" r="3.5">' +
+      '<title>' + esc(p.day) + ': ' + esc(p.value) + 'アクセス</title></circle>'
+    ).join("");
+
+    chart.innerHTML =
+      '<div class="chart-head"><div><strong>アクセス数</strong><span>過去30日間</span></div>' +
+      '<div class="chart-total">' + esc(values.reduce((a, b) => a + b, 0)) + '<small>アクセス</small></div></div>' +
+      '<div class="chart-scroll"><svg viewBox="0 0 ' + width + ' ' + height +
+      '" role="img" aria-label="過去30日間のアクセス数">' +
+      grid +
+      '<path class="chart-area" d="' + areaPath + '"></path>' +
+      '<path class="chart-line" d="' + linePath + '"></path>' +
+      dots +
+      labels +
+      '</svg></div>';
   }
 
   async function loadMaintenance() {
