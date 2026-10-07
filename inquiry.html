@@ -16,7 +16,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf");
-const $=id=>document.getElementById(id);
+const $=id=>document.getElementById(id); const friendlyError=e=>/permission denied|row-level security/i.test(String(e?.message||""))?"問い合わせを送信する権限がありません。":/network|fetch failed/i.test(String(e?.message||""))?"通信に失敗しました。":"問い合わせの送信に失敗しました。";
 (async()=>{
  const {data}=await sb.auth.getSession();
  if(data.session){ $("email").value=data.session.user.email||""; }
@@ -27,7 +27,7 @@ $("send").onclick=async()=>{
  $("send").disabled=true;
  const {data:{session}}=await sb.auth.getSession();
  const {error}=await sb.from("inquiries").insert({user_id:session?.user?.id||null,name:$("name").value.trim()||null,email:$("email").value.trim()||null,subject,message});
- $("result").textContent=error?error.message:"問い合わせを送信しました。";
+ $("result").textContent=error?friendlyError(error):"問い合わせを送信しました。";
  if(!error){$("subject").value="";$("messageText").value="";}
  $("send").disabled=false;
 };
