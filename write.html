@@ -28,6 +28,14 @@
 .tool{flex:0 0 auto;min-width:34px;height:34px;border:0;border-radius:9px;background:#f7f7f7;color:#333;font-weight:700}
 .tool:hover{background:#ededed}
 .editor-wrap{position:relative}
+.markdown-guide{margin:0 22px 0;padding:14px 16px;border:1px solid #e8e8e8;border-radius:12px;background:#fafafa;color:#555;font-size:12px;line-height:1.7}
+.markdown-guide-title{font-weight:800;color:#222;font-size:13px;margin-bottom:3px}
+.markdown-guide-text{margin-bottom:8px}
+.markdown-guide-examples{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 14px}
+.markdown-guide-examples span{white-space:nowrap}
+.markdown-guide code{padding:2px 5px;border-radius:5px;background:#eee;color:#333;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.markdown-guide-tip{margin-top:9px;color:#777}
+@media(max-width:600px){.markdown-guide{margin:0 12px}.markdown-guide-examples{grid-template-columns:1fr}.markdown-guide-examples span{white-space:normal}}
 .writer-content{display:block;width:100%;min-height:560px;padding:28px 38px 44px;border:0;outline:0;resize:none;font-size:18px;line-height:2;color:#222;background:#fff}
 .writer-content::placeholder{color:#c7c7c7}
 .editor-footer{display:flex;justify-content:space-between;padding:12px 20px;border-top:1px solid #eee;color:#999;font-size:12px}
@@ -83,6 +91,22 @@
 <button class="tool" type="button" data-insert="---">―</button>
 <button class="tool" type="button" id="clearBtn">消去</button>
 </div>
+
+      <div class="markdown-guide" aria-label="Markdown初心者向け説明">
+        <div class="markdown-guide-title">📝 Markdownの使い方</div>
+        <div class="markdown-guide-text">Markdownは、文章に記号を少し付けるだけで、見出しや太字などを作れる書き方です。難しく考えなくて大丈夫です。上のボタンを押すだけでも使えます。</div>
+        <div class="markdown-guide-examples">
+          <span><code>**太字**</code> → <strong>太字</strong></span>
+          <span><code># 見出し</code> → 大きな見出し</span>
+          <span><code>## 小見出し</code> → 小さな見出し</span>
+          <span><code>- 項目</code> → 箇条書き</span>
+          <span><code>1. 項目</code> → 番号付きリスト</span>
+          <span><code>&gt; 引用</code> → 引用</span>
+          <span><code>`コード`</code> → コード</span>
+          <span><code>---</code> → 区切り線</span>
+        </div>
+        <div class="markdown-guide-tip">💡 書いた結果は「プレビュー」で確認できます。</div>
+      </div>
 
       <div id="editorWrap" class="editor-wrap">
         <textarea id="content" class="writer-content" maxlength="50000" placeholder="ここから、あなたの文章を始めよう。
