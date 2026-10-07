@@ -15,6 +15,7 @@
 const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf");
 const escapeHtml=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 const renderArticleBody=v=>escapeHtml(v).split(/\r?\n/).map(line=>line.trim()==="---"?"<hr>":line).join("\n").replace(/\n/g,"<br>");
+const renderArticleBody=v=>escapeHtml(v).split(/\r?\n/).map(line=>line.trim()==="---"?"<hr>":line).join("\n").replace(/\n/g,"<br>");
 const id=new URLSearchParams(location.search).get("id");
 (async()=>{
  if(!id){article.innerHTML='<div class="empty-state">記事が指定されていません。</div>';return;}
