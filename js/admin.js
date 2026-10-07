@@ -286,14 +286,68 @@
     await loadReports();
   }
 
+  const viewMeta = {
+    dashboard: ["ダッシュボード","Kiziminの状態をまとめて確認します。"],
+    users: ["ユーザー管理","権限とアカウント状態を管理します。"],
+    articles: ["記事管理","記事の公開状態を管理します。"],
+    comments: ["コメント管理","コメントの表示状態を管理します。"],
+    reports: ["通報管理","届いた通報を確認して対応します。"],
+    inquiries: ["問い合わせ管理","問い合わせの対応状況を管理します。"]
+  };
+
+  function setupAdminNavigation() {
+    const buttons = document.querySelectorAll(".admin-nav [data-view]");
+    const views = document.querySelectorAll(".admin-view");
+    buttons.forEach(button => {
+      button.addEventListener("click", () => {
+        const key = button.dataset.view;
+        buttons.forEach(b => b.classList.toggle("active", b === button));
+        views.forEach(v => v.classList.toggle("active", v.id === "view-" + key));
+        const meta = viewMeta[key] || viewMeta.dashboard;
+        $("admin-view-title").textContent = meta[0];
+        $("admin-view-subtitle").textContent = meta[1];
+        history.replaceState(null, "", "#" + key);
+        if (key === "users") loadUsers().catch(e => console.error(e));
+        if (key === "dashboard") loadDashboard().catch(e => console.error(e));
+      });
+    });
+
+    $("user-search")?.addEventListener("input", e => {
+      const q = e.target.value.trim().toLowerCase();
+      document.querySelectorAll("#users-body tr").forEach(row => {
+        row.hidden = q && !row.textContent.toLowerCase().includes(q);
+      });
+    });
+
+    $("admin-refresh")?.addEventListener("click", async () => {
+      const button = $("admin-refresh");
+      button.disabled = true;
+      button.textContent = "↻ 更新中";
+      try {
+        await Promise.all([loadDashboard(), loadUsers(), loadArticles(), loadComments(), loadReports(), loadInquiries()]);
+      } catch (e) {
+        console.error("管理画面更新エラー", e);
+        alert("データの更新に失敗しました。");
+      } finally {
+        button.disabled = false;
+        button.textContent = "↻ 更新";
+      }
+    });
+
+    const hash = location.hash.slice(1);
+    const initial = viewMeta[hash] ? hash : "dashboard";
+    const button = document.querySelector('.admin-nav [data-view="' + initial + '"]');
+    button?.click();
+  }
+
   async function init() {
     if (!(await checkAdmin())) return;
+    setupAdminNavigation();
     try {
       await Promise.all([loadDashboard(),loadUsers(),loadArticles(),loadComments(),loadReports(),loadInquiries()]);
     } catch (e) {
       console.error(e);
       alert("管理データの読み込みに失敗しました: " + errorMessage(e));
     }
-  }
-  init();
+  }  init();
 })();
