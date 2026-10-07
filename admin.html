@@ -24,7 +24,7 @@
   </div></div></header>
   <main class="container">
     <div id="admin-loading" class="card loading">管理者権限を確認しています...</div>
-    <div id="admin-forbidden" class="card hidden"><div class="admin-alert"><strong>管理画面へのアクセスが拒否されました。</strong><p id="admin-forbidden-reason"></p></div><p><a href="index.html">ホームへ戻る</a></p></div>
+    <div id="admin-forbidden" class="card hidden"><div class="admin-alert"><strong>管理画面へのアクセスが拒否されました。</strong><p id="admin-forbidden-reason"></p><p id="admin-forbidden-detail" class="admin-muted"></p></div><p><a href="index.html">ホームへ戻る</a></p></div>
     <div id="admin-app" class="admin-grid hidden">
       <section class="card"><h1>管理画面</h1><p class="admin-muted">Supabase側で管理者権限を確認済みです。</p><div id="dashboard-stats" class="dashboard-stats"></div><div id="access-chart" class="dashboard-chart"></div><div id="role-audit-summary"></div></section>
       <section class="card"><h2>ユーザー管理</h2><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>ユーザー</th><th>表示名</th><th>権限</th><th>アカウント状態</th><th>登録日</th><th>操作</th></tr></thead><tbody id="users-body"></tbody></table></div></section>
