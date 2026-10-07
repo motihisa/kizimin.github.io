@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Kizimin - 記事を読んだり、書いたりできる場所。">
+  <title>Kizimin</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text: #222222;
+      --muted: #777777;
+      --line: #e9e9e9;
+      --accent: #222222;
+      --soft: #f7f7f7;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP",
+        "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.7;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button {
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(255,255,255,.94);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .header-inner {
+      max-width: 1120px;
+      height: 64px;
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -.04em;
+    }
+
+    .nav {
+      display: flex;
+      gap: 20px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .nav a:hover {
+      color: var(--text);
+    }
+
+    .header-actions {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .search {
+      width: 210px;
+      padding: 9px 14px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      outline: none;
+      background: var(--soft);
+    }
+
+    .search:focus {
+      border-color: #bbb;
+      background: #fff;
+    }
+
+    .login {
+      border: 1px solid var(--line);
+      background: #fff;
+      padding: 8px 14px;
+      border-radius: 999px;
+    }
+
+    .hero {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 64px 20px 36px;
+    }
+
+    .hero h1 {
+      margin: 0 0 10px;
+      font-size: clamp(34px, 6vw, 58px);
+      line-height: 1.15;
+      letter-spacing: -.05em;
+    }
+
+    .hero p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .content {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 20px 80px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 280px;
+      gap: 56px;
+    }
+
+    .section-title {
+      margin: 0 0 18px;
+      font-size: 20px;
+    }
+
+    .articles {
+      border-top: 1px solid var(--line);
+    }
+
+    .article {
+      display: block;
+      padding: 26px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .article:hover h3 {
+      text-decoration: underline;
+      text-underline-offset: 4px;
+    }
+
+    .article-meta {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 7px;
+    }
+
+    .article h3 {
+      margin: 0 0 6px;
+      font-size: 21px;
+      line-height: 1.4;
+    }
+
+    .article p {
+      margin: 0 0 12px;
+      color: #555;
+      font-size: 14px;
+    }
+
+    .author {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 88px;
+      height: fit-content;
+    }
+
+    .side-card {
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--soft);
+    }
+
+    .side-card h2 {
+      margin: 0 0 8px;
+      font-size: 17px;
+    }
+
+    .side-card p {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .write-button {
+      width: 100%;
+      border: 0;
+      border-radius: 999px;
+      padding: 11px 16px;
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .categories {
+      margin-top: 22px;
+    }
+
+    .categories h2 {
+      font-size: 16px;
+      margin: 0 0 10px;
+    }
+
+    .category-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .category {
+      padding: 6px 11px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      background: #fff;
+      font-size: 12px;
+    }
+
+    footer {
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      text-align: center;
+      padding: 30px 20px;
+      font-size: 12px;
+    }
+
+    @media (max-width: 760px) {
+      .header-inner {
+        gap: 12px;
+      }
+
+      .nav {
+        display: none;
+      }
+
+      .search {
+        width: 130px;
+      }
+
+      .content {
+        grid-template-columns: 1fr;
+        gap: 30px;
+      }
+
+      .sidebar {
+        position: static;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <a class="logo" href="/">Kizimin</a>
+
+      <nav class="nav" aria-label="メインメニュー">
+        <a href="#latest">新着</a>
+        <a href="#popular">人気</a>
+        <a href="#categories">カテゴリ</a>
+      </nav>
+
+      <div class="header-actions">
+        <input class="search" type="search" placeholder="記事を検索" aria-label="記事を検索">
+        <button class="login" type="button">ログイン</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <h1>好きなことを、<br>好きなように書こう。</h1>
+      <p>Kiziminは、記事を読んだり、書いたりできる場所です。</p>
+    </section>
+
+    <div class="content">
+      <section id="latest">
+        <h2 class="section-title">新着記事</h2>
+
+        <div class="articles">
+          <a class="article" href="#">
+            <div class="article-meta">2026年10月7日 · テクノロジー</div>
+            <h3>Kiziminへようこそ</h3>
+            <p>ここから新しい記事の世界が始まります。</p>
+            <div class="author">Kizimin編集部</div>
+          </a>
+
+          <a class="article" href="#">
+            <div class="article-meta">2026年10月7日 · 日常</div>
+            <h3>今日考えたこと</h3>
+            <p>日々の出来事や考えを自由に残してみる。</p>
+            <div class="author">ユーザー</div>
+          </a>
+
+          <a class="article" href="#">
+            <div class="article-meta">2026年10月7日 · その他</div>
+            <h3>最初の記事を書く</h3>
+            <p>短い文章でも、誰かに届くかもしれない。</p>
+            <div class="author">ユーザー</div>
+          </a>
+        </div>
+      </section>
+
+      <aside class="sidebar">
+        <div class="side-card">
+          <h2>記事を書いてみよう</h2>
+          <p>あなたの知っていること、考えたこと、好きなことを文章にできます。</p>
+          <button class="write-button" type="button">記事を書く</button>
+        </div>
+
+        <div class="categories" id="categories">
+          <h2>カテゴリ</h2>
+          <div class="category-list">
+            <a class="category" href="#">日常</a>
+            <a class="category" href="#">テクノロジー</a>
+            <a class="category" href="#">ゲーム</a>
+            <a class="category" href="#">勉強</a>
+            <a class="category" href="#">創作</a>
+            <a class="category" href="#">その他</a>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <footer>
+    © 2026 Kizimin
+  </footer>
+</body>
+</html>
