@@ -8,7 +8,7 @@
   const esc = (v) => String(v ?? "").replace(/[&<>"']/g, c => ({
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
   }[c]));
-  const date = v => v ? new Date(v).toLocaleString("ja-JP") : "-";
+  const JST_OPTIONS = { timeZone: "Asia/Tokyo", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false };\n  const date = v => v ? new Date(v).toLocaleString("ja-JP", JST_OPTIONS) : "-";\n  const jstDateTimeValue = v => { if (!v) return ""; const d = new Date(v); if (Number.isNaN(d.getTime())) return ""; return new Intl.DateTimeFormat("sv-SE", { timeZone:"Asia/Tokyo", year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:false }).format(d).replace(" ", "T"); };\n  const jstInputToIso = value => { if (!value) return null; const m = value.match(/^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2})(?::(\\d{2}))?$/); if (!m) return null; return new Date(Date.UTC(Number(m[1]), Number(m[2])-1, Number(m[3]), Number(m[4])-9, Number(m[5]), Number(m[6] || 0))).toISOString(); };
   const statusLabel=v=>({admin:"管理者",user:"一般ユーザー",active:"有効",banned:"BAN",suspended:"一時停止",draft:"下書き",published:"公開中",archived:"アーカイブ",visible:"表示",hidden:"非表示",deleted:"削除済み",open:"未対応",reviewing:"確認中",resolved:"解決済み",dismissed:"却下",closed:"終了"})[v]||v;
   const errorMessage=e=>{const m=String(e?.message||e||"");if(/permission denied|not authorized|row-level security/i.test(m))return "この操作を行う権限がありません。";if(/network|fetch failed/i.test(m))return "通信に失敗しました。";return "処理に失敗しました。しばらくしてからもう一度お試しください。";};
 
@@ -71,7 +71,7 @@
 
   async function loadUsers() {
     const { data, error } = await supabase.from("profiles")
-      .select("id,username,display_name,role,account_status,ban_reason,created_at")
+      .select("id,username,display_name,role,account_status,ban_reason,ban_expires_at,created_at")
       .order("created_at", { ascending:false });
     if (error) throw error;
     $("users-body").innerHTML = data.length ? data.map(u => `
@@ -89,6 +89,10 @@
           <select class="account-status" data-id="${esc(u.id)}" data-current="${esc(u.account_status || "active")}" aria-label="アカウント状態">
             ${["active","banned","suspended"].map(s => '<option value="'+s+'" '+(s===(u.account_status||"active")?"selected":"")+'>'+statusLabel(s)+'</option>').join("")}
           </select>
+          <label style="display:flex;flex-direction:column;gap:4px;width:230px">
+            <span class="admin-muted">BAN解除日時（JST）</span>
+            <input class="ban-expires" data-id="${esc(u.id)}" type="datetime-local" step="1" value="${esc(jstDateTimeValue(u.ban_expires_at))}" aria-label="BAN解除日時（JST）">
+          </label>
           <button type="button" class="account-status-save" data-id="${esc(u.id)}">状態を保存</button>
         </td>
       </tr>`).join("") : '<tr><td colspan="6">ユーザーはいません。</td></tr>';
@@ -98,7 +102,9 @@
 
   async function saveAccountStatus(id) {
     const select = document.querySelector('.account-status[data-id="' + CSS.escape(id) + '"]');
+    const expiryInput = document.querySelector('.ban-expires[data-id="' + CSS.escape(id) + '"]');
     const status = select ? select.value : "active";
+
     if (status !== "active") {
       const reason = prompt("BAN・一時停止の理由を入力してください。");
       if (reason === null) return;
@@ -106,10 +112,26 @@
         alert("理由を入力してください。");
         return;
       }
-      if (!confirm("このアカウントを「" + statusLabel(status) + "」にしますか？")) return;
+
+      const expiryValue = expiryInput ? expiryInput.value.trim() : "";
+      let expiresAt = null;
+      if (expiryValue) {
+        expiresAt = jstInputToIso(expiryValue);
+        if (!expiresAt || new Date(expiresAt).getTime() <= Date.now()) {
+          alert("BAN解除日時は現在より後の正しい日時にしてください。");
+          return;
+        }
+      }
+
+      const label = expiresAt
+        ? statusLabel(status) + "（" + date(expiresAt) + " JSTに解除）"
+        : statusLabel(status) + "（無期限）";
+      if (!confirm("このアカウントを「" + label + "」にしますか？")) return;
+
       const { error } = await supabase.from("profiles").update({
         account_status: status,
-        ban_reason: reason.trim()
+        ban_reason: reason.trim(),
+        ban_expires_at: expiresAt
       }).eq("id", id);
       if (error) {
         alert("アカウント状態の変更に失敗しました: " + errorMessage(error));
@@ -148,7 +170,7 @@
     if (error) throw error;
     $("articles-body").innerHTML = data.length ? data.map(a => `
       <tr><td>${esc(a.title)}</td><td>${esc(a.profiles?.display_name || a.profiles?.username || "-")}</td><td><span class="admin-badge">${esc(statusLabel(a.status))}</span></td><td>${esc(date(a.created_at))}</td>
-      <td><select class="article-status" data-id="${esc(a.id)}">${["draft","published","archived"].map(s => `<option value="${s}" ${s===a.status?"selected":""}>${s}</option>`).join("")}</select></td></tr>`).join("") : '<tr><td colspan="5">記事はありません。</td></tr>';
+      <td><select class="article-status" data-id="${esc(a.id)}">${["draft","published","archived"].map(s => `<option value="${s}" ${s===a.status?"selected":""}>${statusLabel(s)}</option>`).join("")}</select></td></tr>`).join("") : '<tr><td colspan="5">記事はありません。</td></tr>';
     document.querySelectorAll(".article-status").forEach(s => s.onchange = () => updateArticle(s.dataset.id,s.value));
   }
   async function updateArticle(id,status) {
@@ -175,7 +197,7 @@
       .select("id,name,email,subject,message,status,admin_note,created_at,resolved_at")
       .order("created_at",{ascending:false});
     if(error) throw error;
-    $("inquiries-body").innerHTML=data.length?data.map(i=>'<tr><td>'+esc(i.subject)+'</td><td>'+esc(i.name||"-")+'<br>'+esc(i.email||"-")+'</td><td class="inquiry-message">'+esc(i.message)+'</td><td><select class="inquiry-status" data-id="'+esc(i.id)+'">'+["open","reviewing","resolved","closed"].map(s=>'<option value="'+s+'" '+(s===i.status?"selected":"")+'>'+s+'</option>').join("")+'</select><br><textarea class="inquiry-note" data-id="'+esc(i.id)+'" placeholder="管理者メモ">'+esc(i.admin_note||"")+'</textarea><br><button type="button" class="inquiry-save" data-id="'+esc(i.id)+'">保存</button></td><td>'+esc(date(i.created_at))+'</td></tr>').join(""):'<tr><td colspan="6">問い合わせはありません。</td></tr>';
+    $("inquiries-body").innerHTML=data.length?data.map(i=>'<tr><td>'+esc(i.subject)+'</td><td>'+esc(i.name||"-")+'<br>'+esc(i.email||"-")+'</td><td class="inquiry-message">'+esc(i.message)+'</td><td><select class="inquiry-status" data-id="'+esc(i.id)+'">'+["open","reviewing","resolved","closed"].map(s=>'<option value="'+s+'" '+(s===i.status?"selected":"")+''+statusLabel(s)+'</option>').join("")+'</select><br><textarea class="inquiry-note" data-id="'+esc(i.id)+'" placeholder="管理者メモ">'+esc(i.admin_note||"")+'</textarea><br><button type="button" class="inquiry-save" data-id="'+esc(i.id)+'">保存</button></td><td>'+esc(date(i.created_at))+'</td></tr>').join(""):'<tr><td colspan="6">問い合わせはありません。</td></tr>';
     document.querySelectorAll(".inquiry-save").forEach(b=>b.onclick=()=>saveInquiry(b.dataset.id));
   }
   async function saveInquiry(id){
