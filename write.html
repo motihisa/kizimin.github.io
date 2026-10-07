@@ -7,4 +7,5 @@ function slugify(s){return s.toLowerCase().trim().replace(/[^a-z0-9ぁ-んァ-�
 (async()=>{const {data}=await sb.auth.getSession();if(!data.session){location.href="login.html";return;}uid=data.session.user.id;const {data:c}=await sb.from("categories").select("id,name").order("name");category.innerHTML=(c||[]).map(x=>'<option value="'+x.id+'">'+x.name+'</option>').join("");})();
 async function save(status){const title=document.querySelector("#title").value.trim(),content=document.querySelector("#content").value.trim();if(!title||!content){message.textContent="タイトルと本文を入力してください。";return;}const {error}=await sb.from("articles").insert({author_id:uid,category_id:category.value||null,title,slug:slugify(title),excerpt:excerpt.value.trim()||null,content,status,published_at:status==="published"?new Date().toISOString():null});message.textContent=error?error.message:(status==="published"?"公開しました。":"下書きを保存しました。");if(!error&&status==="published")setTimeout(()=>location.href="/",500);}
 document.querySelector("#draft").onclick=()=>save("draft");document.querySelector("#publish").onclick=()=>save("published");
-</script></body></html>
+</script><script src="js/access.js"></script>
+</body></html>
