@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>記事 | Kizimin</title><link rel="stylesheet" href="css/style.css"></head>
+<body>
+<main class="container" style="max-width:820px;padding-top:48px;padding-bottom:90px">
+<a class="logo" href="/">Kizimin</a>
+<article id="article" class="card" style="padding:32px;margin-top:28px">
+<div class="loading">記事を読み込んでいます…</div>
+</article>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf");
+const escapeHtml=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+const id=new URLSearchParams(location.search).get("id");
+(async()=>{
+ if(!id){article.innerHTML='<div class="empty-state">記事が指定されていません。</div>';return;}
+ const {data,error}=await sb.from("articles").select("id,title,content,excerpt,published_at,created_at,profiles:author_id(display_name,username),categories:category_id(name)").eq("id",id).eq("status","published").single();
+ if(error||!data){article.innerHTML='<div class="empty-state">記事が見つかりません。</div>';return;}
+ const author=data.profiles?.display_name||data.profiles?.username||"ユーザー";
+ article.innerHTML='<div class="article-meta">'+escapeHtml(new Intl.DateTimeFormat("ja-JP",{year:"numeric",month:"long",day:"numeric"}).format(new Date(data.published_at||data.created_at)))+' · '+escapeHtml(data.categories?.name||"その他")+'</div><h1>'+escapeHtml(data.title)+'</h1><p class="text-muted">'+escapeHtml(author)+'</p><hr><div style="white-space:pre-wrap;line-height:2">'+escapeHtml(data.content)+'</div>';
+ document.title=data.title+" | Kizimin";
+})();
+</script>
+</body></html>
