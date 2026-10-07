@@ -10,6 +10,7 @@
   const STORAGE_KEY = "sb-bimddapbkdakspjaemsm-auth-token";
   const GATE_ID = "kizimin-account-gate";
   const REFRESH_MS = 60 * 1000;
+  const REQUEST_TIMEOUT_MS = 4000;
   const originalFetch = window.fetch.bind(window);
 
   let gate = null;
@@ -29,6 +30,8 @@
   async function getAccountState(token) {
     if (!token) return null;
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
       const response = await originalFetch(SUPABASE_URL + "/rest/v1/rpc/get_my_account_state", {
         method: "POST",
         headers: {
@@ -36,8 +39,10 @@
           Authorization: "Bearer " + token,
           "Content-Type": "application/json"
         },
-        body: "{}"
+        body: "{}",
+        signal: controller.signal
       });
+      clearTimeout(timeout);
       if (!response.ok) return null;
       return await response.json();
     } catch (_) {
