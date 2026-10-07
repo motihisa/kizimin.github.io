@@ -37,11 +37,11 @@ async function loadComments(articleId){
       return;
     }
     const authorIds=[...new Set(comments.map(c=>c.author_id).filter(Boolean))];
-    const {data:profiles,error:profileError}=authorIds.length
+    const {data:profilesData,error:profileError}=authorIds.length
       ? await sb.from("profiles").select("id,display_name,username").in("id",authorIds)
       : {data:[],error:null};
     if(profileError) console.warn("コメント投稿者情報の取得に失敗しました:",profileError);
-    const profiles=new Map((profiles||[]).map(p=>[p.id,p]));
+    const profiles=new Map((profilesData||[]).map(p=>[p.id,p]));
     commentsList.innerHTML=comments.map(c=>{
       const p=profiles.get(c.author_id);
       const name=p?.display_name||p?.username||"ユーザー";
