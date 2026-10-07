@@ -1,13 +1,144 @@
 <!doctype html>
-<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>記事を書く | Kizimin</title><link rel="stylesheet" href="css/style.css"></head>
-<body><main class="container" style="max-width:820px;padding-top:56px;padding-bottom:80px"><a class="logo" href="index.html">Kizimin</a><div class="card" style="padding:28px;margin-top:28px"><h1>記事を書く</h1><div class="form-group"><label class="form-label">タイトル</label><input id="title" class="form-input"></div><div class="form-group"><label class="form-label">概要</label><input id="excerpt" class="form-input"></div><div class="form-group"><label class="form-label">本文</label><textarea id="content" class="form-textarea" style="min-height:360px"></textarea></div><div class="form-group"><label class="form-label">カテゴリ</label><select id="category" class="form-select"></select></div><button id="draft" class="login">下書き保存</button> <button id="publish" class="write-button" style="width:auto">公開する</button><p id="message" class="text-muted"></p></div></main>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>記事を書く | Kizimin</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+.writer-shell{min-height:100vh;background:#fafafa}
+.writer-top{position:sticky;top:0;z-index:20;height:64px;border-bottom:1px solid #e8e8e8;background:rgba(255,255,255,.92);backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:space-between;padding:0 28px}
+.writer-top-left,.writer-top-right{display:flex;align-items:center;gap:12px}
+.back-link{color:#777;font-size:14px}
+.back-link:hover{color:#111}
+.save-state{font-size:12px;color:#999}
+.writer-actions{display:flex;gap:8px}
+.writer-btn{height:38px;padding:0 15px;border:1px solid #ddd;border-radius:999px;background:#fff;color:#333;font-weight:600}
+.writer-btn:hover{background:#f5f5f5}
+.writer-btn.primary{border-color:#111;background:#111;color:#fff}
+.writer-btn.primary:hover{background:#333}
+.writer-main{width:min(100%,1120px);margin:0 auto;padding:52px 24px 90px}
+.writer-grid{display:grid;grid-template-columns:minmax(0,760px) 250px;gap:42px;align-items:start}
+.writer-editor{background:#fff;border:1px solid #e8e8e8;border-radius:22px;box-shadow:0 12px 40px rgba(0,0,0,.05);overflow:hidden}
+.writer-title{width:100%;border:0;outline:0;padding:34px 38px 10px;font-size:42px;font-weight:800;letter-spacing:-.045em;line-height:1.2}
+.writer-title::placeholder{color:#c7c7c7}
+.writer-excerpt{width:100%;border:0;outline:0;padding:0 38px 24px;color:#777;font-size:16px;line-height:1.7}
+.writer-excerpt::placeholder{color:#bbb}
+.editor-bar{display:flex;align-items:center;gap:7px;padding:10px 16px;border-top:1px solid #f0f0f0;border-bottom:1px solid #eee;overflow:auto}
+.tool{flex:0 0 auto;min-width:34px;height:34px;border:0;border-radius:9px;background:#f7f7f7;color:#333;font-weight:700}
+.tool:hover{background:#ededed}
+.editor-wrap{position:relative}
+.writer-content{display:block;width:100%;min-height:560px;padding:28px 38px 44px;border:0;outline:0;resize:none;font-size:18px;line-height:2;color:#222;background:#fff}
+.writer-content::placeholder{color:#c7c7c7}
+.editor-footer{display:flex;justify-content:space-between;padding:12px 20px;border-top:1px solid #eee;color:#999;font-size:12px}
+.writer-side{position:sticky;top:88px}
+.side-panel{padding:20px;border:1px solid #e8e8e8;border-radius:18px;background:#fff;margin-bottom:14px}
+.side-panel h2{margin:0 0 14px;font-size:14px}
+.side-panel label{display:block;margin:0 0 6px;font-size:12px;color:#777;font-weight:600}
+.side-panel input,.side-panel select{width:100%;height:42px;padding:0 11px;border:1px solid #ddd;border-radius:10px;background:#fff;outline:0}
+.side-panel input:focus,.side-panel select:focus{border-color:#999;box-shadow:0 0 0 3px rgba(0,0,0,.05)}
+.preview{display:none;padding:34px 38px 50px;min-height:560px;white-space:pre-wrap;font-size:18px;line-height:2}
+.preview.active{display:block}
+.editor-hidden{display:none!important}
+.preview-title{margin:0 0 8px;font-size:36px;line-height:1.3}
+.preview-excerpt{margin:0 0 30px;color:#777}
+.preview-body{white-space:pre-wrap}
+@media(max-width:900px){.writer-grid{display:block}.writer-side{position:static;margin-top:18px}.writer-main{padding:32px 16px 70px}}
+@media(max-width:600px){.writer-top{padding:0 14px}.writer-top-left .save-state{display:none}.writer-main{padding-top:18px}.writer-title{padding:25px 22px 8px;font-size:32px}.writer-excerpt{padding:0 22px 20px}.writer-content{min-height:480px;padding:24px 22px 36px;font-size:17px}.preview{padding:26px 22px 38px}.preview-title{font-size:29px}.writer-actions .writer-btn{padding:0 11px}}
+</style>
+</head>
+<body>
+<div class="writer-shell">
+<header class="writer-top">
+  <div class="writer-top-left">
+    <a class="logo" href="index.html">Kizimin</a>
+    <a class="back-link" href="index.html">← 戻る</a>
+    <span id="saveState" class="save-state">準備中</span>
+  </div>
+  <div class="writer-top-right">
+    <div class="writer-actions">
+      <button id="previewBtn" class="writer-btn" type="button">プレビュー</button>
+      <button id="draft" class="writer-btn" type="button">下書き保存</button>
+      <button id="publish" class="writer-btn primary" type="button">公開する</button>
+    </div>
+  </div>
+</header>
+
+<main class="writer-main">
+  <div class="writer-grid">
+    <section class="writer-editor">
+      <input id="title" class="writer-title" maxlength="160" placeholder="タイトルを入力…" autocomplete="off">
+      <input id="excerpt" class="writer-excerpt" maxlength="300" placeholder="記事の概要をひとこと。読む前の人に伝える文章です。" autocomplete="off">
+
+      <div class="editor-bar" aria-label="編集ツール">
+        <button class="tool" type="button" data-insert="「」" data-caret="-1">“”</button>
+        <button class="tool" type="button" data-insert="## " data-caret="0">H</button>
+        <button class="tool" type="button" data-insert="- " data-caret="0">•</button>
+        <button class="tool" type="button" data-insert="1. " data-caret="0">1.</button>
+        <button class="tool" type="button" data-insert="---\n" data-caret="0">―</button>
+        <button class="tool" type="button" id="clearBtn">消去</button>
+      </div>
+
+      <div id="editorWrap" class="editor-wrap">
+        <textarea id="content" class="writer-content" maxlength="50000" placeholder="ここから、あなたの文章を始めよう。
+
+最初の一文は完璧じゃなくていい。
+思いついたことを、そのまま書いてみよう。"></textarea>
+        <div id="preview" class="preview">
+          <h1 id="previewTitle" class="preview-title"></h1>
+          <p id="previewExcerpt" class="preview-excerpt"></p>
+          <div id="previewBody" class="preview-body"></div>
+        </div>
+      </div>
+
+      <div class="editor-footer">
+        <span id="count">0文字</span>
+        <span id="reading">読了 約0分</span>
+      </div>
+    </section>
+
+    <aside class="writer-side">
+      <div class="side-panel">
+        <h2>公開設定</h2>
+        <label for="category">カテゴリ</label>
+        <select id="category"></select>
+      </div>
+      <div class="side-panel">
+        <h2>書くためのメモ</h2>
+        <p style="margin:0;color:#777;font-size:13px;line-height:1.8">タイトル → 概要 → 本文の順で、思いつくまま書けば大丈夫。保存は下書きでも公開でもできます。</p>
+      </div>
+      <div class="side-panel">
+        <h2>自動保存</h2>
+        <p style="margin:0;color:#777;font-size:13px;line-height:1.8">入力内容はこのブラウザにも一時保存されます。突然ページを閉じても、文明の利器が少しだけ仕事をします。</p>
+      </div>
+    </aside>
+  </div>
+</main>
+</div>
+
 <script src="js/ban-screen.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>
-const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf");let uid=null;
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","sb_publishable_JSnuaf48KMeQ4sodofBgA_RGlhFHpf");
+const $=id=>document.getElementById(id);
+let uid=null;
+const draftKey="kizimin:writer:draft";
+const friendlyError=e=>{const m=String(e?.message||"");if(/duplicate key|unique/i.test(m))return "同じ記事の識別情報がすでに使用されています。";if(/permission denied|row-level security/i.test(m))return "記事を保存する権限がありません。";return "記事の保存に失敗しました。しばらくしてからもう一度お試しください。";};
+
 function slugify(s){return s.toLowerCase().trim().replace(/[^a-z0-9ぁ-んァ-ン一-龥]+/g,"-").replace(/^-+|-+$/g,"")+"-"+Date.now();}
-(async()=>{const {data}=await sb.auth.getSession();if(!data.session){location.href="login.html";return;}uid=data.session.user.id;const {data:c}=await sb.from("categories").select("id,name").order("name");category.innerHTML=(c||[]).map(x=>'<option value="'+x.id+'">'+x.name+'</option>').join("");})();
-function friendlyError(e){const m=String(e?.message||"");if(/duplicate key|unique/i.test(m))return "同じ記事の識別情報がすでに使用されています。";if(/permission denied|row-level security/i.test(m))return "記事を保存する権限がありません。";return "記事の保存に失敗しました。しばらくしてからもう一度お試しください。";}
-async function save(status){const title=document.querySelector("#title").value.trim(),content=document.querySelector("#content").value.trim();if(!title||!content){message.textContent="タイトルと本文を入力してください。";return;}const {error}=await sb.from("articles").insert({author_id:uid,category_id:category.value||null,title,slug:slugify(title),excerpt:excerpt.value.trim()||null,content,status,published_at:status==="published"?new Date().toISOString():null});message.textContent=error?friendlyError(error):(status==="published"?"公開しました。":"下書きを保存しました。");if(!error&&status==="published")setTimeout(()=>location.href="index.html",500);}
-document.querySelector("#draft").onclick=()=>save("draft");document.querySelector("#publish").onclick=()=>save("published");
-</script><script src="js/access.js"></script>
-</body></html>
+function updateStats(){const n=$("content").value.length;$("count").textContent=n.toLocaleString()+"文字";$("reading").textContent="読了 約"+Math.max(0,Math.ceil(n/500))+"分";}
+function saveLocal(){localStorage.setItem(draftKey,JSON.stringify({title:$("title").value,excerpt:$("excerpt").value,content:$("content").value,category:$("category").value}));$("saveState").textContent="自動保存済み";}
+function restoreLocal(){try{const d=JSON.parse(localStorage.getItem(draftKey)||"null");if(!d)return;if(!$("title").value&&!$("content").value){$("title").value=d.title||"";$("excerpt").value=d.excerpt||"";$("content").value=d.content||"";if(d.category)$("category").value=d.category;updateStats();$("saveState").textContent="下書きを復元しました";}}catch{}}
+function updatePreview(){ $("previewTitle").textContent=$("title").value||"無題の記事"; $("previewExcerpt").textContent=$("excerpt").value; $("previewExcerpt").style.display=$("excerpt").value?"block":"none"; $("previewBody").textContent=$("content").value||"本文はまだありません。"; }
+async function save(status){const title=$("title").value.trim(),content=$("content").value.trim();if(!title||!content){$("saveState").textContent="タイトルと本文を入力してください";return;}const {error}=await sb.from("articles").insert({author_id:uid,category_id:$("category").value||null,title,slug:slugify(title),excerpt:$("excerpt").value.trim()||null,content,status,published_at:status==="published"?new Date().toISOString():null});if(error){$("saveState").textContent=friendlyError(error);return;}localStorage.removeItem(draftKey);$("saveState").textContent=status==="published"?"公開しました":"下書きを保存しました";if(status==="published")setTimeout(()=>location.href="index.html",600);}
+(async()=>{const {data}=await sb.auth.getSession();if(!data.session){location.href="login.html";return;}uid=data.session.user.id;const {data:c}=await sb.from("categories").select("id,name").order("name");$("category").innerHTML=(c||[]).map(x=>'<option value="'+x.id+'">'+x.name+'</option>').join("");restoreLocal();updateStats();})();
+$("content").addEventListener("input",()=>{updateStats();clearTimeout(window.__saveTimer);window.__saveTimer=setTimeout(saveLocal,500);});
+["title","excerpt","category"].forEach(id=>$(id).addEventListener("input",saveLocal));
+$("previewBtn").onclick=()=>{const active=$("preview").classList.toggle("active");$("content").classList.toggle("editor-hidden",active);$("editorWrap").classList.toggle("previewing",active);$("previewBtn").textContent=active?"編集に戻る":"プレビュー";if(active)updatePreview();};
+$("clearBtn").onclick=()=>{if(confirm("本文を消去しますか？")){$("content").value="";updateStats();saveLocal();}};
+document.querySelectorAll(".tool[data-insert]").forEach(btn=>btn.addEventListener("click",()=>{const ta=$("content"),v=btn.dataset.insert,caret=ta.selectionStart;ta.focus();ta.setRangeText(v,caret,ta.selectionEnd,"end");if(btn.dataset.caret==="-1")ta.selectionStart=ta.selectionEnd=caret+1;updateStats();saveLocal();}));
+$("draft").onclick=()=>save("draft");$("publish").onclick=()=>save("published");
+</script>
+<script src="js/access.js"></script>
+</body>
+</html>
