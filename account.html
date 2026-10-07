@@ -28,7 +28,7 @@ body{background:#fafaf8;color:#171717}.account-shell{max-width:1100px;margin:aut
 <script src="js/maintenance-gate.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","sb_publishable_JSnuaf48KMeQ4sodofBgA8_RGlhFHpf");let uid=null,avatarUrl=null;
+const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","sb_publishable_JSnuaf48KMeQ4sodofBgA8_RGlhFHpf");let uid=null,avatarUrl=null;const PROFILE_CACHE_PREFIX="kizimin:profile:";
 const $=id=>document.getElementById(id),msg=$("message"),MAX_AVATAR_SIZE=2*1024*1024;
 const friendlyError=e=>/duplicate key|already exists/i.test(String(e?.message||""))?"そのユーザー名はすでに使用されています。":/permission denied|row-level security/i.test(String(e?.message||""))?"この操作を行う権限がありません。":"保存に失敗しました。しばらくしてからもう一度お試しください。";
 function updatePreview(){const n=$("display").value.trim()||"名前未設定",u=$("username").value.trim();$("preview-name").textContent=n;$("preview-user").textContent=u?"@"+u:"@username";$("bio-count").textContent=$("bio").value.length;const a=$("avatar");if(avatarUrl){a.innerHTML='<img src="'+avatarUrl+'" alt="プロフィール画像">'}else{a.textContent=n.slice(0,1).toUpperCase()}}
@@ -47,7 +47,7 @@ $("remove-avatar").onclick=async()=>{if(!uid)return;if(!confirm("プロフィー
 (async()=>{const {data,error}=await sb.auth.getSession();if(error||!data.session){location.href="login.html";return}uid=data.session.user.id;$("email").textContent=data.session.user.email||"";await loadProfile()})();
 $("save").onclick=async()=>{const b=$("save"),file=$("avatar-file").files?.[0];b.disabled=true;msg.textContent="保存しています…";let nextAvatarUrl=avatarUrl;
 if(file){if(file.size>MAX_AVATAR_SIZE){msg.textContent="画像は2MB以下にしてください。";b.disabled=false;return}const ext=({image/jpeg:"jpg",image/png:"png",image/webp:"webp",image/gif:"gif"})[file.type];const path=uid+"/avatar."+ext;const {error:upErr}=await sb.storage.from("avatars").upload(path,file,{upsert:true,contentType:file.type,cacheControl:"3600"});if(upErr){msg.textContent="プロフィール画像のアップロードに失敗しました。";b.disabled=false;return}nextAvatarUrl=sb.storage.from("avatars").getPublicUrl(path).data.publicUrl+"?v="+Date.now()}
-const {error}=await sb.from("profiles").update({display_name:$("display").value.trim(),username:$("username").value.trim()||null,bio:$("bio").value.trim()||null,avatar_url:nextAvatarUrl}).eq("id",uid);b.disabled=false;msg.textContent=error?friendlyError(error):"保存しました。";if(!error){avatarUrl=nextAvatarUrl;$("avatar-file").value="";updatePreview()}};
+const {error}=await sb.from("profiles").update({display_name:$("display").value.trim(),username:$("username").value.trim()||null,bio:$("bio").value.trim()||null,avatar_url:nextAvatarUrl}).eq("id",uid);b.disabled=false;msg.textContent=error?friendlyError(error):"保存しました。";if(!error){avatarUrl=nextAvatarUrl;$("avatar-file").value="";updatePreview();try{localStorage.setItem(PROFILE_CACHE_PREFIX+uid,JSON.stringify({data:{display_name:$("display").value.trim(),username:$("username").value.trim()||null,bio:$("bio").value.trim()||null,avatar_url:nextAvatarUrl},updatedAt:Date.now()}))}catch{}}};
 </script>
-</script><script src="js/access.js"></script>
+<script src="js/access.js"></script>
 </body></html>
