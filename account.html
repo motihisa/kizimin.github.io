@@ -6,4 +6,5 @@ const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","sb_pu
 let uid=null; const msg=document.querySelector("#message");
 (async()=>{const {data}=await sb.auth.getSession();if(!data.session){location.href="login.html";return;}uid=data.session.user.id;document.querySelector("#email").textContent=data.session.user.email||"";const {data:p}=await sb.from("profiles").select("display_name,username,bio").eq("id",uid).single();if(p){display.value=p.display_name||"";username.value=p.username||"";bio.value=p.bio||"";}})();
 document.querySelector("#save").onclick=async()=>{const {error}=await sb.from("profiles").update({display_name:display.value.trim(),username:username.value.trim()||null,bio:bio.value.trim()||null}).eq("id",uid);msg.textContent=error?error.message:"保存しました。";};
-</script></body></html>
+</script><script src="js/access.js"></script>
+</body></html>
