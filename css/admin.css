@@ -6,3 +6,42 @@
 
 /* User management navigation polish */
 .admin-nav .nav-users{position:relative;display:flex;align-items:center;gap:10px;margin-top:4px;background:transparent;border:1px solid transparent}.admin-nav .nav-users .nav-icon{margin:0;width:22px;height:22px;display:grid;place-items:center;border-radius:7px;background:#1f2937;color:#9ca3af;font-size:10px;transition:.18s ease}.admin-nav .nav-users .nav-label{letter-spacing:.01em}.admin-nav .nav-users:hover{background:#1f2937;border-color:#374151}.admin-nav .nav-users:hover .nav-icon,.admin-nav .nav-users.active .nav-icon{background:#fff;color:#111827}.admin-nav .nav-users.active{background:linear-gradient(90deg,#1f2937,#172033);box-shadow:inset 3px 0 0 #fff}.admin-nav .nav-users.active .nav-label{font-weight:700}.admin-nav .nav-users:focus-visible{outline:2px solid #fff;outline-offset:2px}
+
+/* User management controls polish */
+.admin-table .admin-actions{align-items:center;gap:8px;min-width:560px}
+.admin-table .admin-actions button,
+.admin-table .admin-actions select,
+.admin-table .admin-actions input{font:600 12px/1.2 inherit;box-sizing:border-box}
+.admin-table .user-role,
+.admin-table .account-status-save{
+  border:1px solid var(--ad-line);background:#fff;color:#374151;border-radius:9px;
+  padding:9px 11px;cursor:pointer;white-space:nowrap;transition:.16s ease;
+  box-shadow:0 1px 2px rgba(15,23,42,.04)
+}
+.admin-table .user-role:hover,
+.admin-table .account-status-save:hover{background:#f8fafc;border-color:#cbd5e1;transform:translateY(-1px)}
+.admin-table .account-status{
+  appearance:none;border:1px solid var(--ad-line);background:#fff;color:#111827;
+  border-radius:9px;padding:9px 32px 9px 11px;cursor:pointer;
+  background-image:linear-gradient(45deg,transparent 50%,#6b7280 50%),linear-gradient(135deg,#6b7280 50%,transparent 50%);
+  background-position:calc(100% - 14px) 13px,calc(100% - 9px) 13px;background-size:5px 5px,5px 5px;background-repeat:no-repeat;
+}
+.admin-table .account-status:focus,
+.admin-table .ban-expires:focus,
+.admin-table .user-role:focus,
+.admin-table .account-status-save:focus{outline:2px solid #cbd5e1;outline-offset:1px}
+.admin-table .ban-expiry-field{display:flex!important;flex-direction:column;gap:5px;width:205px!important}
+.admin-table .ban-expiry-field .admin-muted{font-size:10px;font-weight:700;letter-spacing:.02em}
+.admin-table .ban-expires{
+  width:100%;border:1px solid var(--ad-line);background:#fff;color:#111827;
+  border-radius:9px;padding:9px 10px;min-height:36px;
+}
+.admin-table .account-status-save{background:#111827;color:#fff;border-color:#111827}
+.admin-table .account-status-save:hover{background:#1f2937;border-color:#1f2937;box-shadow:0 4px 10px rgba(17,24,39,.16)}
+.admin-table .user-delete{
+  border:1px solid #fecaca;background:#fff5f5;color:#b91c1c;border-radius:9px;
+  padding:9px 11px;cursor:pointer;font:700 12px/1.2 inherit;white-space:nowrap;
+  transition:.16s ease;margin-left:2px;
+}
+.admin-table .user-delete:hover{background:#fee2e2;border-color:#fca5a5;color:#991b1b;transform:translateY(-1px)}
+.admin-table .user-delete:disabled{opacity:.55;cursor:not-allowed;transform:none}
