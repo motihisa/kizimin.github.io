@@ -9,7 +9,7 @@
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
   }[c]));
   const date = v => v ? new Date(v).toLocaleString("ja-JP") : "-";
-  const statusLabel=v=>({admin:"管理者",user:"一般ユーザー",draft:"下書き",published:"公開中",archived:"アーカイブ",visible:"表示",hidden:"非表示",deleted:"削除済み",open:"未対応",reviewing:"確認中",resolved:"解決済み",dismissed:"却下",closed:"終了"})[v]||v;
+  const statusLabel=v=>({admin:"管理者",user:"一般ユーザー",active:"有効",banned:"BAN",suspended:"一時停止",draft:"下書き",published:"公開中",archived:"アーカイブ",visible:"表示",hidden:"非表示",deleted:"削除済み",open:"未対応",reviewing:"確認中",resolved:"解決済み",dismissed:"却下",closed:"終了"})[v]||v;
   const errorMessage=e=>{const m=String(e?.message||e||"");if(/permission denied|not authorized|row-level security/i.test(m))return "この操作を行う権限がありません。";if(/network|fetch failed/i.test(m))return "通信に失敗しました。";return "処理に失敗しました。しばらくしてからもう一度お試しください。";};
 
   function forbidden(message) {
@@ -71,12 +71,65 @@
 
   async function loadUsers() {
     const { data, error } = await supabase.from("profiles")
-      .select("id,username,display_name,role,created_at").order("created_at", { ascending:false });
+      .select("id,username,display_name,role,account_status,ban_reason,created_at")
+      .order("created_at", { ascending:false });
     if (error) throw error;
     $("users-body").innerHTML = data.length ? data.map(u => `
-      <tr><td>${esc(u.username || u.id)}</td><td>${esc(u.display_name || "-")}</td><td><span class="admin-badge">${esc(statusLabel(u.role))}</span></td><td>${esc(date(u.created_at))}</td>
-      <td><button type="button" class="user-role" data-id="${esc(u.id)}" data-role="${esc(u.role)}">${u.role === "admin" ? "userに変更" : "adminに変更"}</button></td></tr>`).join("") : '<tr><td colspan="5">ユーザーはいません。</td></tr>';
+      <tr>
+        <td>${esc(u.username || u.id)}</td>
+        <td>${esc(u.display_name || "-")}</td>
+        <td><span class="admin-badge">${esc(statusLabel(u.role))}</span></td>
+        <td>
+          <span class="admin-badge">${esc(statusLabel(u.account_status || "active"))}</span>
+          ${u.ban_reason ? '<div class="admin-muted" style="margin-top:6px;white-space:pre-wrap">'+esc(u.ban_reason)+'</div>' : ''}
+        </td>
+        <td>${esc(date(u.created_at))}</td>
+        <td class="admin-actions">
+          <button type="button" class="user-role" data-id="${esc(u.id)}" data-role="${esc(u.role)}">${u.role === "admin" ? "userに変更" : "adminに変更"}</button>
+          <select class="account-status" data-id="${esc(u.id)}" data-current="${esc(u.account_status || "active")}" aria-label="アカウント状態">
+            ${["active","banned","suspended"].map(s => '<option value="'+s+'" '+(s===(u.account_status||"active")?"selected":"")+'>'+statusLabel(s)+'</option>').join("")}
+          </select>
+          <button type="button" class="account-status-save" data-id="${esc(u.id)}">状態を保存</button>
+        </td>
+      </tr>`).join("") : '<tr><td colspan="6">ユーザーはいません。</td></tr>';
     document.querySelectorAll(".user-role").forEach(b => b.onclick = () => changeRole(b.dataset.id,b.dataset.role));
+    document.querySelectorAll(".account-status-save").forEach(b => b.onclick = () => saveAccountStatus(b.dataset.id));
+  }
+
+  async function saveAccountStatus(id) {
+    const select = document.querySelector('.account-status[data-id="' + CSS.escape(id) + '"]');
+    const status = select ? select.value : "active";
+    if (status !== "active") {
+      const reason = prompt("BAN・一時停止の理由を入力してください。");
+      if (reason === null) return;
+      if (!reason.trim()) {
+        alert("理由を入力してください。");
+        return;
+      }
+      if (!confirm("このアカウントを「" + statusLabel(status) + "」にしますか？")) return;
+      const { error } = await supabase.from("profiles").update({
+        account_status: status,
+        ban_reason: reason.trim()
+      }).eq("id", id);
+      if (error) {
+        alert("アカウント状態の変更に失敗しました: " + errorMessage(error));
+        await loadUsers();
+        return;
+      }
+    } else {
+      if (!confirm("このアカウントの利用制限を解除しますか？")) return;
+      const { error } = await supabase.from("profiles").update({
+        account_status: "active",
+        ban_reason: null,
+        ban_expires_at: null
+      }).eq("id", id);
+      if (error) {
+        alert("アカウント状態の変更に失敗しました: " + errorMessage(error));
+        await loadUsers();
+        return;
+      }
+    }
+    await loadUsers();
   }
 
   async function changeRole(id, current) {
