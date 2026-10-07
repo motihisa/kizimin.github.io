@@ -436,17 +436,14 @@
   }
 
   async function loadComments() {
-    const { data, error } = await supabase.from("comments")
-      .select("id,content,status,created_at,profiles(username,display_name)").order("created_at",{ascending:false});
-    if (error) throw error;
-    $("comments-body").innerHTML = data.length ? data.map(c => `
-      <tr><td class="admin-log">${esc(c.content)}</td><td>${esc(c.profiles?.display_name || c.profiles?.username || "-")}</td><td><span class="admin-badge">${esc(statusLabel(c.status))}</span></td><td>${esc(date(c.created_at))}</td>
-      <td><select class="comment-status" data-id="${esc(c.id)}">${["visible","hidden","deleted"].map(s => `<option value="${s}" ${s===c.status?"selected":""}>${statusLabel(s)}</option>`).join("")}</select></td></tr>`).join("") : '<tr><td colspan="5">コメントはありません。</td></tr>';
+    const data = await secureContent("admin_comments_list");
+    const rows = data.comments || [];
+    $("comments-body").innerHTML = rows.length ? rows.map(c => '<tr><td class="admin-log">' + esc(c.content) + '</td><td>' + esc(c.profiles?.display_name || c.profiles?.username || "-") + '</td><td><span class="admin-badge">' + esc(statusLabel(c.status)) + '</span></td><td>' + esc(date(c.created_at)) + '</td><td><select class="comment-status" data-id="' + esc(c.id) + '">' + ["visible","hidden","deleted"].map(x => '<option value="' + x + '" ' + (x===c.status?"selected":"") + '>' + statusLabel(x) + '</option>').join("") + '</select></td></tr>').join("") : '<tr><td colspan="5">コメントはありません。</td></tr>';
     document.querySelectorAll(".comment-status").forEach(s => s.onchange = () => updateComment(s.dataset.id,s.value));
   }
   async function updateComment(id,status) {
-    const { error } = await supabase.from("comments").update({status}).eq("id",id);
-    if (error) { alert("コメント状態の変更に失敗しました: " + errorMessage(error)); await loadComments(); }
+    try { await secureContent("comment_status",{comment_id:id,status}); }
+    catch (error) { alert("コメント状態の変更に失敗しました: " + errorMessage(error)); await loadComments(); }
   }
 
   async function loadInquiries() {
@@ -486,6 +483,46 @@
     await loadReports();
   }
 
+  async function secureContent(action, extra = {}) {
+    const { data, error } = await supabase.functions.invoke("secure-content", { body: { action, ...extra } });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return data;
+  }
+
+  async function loadDmManagement() {
+    const box = $("dm-admin-conversations");
+    if (!box) return;
+    box.textContent = "読み込み中…";
+    const data = await secureContent("dm_admin_conversations");
+    const conversations = data.conversations || [];
+    box.innerHTML = conversations.length ? conversations.map(c => {
+      const names = (c.members || []).map(m => m.profiles?.display_name || m.profiles?.username || "ユーザー").join(" / ");
+      return '<button class="dm-admin-conv" data-id="' + esc(c.id) + '"><div class="dm-admin-conv-name">' + esc(names || "ユーザー") + '</div><div class="dm-admin-conv-meta">' + esc(date(c.updated_at)) + '</div></button>';
+    }).join("") : '<div class="admin-muted" style="padding:18px">DMはありません。</div>';
+    document.querySelectorAll(".dm-admin-conv").forEach(b => b.onclick = () => loadDmAdminMessages(b.dataset.id));
+  }
+
+  async function loadDmAdminMessages(id) {
+    const head = $("dm-admin-head"), box = $("dm-admin-messages");
+    if (!box) return;
+    head.textContent = "DMを読み込んでいます…";
+    box.innerHTML = '<div class="admin-muted">読み込み中…</div>';
+    try {
+      const data = await secureContent("dm_admin_messages", { conversation_id: id });
+      const conv = document.querySelector('.dm-admin-conv[data-id="' + CSS.escape(id) + '"]');
+      document.querySelectorAll(".dm-admin-conv").forEach(x => x.classList.toggle("active", x === conv));
+      head.textContent = "DM管理";
+      box.innerHTML = (data.messages || []).map(m => '<div class="dm-admin-message"><div class="dm-admin-message-text">' + esc(m.content) + '</div><div class="dm-admin-message-meta"><span>' + esc(date(m.created_at)) + '</span><button class="dm-admin-delete" type="button" data-message="' + esc(m.id) + '">このメッセージを削除</button></div></div>').join("") || '<div class="admin-muted">メッセージはありません。</div>';
+      document.querySelectorAll(".dm-admin-delete").forEach(b => b.onclick = async () => {
+        if (!confirm("このDMを削除しますか？")) return;
+        b.disabled = true;
+        try { await secureContent("dm_admin_delete_message", { message_id: b.dataset.message }); await loadDmAdminMessages(id); }
+        catch (e) { alert("DMの削除に失敗しました: " + errorMessage(e)); b.disabled = false; }
+      });
+    } catch (e) { head.textContent = "DM管理"; box.innerHTML = '<div class="admin-alert">DMを読み込めませんでした。' + esc(errorMessage(e)) + '</div>'; }
+  }
+
   async function broadcastNotification() {
     const title = $("broadcast-title")?.value.trim();
     const body = $("broadcast-body")?.value.trim() || "";
@@ -522,7 +559,8 @@
     comments: ["コメント管理","コメントの表示状態を管理します。"],
     reports: ["通報管理","届いた通報を確認して対応します。"],
     inquiries: ["問い合わせ管理","問い合わせの対応状況を管理します。"],
-    notifications: ["通知送信","管理者から全ユーザーへサイト内通知を送信します。"]
+    notifications: ["通知送信","管理者から全ユーザーへサイト内通知を送信します。"],
+    "dm-management": ["DM管理","DMの確認と削除を管理します。"]
   };
 
   function setupAdminNavigation() {
@@ -537,7 +575,7 @@
         $("admin-view-title").textContent = meta[0];
         $("admin-view-subtitle").textContent = meta[1];
         history.replaceState(null, "", "#" + key);
-        const loaders = {dashboard: loadDashboard, users: loadUsers, articles: loadArticles, comments: loadComments, reports: loadReports, inquiries: loadInquiries};
+        const loaders = {dashboard: loadDashboard, users: loadUsers, articles: loadArticles, comments: loadComments, reports: loadReports, inquiries: loadInquiries, "dm-management": loadDmManagement};
         const loader = loaders[key];
         if (loader) loader().catch(e => {
           console.error("管理セクション読み込みエラー", key, e);
@@ -605,7 +643,7 @@
     if (!(await checkAdmin())) return;
     setupAdminNavigation();
     try {
-      await Promise.all([loadDashboard(),loadMaintenance(),loadUsers(),loadArticles(),loadComments(),loadReports(),loadInquiries()]);
+      await Promise.all([loadDashboard(),loadMaintenance(),loadUsers(),loadArticles(),loadComments(),loadReports(),loadInquiries(),loadDmManagement()]);
     } catch (e) {
       console.error(e);
       alert("管理データの読み込みに失敗しました: " + errorMessage(e));
