@@ -647,7 +647,8 @@
         ["記事", loadArticles],
         ["コメント", loadComments],
         ["通報", loadReports],
-        ["問い合わせ", loadInquiries]
+        ["問い合わせ", loadInquiries],
+        ["通知履歴", loadNotificationHistory]
       ];
       const failures = [];
       try {
