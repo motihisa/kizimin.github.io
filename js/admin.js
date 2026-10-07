@@ -391,15 +391,13 @@
     if (!body) return;
     body.innerHTML = '<tr><td colspan="5"><div class="admin-muted">記事を読み込んでいます...</div></td></tr>';
     try {
-      const { data, error } = await supabase.from("articles")
-        .select("id,title,status,created_at,profiles(username,display_name)")
-        .order("created_at",{ascending:false});
+      const { data, error } = await supabase.rpc("admin_list_articles");
       if (error) throw error;
       const rows = Array.isArray(data) ? data : [];
       body.innerHTML = rows.length ? rows.map(a => `
         <tr>
           <td>${esc(a.title)}</td>
-          <td>${esc(a.profiles?.display_name || a.profiles?.username || "-")}</td>
+          <td>${esc(a.author_name || "-")}</td>
           <td><span class="admin-badge">${esc(statusLabel(a.status))}</span></td>
           <td>${esc(date(a.created_at))}</td>
           <td>
@@ -436,10 +434,16 @@
   }
 
   async function loadComments() {
-    const data = await secureContent("admin_comments_list");
-    const rows = data.comments || [];
-    $("comments-body").innerHTML = rows.length ? rows.map(c => '<tr><td class="admin-log">' + esc(c.content) + '</td><td>' + esc(c.profiles?.display_name || c.profiles?.username || "-") + '</td><td><span class="admin-badge">' + esc(statusLabel(c.status)) + '</span></td><td>' + esc(date(c.created_at)) + '</td><td><select class="comment-status" data-id="' + esc(c.id) + '">' + ["visible","hidden","deleted"].map(x => '<option value="' + x + '" ' + (x===c.status?"selected":"") + '>' + statusLabel(x) + '</option>').join("") + '</select></td></tr>').join("") : '<tr><td colspan="5">コメントはありません。</td></tr>';
-    document.querySelectorAll(".comment-status").forEach(s => s.onchange = () => updateComment(s.dataset.id,s.value));
+    try {
+      const data = await secureContent("admin_comments_list");
+      const rows = data.comments || [];
+      $("comments-body").innerHTML = rows.length ? rows.map(c => '<tr><td class="admin-log">' + esc(c.content) + '</td><td>' + esc(c.profiles?.display_name || c.profiles?.username || "-") + '</td><td><span class="admin-badge">' + esc(statusLabel(c.status)) + '</span></td><td>' + esc(date(c.created_at)) + '</td><td><select class="comment-status" data-id="' + esc(c.id) + '">' + ["visible","hidden","deleted"].map(x => '<option value="' + x + '" ' + (x===c.status?"selected":"") + '>' + statusLabel(x) + '</option>').join("") + '</select></td></tr>').join("") : '<tr><td colspan="5">コメントはありません。</td></tr>';
+      document.querySelectorAll(".comment-status").forEach(s => s.onchange = () => updateComment(s.dataset.id,s.value));
+    } catch (e) {
+      console.error("コメント一覧の読み込みに失敗しました:", e);
+      const body = $("comments-body");
+      if (body) body.innerHTML = '<tr><td colspan="5"><div class="admin-alert">コメントを読み込めませんでした。' + esc(errorMessage(e)) + '</div></td></tr>';
+    }
   }
   async function updateComment(id,status) {
     try { await secureContent("comment_status",{comment_id:id,status}); }
@@ -642,11 +646,21 @@
   async function init() {
     if (!(await checkAdmin())) return;
     setupAdminNavigation();
-    try {
-      await Promise.all([loadDashboard(),loadMaintenance(),loadUsers(),loadArticles(),loadComments(),loadReports(),loadInquiries(),loadDmManagement()]);
-    } catch (e) {
-      console.error(e);
-      alert("管理データの読み込みに失敗しました: " + errorMessage(e));
-    }
+    const loaders = [
+      ["ダッシュボード", loadDashboard],
+      ["メンテナンス設定", loadMaintenance],
+      ["ユーザー", loadUsers],
+      ["記事", loadArticles],
+      ["コメント", loadComments],
+      ["通報", loadReports],
+      ["問い合わせ", loadInquiries],
+      ["DM管理", loadDmManagement]
+    ];
+    const results = await Promise.allSettled(loaders.map(([, loader]) => loader()));
+    results.forEach((result, i) => {
+      if (result.status === "rejected") {
+        console.error("管理データの読み込み失敗:", loaders[i][0], result.reason);
+      }
+    });
   }  init();
 })();
