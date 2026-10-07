@@ -1,41 +1,22 @@
 <!doctype html>
 <html lang="ja">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Kizimin 管理画面</title>
-  <link rel="stylesheet" href="css/style.css">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    .dashboard-chart{width:100%;height:280px;overflow:hidden}.dashboard-chart svg{width:100%;height:100%}.dashboard-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0}.stat-card{padding:16px;border:1px solid #e5e7eb;border-radius:10px}.stat-number{font-size:1.7rem;font-weight:700}.stat-label{font-size:.85rem;color:#6b7280}.inquiry-message{white-space:pre-wrap;word-break:break-word;max-width:520px}
-    .admin-grid{display:grid;gap:24px}.admin-table-wrap{overflow-x:auto}
-    .admin-table{width:100%;border-collapse:collapse}.admin-table th,.admin-table td{padding:12px;border-bottom:1px solid #e5e7eb;text-align:left;vertical-align:top}
-    .admin-table th{font-size:.9rem;white-space:nowrap}.admin-table td{font-size:.9rem}
-    .admin-badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef2ff;font-size:.8rem}
-    .admin-muted{color:#6b7280}.admin-actions{display:flex;gap:8px;flex-wrap:wrap}
-    .admin-alert,.admin-ok{padding:14px;border-radius:8px}.admin-alert{background:#fef2f2;color:#991b1b}.admin-ok{background:#f0fdf4;color:#166534}
-    .admin-log{white-space:pre-wrap;word-break:break-word;max-width:520px}
-  </style>
-</head>
-<body>
-  <header class="header"><div class="container"><div class="header-inner">
-    <a class="logo" href="index.html">Kizimin</a>
-    <nav class="nav"><a href="index.html">ホーム</a><a href="account.html">アカウント</a></nav>
-  </div></div></header>
-  <main class="container">
-    <div id="admin-loading" class="card loading">管理者権限を確認しています...</div>
-    <div id="admin-forbidden" class="card hidden"><div class="admin-alert"><strong>管理画面へのアクセスが拒否されました。</strong><p id="admin-forbidden-reason"></p><p id="admin-forbidden-detail" class="admin-muted"></p></div><p><a href="index.html">ホームへ戻る</a></p></div>
-    <div id="admin-app" class="admin-grid hidden">
-      <section class="card"><h1>管理画面</h1><p class="admin-muted">Supabase側で管理者権限を確認済みです。</p><div id="dashboard-stats" class="dashboard-stats"></div><div id="access-chart" class="dashboard-chart"></div><div id="role-audit-summary"></div></section>
-      <section class="card"><h2>ユーザー管理</h2><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>ユーザー</th><th>表示名</th><th>権限</th><th>アカウント状態</th><th>登録日</th><th>操作</th></tr></thead><tbody id="users-body"></tbody></table></div></section>
-      <section class="card"><h2>記事管理</h2><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>タイトル</th><th>作者</th><th>状態</th><th>作成日</th><th>操作</th></tr></thead><tbody id="articles-body"></tbody></table></div></section>
-      <section class="card"><h2>コメント管理</h2><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>内容</th><th>作者</th><th>状態</th><th>作成日</th><th>操作</th></tr></thead><tbody id="comments-body"></tbody></table></div></section>
-      <section class="card"><h2>通報管理</h2><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>対象</th><th>理由</th><th>状態</th><th>作成日</th><th>操作</th></tr></thead><tbody id="reports-body"></tbody></table></div></section>
-      <section class="card"><h2>問い合わせ管理</h2><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>件名</th><th>送信者</th><th>内容</th><th>状態</th><th>作成日</th><th>操作</th></tr></thead><tbody id="inquiries-body"></tbody></table></div></section>
-    </div>
-  </main>
-  <script src="js/ban-screen.js"></script>
-  <script src="js/access.js"></script>
-  <script src="js/admin.js"></script>
-</body>
-</html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kizimin Admin</title>
+<link rel="stylesheet" href="css/style.css"><link rel="stylesheet" href="css/admin.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head>
+<body class="admin-page">
+<div id="admin-loading" class="admin-loading admin-panel"><strong>管理者権限を確認しています...</strong><p class="admin-muted">Supabaseで安全に確認しています。</p></div>
+<div id="admin-forbidden" class="admin-forbidden-wrap admin-panel hidden"><div class="admin-alert"><strong>管理画面へのアクセスが拒否されました。</strong><p id="admin-forbidden-reason"></p><p id="admin-forbidden-detail" class="admin-muted"></p></div><a class="admin-btn" href="index.html">ホームへ戻る</a></div>
+<div id="admin-app" class="admin-shell hidden">
+<aside class="admin-sidebar"><div class="admin-brand">Kizimin<small>ADMIN CONSOLE</small></div><nav class="admin-nav" aria-label="管理メニュー">
+<button class="active" data-view="dashboard"><span>▦</span>ダッシュボード</button><button data-view="users"><span>●</span>ユーザー</button><button data-view="articles"><span>▤</span>記事</button><button data-view="comments"><span>◌</span>コメント</button><button data-view="reports"><span>!</span>通報</button><button data-view="inquiries"><span>✉</span>問い合わせ</button>
+</nav><div class="admin-sidebar-bottom"><a href="index.html">← サイトへ戻る</a><a href="account.html">アカウント設定</a></div></aside>
+<main class="admin-main"><header class="admin-topbar"><div><h1 id="admin-view-title">ダッシュボード</h1><p id="admin-view-subtitle">Kiziminの状態をまとめて確認します。</p></div><div class="admin-top-actions"><button id="admin-refresh" class="admin-btn primary">↻ 更新</button></div></header>
+<section id="view-dashboard" class="admin-view active"><div class="admin-panel"><div class="admin-panel-head"><div><h2>サイト概要</h2><p class="admin-muted">直近30日間のアクセス推移</p></div></div><div id="dashboard-stats" class="dashboard-stats"></div></div><div class="admin-panel"><div id="access-chart" class="dashboard-chart"></div></div><div class="admin-panel"><h2>権限監査</h2><div id="role-audit-summary" style="margin-top:14px"></div></div></section>
+<section id="view-users" class="admin-view"><div class="admin-panel"><div class="admin-panel-head"><div><h2>ユーザー管理</h2><p class="admin-muted">権限とアカウント状態を管理します。</p></div><input id="user-search" class="admin-search" placeholder="ユーザーを検索"></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>ユーザー</th><th>表示名</th><th>権限</th><th>状態</th><th>登録日</th><th>操作</th></tr></thead><tbody id="users-body"></tbody></table></div></div></section>
+<section id="view-articles" class="admin-view"><div class="admin-panel"><div class="admin-panel-head"><div><h2>記事管理</h2><p class="admin-muted">公開状態を変更できます。</p></div></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>タイトル</th><th>作者</th><th>状態</th><th>作成日</th><th>操作</th></tr></thead><tbody id="articles-body"></tbody></table></div></div></section>
+<section id="view-comments" class="admin-view"><div class="admin-panel"><div class="admin-panel-head"><div><h2>コメント管理</h2><p class="admin-muted">表示・非表示・削除済みを管理します。</p></div></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>内容</th><th>作者</th><th>状態</th><th>作成日</th><th>操作</th></tr></thead><tbody id="comments-body"></tbody></table></div></div></section>
+<section id="view-reports" class="admin-view"><div class="admin-panel"><div class="admin-panel-head"><div><h2>通報管理</h2><p class="admin-muted">ユーザーから届いた通報を確認します。</p></div></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>対象</th><th>理由</th><th>状態</th><th>作成日</th><th>操作</th></tr></thead><tbody id="reports-body"></tbody></table></div></div></section>
+<section id="view-inquiries" class="admin-view"><div class="admin-panel"><div class="admin-panel-head"><div><h2>問い合わせ管理</h2><p class="admin-muted">問い合わせへの対応状況を管理します。</p></div></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>件名</th><th>送信者</th><th>内容</th><th>状態</th><th>操作</th></tr></thead><tbody id="inquiries-body"></tbody></table></div></div></section>
+</main></div>
+<script src="js/ban-screen.js"></script><script src="js/access.js"></script><script src="js/admin.js"></script>
+</body></html>
