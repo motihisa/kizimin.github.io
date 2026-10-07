@@ -275,7 +275,7 @@
         </td>
         <td>${esc(date(u.created_at))}</td>
         <td class="admin-actions">
-          ${currentAdminRole === "admin" ? `<button type="button" class="user-role" data-id="${esc(u.id)}" data-role="${esc(u.role)}">${u.role === "admin" ? "userに変更" : "adminに変更"}</button>` : ""}
+          ${currentAdminRole === "admin" ? `<select class="user-role-select" data-id="${esc(u.id)}" data-current="${esc(u.role || "user")}" aria-label="ユーザー権限">${["user","moderator","admin"].map(r => '<option value="'+r+'" '+(r===(u.role||"user")?"selected":"")+'>'+statusLabel(r)+'</option>').join("")}</select>` : `<span class="admin-muted">${esc(statusLabel(u.role || "user"))}</span>`}
           <select class="account-status" data-id="${esc(u.id)}" data-current="${esc(u.account_status || "active")}" aria-label="アカウント状態">
             ${["active","banned","suspended"].map(s => '<option value="'+s+'" '+(s===(u.account_status||"active")?"selected":"")+'>'+statusLabel(s)+'</option>').join("")}
           </select>
@@ -287,7 +287,7 @@
           ${currentAdminRole === "admin" ? `<button type="button" class="user-delete" data-id="${esc(u.id)}" data-name="${esc(u.display_name || u.username || u.id)}">強制削除</button>` : ""}
         </td>
       </tr>`).join("") : '<tr><td colspan="6">ユーザーはいません。</td></tr>';
-    document.querySelectorAll(".user-role").forEach(b => b.onclick = () => changeRole(b.dataset.id,b.dataset.role));
+    document.querySelectorAll(".user-role-select").forEach(s => s.onchange = () => changeRole(s.dataset.id, s.dataset.current, s.value, s));
     document.querySelectorAll(".account-status-save").forEach(b => b.onclick = () => saveAccountStatus(b.dataset.id));
     document.querySelectorAll(".user-delete").forEach(b => b.onclick = () => forceDeleteUser(b.dataset.id, b.dataset.name));
   }
@@ -370,23 +370,44 @@
     await loadUsers();
   }
 
-  async function changeRole(id, current) {
+  async function changeRole(id, current, next, selectEl) {
+    if (currentAdminRole !== "admin") {
+      if (selectEl) selectEl.value = current;
+      alert("権限の変更は管理者のみ実行できます。");
+      return;
+    }
+    if (!["user","moderator","admin"].includes(next)) {
+      if (selectEl) selectEl.value = current;
+      return;
+    }
     const { data: sessionData } = await supabase.auth.getSession();
     const currentUserId = sessionData?.session?.user?.id;
-    if (currentUserId === id && current === "admin") {
+    if (currentUserId === id && current === "admin" && next !== "admin") {
+      if (selectEl) selectEl.value = current;
       alert("自分自身の管理者権限は、この画面から解除できません。");
       return;
     }
-    const next = current === "admin" ? "user" : "admin";
-    if (!confirm("このユーザーを " + next + " に変更しますか？")) return;
-    const { error } = await supabase.from("profiles").update({ role:next }).eq("id",id);
-    if (error) { alert("権限変更に失敗しました: " + errorMessage(error)); return; }
-    await loadUsers();
+    if (current === next) return;
+    if (!confirm("このユーザーの権限を「" + statusLabel(current) + "」から「" + statusLabel(next) + "」に変更しますか？")) {
+      if (selectEl) selectEl.value = current;
+      return;
+    }
+    if (selectEl) selectEl.disabled = true;
     try {
-      const { data } = await supabase.rpc("admin_access_check");
-      renderAudit((Array.isArray(data) ? data[0] : data)?.recent_role_changes || []);
-    } catch (e) {
-      console.warn("権限監査の再取得に失敗", e);
+      const { error } = await supabase.from("profiles").update({ role: next }).eq("id", id);
+      if (error) throw error;
+      await loadUsers();
+      try {
+        const { data } = await supabase.rpc("admin_access_check");
+        renderAudit((Array.isArray(data) ? data[0] : data)?.recent_role_changes || []);
+      } catch (e) {
+        console.warn("権限監査の再取得に失敗", e);
+      }
+    } catch (error) {
+      if (selectEl) selectEl.value = current;
+      alert("権限変更に失敗しました: " + errorMessage(error));
+    } finally {
+      if (selectEl) selectEl.disabled = false;
     }
   }
 
