@@ -46,7 +46,7 @@
 @media(max-width:900px){.writer-grid{display:block}.writer-side{position:static;margin-top:18px}.writer-main{padding:32px 16px 70px}}
 @media(max-width:600px){.writer-top{padding:0 14px}.writer-top-left .save-state{display:none}.writer-main{padding-top:18px}.writer-title{padding:25px 22px 8px;font-size:32px}.writer-excerpt{padding:0 22px 20px}.writer-content{min-height:480px;padding:24px 22px 36px;font-size:17px}.preview{padding:26px 22px 38px}.preview-title{font-size:29px}.writer-actions .writer-btn{padding:0 11px}}
 /* Kizimin writer publishing controls */
-.publish-settings{display:grid;gap:10px}.publish-option{display:flex;align-items:flex-start;gap:10px;padding:11px;border:1px solid #e5e5e5;border-radius:11px;cursor:pointer}.publish-option:has(input:checked){border-color:#111;background:#fafafa}.publish-option input{margin-top:3px}.publish-option strong{display:block;font-size:13px}.publish-option small{display:block;color:#777;font-size:11px;margin-top:3px;line-height:1.5}.publish-note{padding:10px 11px;background:#f7f7f7;border-radius:9px;color:#666;font-size:11px;line-height:1.6}.category-status{font-size:11px;color:#777;margin-top:7px}</style>
+.publish-settings{display:grid;gap:10px}.publish-option{display:flex;align-items:flex-start;gap:10px;padding:11px;border:1px solid #e5e5e5;border-radius:11px;cursor:pointer}.publish-option:has(input:checked){border-color:#111;background:#fafafa}.publish-option input{margin-top:3px}.publish-option strong{display:block;font-size:13px}.publish-option small{display:block;color:#777;font-size:11px;margin-top:3px;line-height:1.5}.publish-note{padding:10px 11px;background:#f7f7f7;border-radius:9px;color:#666;font-size:11px;line-height:1.6}.category-status{font-size:11px;color:#777;margin-top:7px}.allowed-users{display:none;margin-top:12px}.allowed-users.active{display:block}.allowed-list{max-height:220px;overflow:auto;border:1px solid #eee;border-radius:10px}.allowed-user{display:flex!important;align-items:center;gap:9px;padding:9px 10px;margin:0!important;border-bottom:1px solid #f1f1f1}.allowed-user input{width:auto!important;height:auto!important}</style>
 </head>
 <body>
 <div class="writer-shell">
@@ -106,6 +106,13 @@
           <label class="publish-option"><input type="radio" name="visibility" value="restricted"><span><strong>許可されたユーザーのみ</strong><small>閲覧を許可したユーザーだけが読めます。</small></span></label>
         </div>
       </div>
+        <div id="allowedUsers" class="allowed-users">
+          <label for="allowedSearch">許可するユーザーを検索</label>
+          <input id="allowedSearch" type="search" placeholder="ユーザー名・表示名で検索">
+          <div id="allowedList" class="allowed-list"><div style="padding:12px;color:#888;font-size:12px">読み込み中…</div></div>
+          <div id="allowedStatus" class="category-status"></div>
+        </div>
+      </div>
       <div class="side-panel">
         <h2>カテゴリ</h2>
         <label for="category">カテゴリを選択</label>
@@ -132,24 +139,34 @@
 const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","sb_publishable_JSnuaf48KMeQ4sodofBgA_RGlhFHpf");
 const $=id=>document.getElementById(id);
 let uid=null;
+let allowedUsers=[];
 const draftKey="kizimin:writer:draft";
 const friendlyError=e=>{const m=String(e?.message||"");if(/duplicate key|unique/i.test(m))return "同じ記事の識別情報がすでに使用されています。";if(/permission denied|row-level security/i.test(m))return "記事を保存する権限がありません。";return "記事の保存に失敗しました。しばらくしてからもう一度お試しください。";};
 
 function slugify(s){return s.toLowerCase().trim().replace(/[^a-z0-9ぁ-んァ-ン一-龥]+/g,"-").replace(/^-+|-+$/g,"")+"-"+Date.now();}
 function updateStats(){const n=$("content").value.length;$("count").textContent=n.toLocaleString()+"文字";$("reading").textContent="読了 約"+Math.max(0,Math.ceil(n/500))+"分";}
-function saveLocal(){localStorage.setItem(draftKey,JSON.stringify({title:$("title").value,excerpt:$("excerpt").value,content:$("content").value,category:$("category").value}));$("saveState").textContent="自動保存済み";}
-function restoreLocal(){try{const d=JSON.parse(localStorage.getItem(draftKey)||"null");if(!d)return;if(!$("title").value&&!$("content").value){$("title").value=d.title||"";$("excerpt").value=d.excerpt||"";$("content").value=d.content||"";if(d.category)$("category").value=d.category;updateStats();$("saveState").textContent="下書きを復元しました";}}catch{}}
+function saveLocal(){localStorage.setItem(draftKey,JSON.stringify({title:$("title").value,excerpt:$("excerpt").value,content:$("content").value,category:$("category").value,visibility:document.querySelector("input[name=visibility]:checked")?.value||"public"}));$("saveState").textContent="自動保存済み";}
+function restoreLocal(){try{const d=JSON.parse(localStorage.getItem(draftKey)||"null");if(!d)return;if(!$("title").value&&!$("content").value){$("title").value=d.title||"";$("excerpt").value=d.excerpt||"";$("content").value=d.content||"";if(d.category)$("category").value=d.category;if(d.visibility){const el=document.querySelector("input[name=visibility][value="+d.visibility+"]");if(el){el.checked=true;toggleAllowedUsers();}}updateStats();$("saveState").textContent="下書きを復元しました";}}catch{}}
 function updatePreview(){ $("previewTitle").textContent=$("title").value||"無題の記事"; $("previewExcerpt").textContent=$("excerpt").value; $("previewExcerpt").style.display=$("excerpt").value?"block":"none"; $("previewBody").textContent=$("content").value||"本文はまだありません。"; }
+function renderAllowedUsers(){
+  const q=($("allowedSearch").value||"").trim().toLowerCase();
+  const selected=new Set(Array.from(document.querySelectorAll("#allowedList input:checked")).map(x=>x.value));
+  const list=allowedUsers.filter(u=>!q||String(u.username||"").toLowerCase().includes(q)||String(u.display_name||"").toLowerCase().includes(q));
+  $("allowedList").innerHTML=list.length?list.map(u=>'<label class="allowed-user"><input type="checkbox" value="'+u.id+'" '+(selected.has(u.id)?"checked":"")+'><span><strong>'+String(u.display_name||u.username||"ユーザー").replace(/[<>&"]/g,"")+'</strong><small>@'+String(u.username||"").replace(/[<>&"]/g,"")+'</small></span></label>').join(""):'<div style="padding:12px;color:#888;font-size:12px">該当するユーザーがいません。</div>';
+  $("allowedStatus").textContent=Array.from(document.querySelectorAll("#allowedList input:checked")).length+"人を許可中";
+}
+async function loadAllowedUsers(){const {data,error}=await sb.from("profiles").select("id,username,display_name").order("username").limit(2000);if(error){$("allowedList").innerHTML='<div style="padding:12px;color:#888;font-size:12px">ユーザー一覧を読み込めませんでした。</div>';return;}allowedUsers=data||[];renderAllowedUsers();}
+function toggleAllowedUsers(){const restricted=document.querySelector('input[name="visibility"]:checked')?.value==="restricted";$("allowedUsers").classList.toggle("active",restricted);if(restricted&&!allowedUsers.length)loadAllowedUsers();if(restricted)renderAllowedUsers();}
 async function save(){const status="published";const visibility=document.querySelector('input[name="visibility"]:checked')?.value||"public";const title=$("title").value.trim(),content=$("content").value.trim();if(!title||!content){$("saveState").textContent="タイトルと本文を入力してください";return;}const selectedCategory=$("category").value||null;
 if(status==="published" && !selectedCategory){$("saveState").textContent="公開するにはカテゴリを選択してください";$("category").focus();return;}
-const {error}=await sb.from("articles").insert({author_id:uid,category_id:selectedCategory,title,slug:slugify(title),excerpt:$("excerpt").value.trim()||null,content,status,published_at:status==="published"?new Date().toISOString():null});if(error){$("saveState").textContent=friendlyError(error);return;}localStorage.removeItem(draftKey);$("saveState").textContent=status==="published"?"公開しました":"下書きを保存しました";if(status==="published")setTimeout(()=>location.href="index.html",600);}
+const {data:article,error}=await sb.from("articles").insert({author_id:uid,category_id:selectedCategory,title,slug:slugify(title),excerpt:$("excerpt").value.trim()||null,content,status,visibility,published_at:status==="published"?new Date().toISOString():null}).select("id").single();if(error){$("saveState").textContent=friendlyError(error);return;}if(visibility==="restricted"){const ids=Array.from(document.querySelectorAll("#allowedList input:checked")).map(x=>x.value).filter(id=>id!==uid);if(ids.length){const {error:ae}=await sb.from("article_allowed_users").insert(ids.map(user_id=>({article_id:article.id,user_id})));if(ae){$("saveState").textContent=friendlyError(ae);return;}}}localStorage.removeItem(draftKey);$("saveState").textContent=status==="published"?"公開しました":"下書きを保存しました";if(status==="published")setTimeout(()=>location.href="index.html",600);}
 (async()=>{const {data}=await sb.auth.getSession();if(!data.session){location.href="login.html";return;}uid=data.session.user.id;const fallback=[{id:"060ac597-ebc7-433c-ac01-404818cf7186",name:"勉強"},{id:"18cb10b2-e649-4852-ad90-b8f3b9fcfb80",name:"その他"},{id:"7a13ab2f-0985-4394-999c-dbae4016e031",name:"創作"},{id:"7c58b262-1ef0-4338-b0b7-c347d3b63b42",name:"ゲーム"},{id:"ccc5fab9-73d0-4a42-8a5a-73b2048967e6",name:"テクノロジー"},{id:"de0fefbf-a0fc-4a4c-b603-cf8e06e3d63a",name:"日常"}];const {data:c,error:ce}=await sb.from("categories").select("id,name").order("name");const categories=ce||!c?.length?fallback:c;$("category").innerHTML='<option value="">カテゴリを選択</option>'+categories.map(x=>'<option value="'+x.id+'">'+x.name+'</option>').join("");$("categoryStatus").textContent=categories.length+"カテゴリから選択できます";restoreLocal();updateStats();})();
 $("content").addEventListener("input",()=>{updateStats();clearTimeout(window.__saveTimer);window.__saveTimer=setTimeout(saveLocal,500);});
 ["title","excerpt","category"].forEach(id=>$(id).addEventListener("input",saveLocal));
 $("previewBtn").onclick=()=>{const active=$("preview").classList.toggle("active");$("content").classList.toggle("editor-hidden",active);$("editorWrap").classList.toggle("previewing",active);$("previewBtn").textContent=active?"編集に戻る":"プレビュー";if(active)updatePreview();};
 $("clearBtn").onclick=()=>{if(confirm("本文を消去しますか？")){$("content").value="";updateStats();saveLocal();}};
 document.querySelectorAll(".tool[data-insert]").forEach(btn=>btn.addEventListener("click",()=>{const ta=$("content"),v=btn.dataset.insert,caret=ta.selectionStart;ta.focus();ta.setRangeText(v,caret,ta.selectionEnd,"end");if(btn.dataset.caret==="-1")ta.selectionStart=ta.selectionEnd=caret+1;updateStats();saveLocal();}));
-document.querySelectorAll('input[name="visibility"]').forEach(el=>el.addEventListener("change",saveLocal));
+document.querySelectorAll('input[name="visibility"]').forEach(el=>el.addEventListener("change",()=>{toggleAllowedUsers();saveLocal();}));$("allowedSearch").addEventListener("input",renderAllowedUsers);$("allowedList").addEventListener("change",()=>{renderAllowedUsers();saveLocal();});
 $("publish").onclick=()=>save();
 </script>
 <script src="js/access.js"></script>
