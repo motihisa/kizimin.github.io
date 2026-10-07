@@ -18,7 +18,7 @@
 <script src="js/maintenance-gate.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf");
+const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpbWRkYXBia2Rha3NwamFlbXNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzMTU0MTksImV4cCI6MjEwNjg5MTQxOX0.qezG4VOkyYfaa4DxClk1PSV7bZEne7WEbxj52m1l7iM");
 const $=id=>document.getElementById(id); const friendlyError=e=>/permission denied|row-level security/i.test(String(e?.message||""))?"問い合わせを送信する権限がありません。":/network|fetch failed/i.test(String(e?.message||""))?"通信に失敗しました。":"問い合わせの送信に失敗しました。";
 (async()=>{
  const {data}=await sb.auth.getSession();
