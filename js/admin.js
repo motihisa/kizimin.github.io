@@ -3,7 +3,7 @@
   const SUPABASE_URL = "https://bimddapbkdakspjaemsm.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf";
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
-  const $ = (id) => document.getElementById(id);
+  const $ = (id) => document.getElementById(id);\n  let currentAdminRole = "user";
 
   const esc = (v) => String(v ?? "").replace(/[&<>"']/g, c => ({
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
@@ -66,7 +66,7 @@
       return false;
     }
 
-    if (profile.role !== "admin") {
+    if (!["admin","moderator"].includes(profile.role)) {
       forbidden(
         "管理画面へのアクセスが拒否されました。",
         "現在のKiziminプロフィール権限: " + (profile.role || "不明") + " / ログインユーザーID: " + userId
@@ -280,7 +280,7 @@
             <input class="ban-expires" data-id="${esc(u.id)}" type="datetime-local" step="1" value="${esc(jstDateTimeValue(u.ban_expires_at))}" aria-label="BAN解除日時（JST）">
           </label>
           <button type="button" class="account-status-save" data-id="${esc(u.id)}">状態を保存</button>
-          <button type="button" class="user-delete" data-id="${esc(u.id)}" data-name="${esc(u.display_name || u.username || u.id)}">強制削除</button>
+          ${currentAdminRole === "admin" ? `<button type="button" class="user-delete" data-id="${esc(u.id)}" data-name="${esc(u.display_name || u.username || u.id)}">強制削除</button>` : ""}
         </td>
       </tr>`).join("") : '<tr><td colspan="6">ユーザーはいません。</td></tr>';
     document.querySelectorAll(".user-role").forEach(b => b.onclick = () => changeRole(b.dataset.id,b.dataset.role));
