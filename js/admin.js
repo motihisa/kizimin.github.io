@@ -187,10 +187,36 @@
             <input class="ban-expires" data-id="${esc(u.id)}" type="datetime-local" step="1" value="${esc(jstDateTimeValue(u.ban_expires_at))}" aria-label="BAN解除日時（JST）">
           </label>
           <button type="button" class="account-status-save" data-id="${esc(u.id)}">状態を保存</button>
+          <button type="button" class="user-delete" data-id="${esc(u.id)}" data-name="${esc(u.display_name || u.username || u.id)}">強制削除</button>
         </td>
       </tr>`).join("") : '<tr><td colspan="6">ユーザーはいません。</td></tr>';
     document.querySelectorAll(".user-role").forEach(b => b.onclick = () => changeRole(b.dataset.id,b.dataset.role));
     document.querySelectorAll(".account-status-save").forEach(b => b.onclick = () => saveAccountStatus(b.dataset.id));
+    document.querySelectorAll(".user-delete").forEach(b => b.onclick = () => forceDeleteUser(b.dataset.id, b.dataset.name));
+  }
+
+  async function forceDeleteUser(id, name) {
+    const first = confirm("「" + name + "」のアカウントを強制削除しますか？\n\nこの操作は元に戻せません。投稿・コメントなど、このアカウントに紐づくデータも削除されます。");
+    if (!first) return;
+    const second = prompt("確認のため、削除対象のユーザー名を入力してください。\nキャンセルで中止します。");
+    if (second === null) return;
+    if (second.trim() !== name.trim()) {
+      alert("入力が一致しないため、削除を中止しました。");
+      return;
+    }
+    const buttons = document.querySelectorAll('.user-delete[data-id="' + CSS.escape(id) + '"]');
+    buttons.forEach(b => { b.disabled = true; b.textContent = "削除中…"; });
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-delete-user", { body: { user_id: id } });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error || "削除に失敗しました。");
+      alert("アカウントを完全に削除しました。");
+      await loadUsers();
+    } catch (e) {
+      console.error("強制削除失敗", e);
+      alert("アカウントの強制削除に失敗しました: " + (e?.context?.error || e?.message || "不明なエラー"));
+      await loadUsers();
+    }
   }
 
   async function saveAccountStatus(id) {
