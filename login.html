@@ -48,6 +48,8 @@ const confirmGroup = document.querySelector("#confirmGroup");
 const message = document.querySelector("#message");
 let signupMode = false;
 
+function friendlyError(error) { const m=String(error?.message||""); if(/Invalid login credentials/i.test(m)) return "メールアドレスまたはパスワードが正しくありません。"; if(/User already registered/i.test(m)) return "このメールアドレスはすでに登録されています。"; if(/Email not confirmed/i.test(m)) return "メールアドレスの確認が完了していません。確認メールを確認してください。"; return "処理に失敗しました。しばらくしてからもう一度お試しください。"; }
+
 function setMessage(text) {
   message.textContent = text;
 }
@@ -107,7 +109,7 @@ submit.addEventListener("click", async () => {
       setMessage("アカウントを作成しました。確認メールを確認してください。");
     }
   } catch (error) {
-    setMessage(error.message || "処理に失敗しました。");
+    setMessage(friendlyError(error));
   } finally {
     submit.disabled = false;
   }
