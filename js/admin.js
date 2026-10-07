@@ -41,33 +41,57 @@
     const userId = session.user.id;
     console.info("管理者チェック: ログイン中ユーザー", userId);
 
-    const { data, error } = await supabase.rpc("admin_access_check");
+    // 管理者判定はRPCだけに依存せず、現在のユーザー自身のprofiles.roleを
+    // RLS経由で直接確認する。これによりPostgRESTの関数キャッシュ等で
+    // admin_access_check() が一時的に呼び出せない場合でも管理画面へ入れる。
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("role,account_status")
+      .eq("id", userId)
+      .maybeSingle();
 
-    if (error) {
-      console.error("管理者チェックRPCエラー", error);
-      forbidden("Supabase側の管理者チェックに失敗しました。", "admin_access_check の呼び出しに失敗しました。");
+    if (profileError) {
+      console.error("管理者チェック: profiles取得失敗", profileError);
+      forbidden("管理者権限の確認に失敗しました。", "Kiziminプロフィールの読み込みに失敗しました。");
       return false;
     }
 
-    const result = Array.isArray(data) ? data[0] : data;
-    console.info("管理者チェック結果", result);
-
-    if (!result) {
-      forbidden("Supabase側から管理者チェック結果が返されませんでした。", "ログインユーザーID: " + userId);
+    if (!profile) {
+      forbidden("管理者権限の確認に失敗しました。", "ログインユーザーのKiziminプロフィールが見つかりません。");
       return false;
     }
 
-    if (result.allowed !== true || result.role !== "admin") {
+    if (profile.account_status && profile.account_status !== "active") {
+      forbidden("このアカウントは管理画面を利用できません。", "アカウント状態: " + profile.account_status);
+      return false;
+    }
+
+    if (profile.role !== "admin") {
       forbidden(
         "管理画面へのアクセスが拒否されました。",
-        "現在のKiziminプロフィール権限: " + (result.role || "不明") + " / ログインユーザーID: " + userId
+        "現在のKiziminプロフィール権限: " + (profile.role || "不明") + " / ログインユーザーID: " + userId
       );
       return false;
     }
 
     $("admin-loading").classList.add("hidden");
     $("admin-app").classList.remove("hidden");
-    renderAudit(result.recent_role_changes || []);
+
+    // 監査情報は補助機能。ここが失敗しても管理画面自体は表示する。
+    try {
+      const { data, error } = await supabase.rpc("admin_access_check");
+      if (error) {
+        console.warn("管理者チェックRPCは利用できません。監査表示を省略します。", error);
+        renderAudit([]);
+      } else {
+        const result = Array.isArray(data) ? data[0] : data;
+        renderAudit(result?.recent_role_changes || []);
+      }
+    } catch (error) {
+      console.warn("管理者チェックRPC呼び出し失敗", error);
+      renderAudit([]);
+    }
+
     return true;
   }
 
