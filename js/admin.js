@@ -9,6 +9,8 @@
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
   }[c]));
   const date = v => v ? new Date(v).toLocaleString("ja-JP") : "-";
+  const statusLabel=v=>({admin:"管理者",user:"一般ユーザー",draft:"下書き",published:"公開中",archived:"アーカイブ",visible:"表示",hidden:"非表示",deleted:"削除済み",open:"未対応",reviewing:"確認中",resolved:"解決済み",dismissed:"却下",closed:"終了"})[v]||v;
+  const errorMessage=e=>{const m=String(e?.message||e||"");if(/permission denied|not authorized|row-level security/i.test(m))return "この操作を行う権限がありません。";if(/network|fetch failed/i.test(m))return "通信に失敗しました。";return "処理に失敗しました。しばらくしてからもう一度お試しください。";};
 
   function forbidden(message) {
     $("admin-loading").classList.add("hidden");
@@ -72,7 +74,7 @@
       .select("id,username,display_name,role,created_at").order("created_at", { ascending:false });
     if (error) throw error;
     $("users-body").innerHTML = data.length ? data.map(u => `
-      <tr><td>${esc(u.username || u.id)}</td><td>${esc(u.display_name || "-")}</td><td><span class="admin-badge">${esc(u.role)}</span></td><td>${esc(date(u.created_at))}</td>
+      <tr><td>${esc(u.username || u.id)}</td><td>${esc(u.display_name || "-")}</td><td><span class="admin-badge">${esc(statusLabel(u.role))}</span></td><td>${esc(date(u.created_at))}</td>
       <td><button type="button" class="user-role" data-id="${esc(u.id)}" data-role="${esc(u.role)}">${u.role === "admin" ? "userに変更" : "adminに変更"}</button></td></tr>`).join("") : '<tr><td colspan="5">ユーザーはいません。</td></tr>';
     document.querySelectorAll(".user-role").forEach(b => b.onclick = () => changeRole(b.dataset.id,b.dataset.role));
   }
@@ -81,7 +83,7 @@
     const next = current === "admin" ? "user" : "admin";
     if (!confirm("このユーザーを " + next + " に変更しますか？")) return;
     const { error } = await supabase.from("profiles").update({ role:next }).eq("id",id);
-    if (error) { alert("権限変更に失敗しました: " + error.message); return; }
+    if (error) { alert("権限変更に失敗しました: " + errorMessage(error)); return; }
     await loadUsers();
     const { data } = await supabase.rpc("admin_access_check");
     renderAudit((Array.isArray(data) ? data[0] : data)?.recent_role_changes || []);
@@ -92,13 +94,13 @@
       .select("id,title,status,created_at,profiles(username,display_name)").order("created_at",{ascending:false});
     if (error) throw error;
     $("articles-body").innerHTML = data.length ? data.map(a => `
-      <tr><td>${esc(a.title)}</td><td>${esc(a.profiles?.display_name || a.profiles?.username || "-")}</td><td><span class="admin-badge">${esc(a.status)}</span></td><td>${esc(date(a.created_at))}</td>
+      <tr><td>${esc(a.title)}</td><td>${esc(a.profiles?.display_name || a.profiles?.username || "-")}</td><td><span class="admin-badge">${esc(statusLabel(a.status))}</span></td><td>${esc(date(a.created_at))}</td>
       <td><select class="article-status" data-id="${esc(a.id)}">${["draft","published","archived"].map(s => `<option value="${s}" ${s===a.status?"selected":""}>${s}</option>`).join("")}</select></td></tr>`).join("") : '<tr><td colspan="5">記事はありません。</td></tr>';
     document.querySelectorAll(".article-status").forEach(s => s.onchange = () => updateArticle(s.dataset.id,s.value));
   }
   async function updateArticle(id,status) {
     const { error } = await supabase.from("articles").update({status}).eq("id",id);
-    if (error) { alert("記事状態の変更に失敗しました: " + error.message); await loadArticles(); }
+    if (error) { alert("記事状態の変更に失敗しました: " + errorMessage(error)); await loadArticles(); }
   }
 
   async function loadComments() {
@@ -106,13 +108,13 @@
       .select("id,content,status,created_at,profiles(username,display_name)").order("created_at",{ascending:false});
     if (error) throw error;
     $("comments-body").innerHTML = data.length ? data.map(c => `
-      <tr><td class="admin-log">${esc(c.content)}</td><td>${esc(c.profiles?.display_name || c.profiles?.username || "-")}</td><td><span class="admin-badge">${esc(c.status)}</span></td><td>${esc(date(c.created_at))}</td>
+      <tr><td class="admin-log">${esc(c.content)}</td><td>${esc(c.profiles?.display_name || c.profiles?.username || "-")}</td><td><span class="admin-badge">${esc(statusLabel(c.status))}</span></td><td>${esc(date(c.created_at))}</td>
       <td><select class="comment-status" data-id="${esc(c.id)}">${["visible","hidden","deleted"].map(s => `<option value="${s}" ${s===c.status?"selected":""}>${s}</option>`).join("")}</select></td></tr>`).join("") : '<tr><td colspan="5">コメントはありません。</td></tr>';
     document.querySelectorAll(".comment-status").forEach(s => s.onchange = () => updateComment(s.dataset.id,s.value));
   }
   async function updateComment(id,status) {
     const { error } = await supabase.from("comments").update({status}).eq("id",id);
-    if (error) { alert("コメント状態の変更に失敗しました: " + error.message); await loadComments(); }
+    if (error) { alert("コメント状態の変更に失敗しました: " + errorMessage(error)); await loadComments(); }
   }
 
   async function loadInquiries() {
@@ -127,7 +129,7 @@
     const status=document.querySelector('.inquiry-status[data-id="'+CSS.escape(id)+'"]').value;
     const note=document.querySelector('.inquiry-note[data-id="'+CSS.escape(id)+'"]').value;
     const {error}=await supabase.from("inquiries").update({status,admin_note:note,resolved_at:["resolved","closed"].includes(status)?new Date().toISOString():null}).eq("id",id);
-    if(error){alert("問い合わせの更新に失敗しました: "+error.message);return;}
+    if(error){alert("問い合わせの更新に失敗しました: "+errorMessage(error));return;}
     await loadInquiries(); await loadDashboard();
   }
 
@@ -136,7 +138,7 @@
       .select("id,article_id,comment_id,reason,status,admin_note,created_at").order("created_at",{ascending:false});
     if (error) throw error;
     $("reports-body").innerHTML = data.length ? data.map(r => `
-      <tr><td>${esc(r.article_id ? "記事: " + r.article_id : "コメント: " + r.comment_id)}</td><td class="admin-log">${esc(r.reason)}</td><td><span class="admin-badge">${esc(r.status)}</span></td><td>${esc(date(r.created_at))}</td>
+      <tr><td>${esc(r.article_id ? "記事: " + r.article_id : "コメント: " + r.comment_id)}</td><td class="admin-log">${esc(r.reason)}</td><td><span class="admin-badge">${esc(statusLabel(r.status))}</span></td><td>${esc(date(r.created_at))}</td>
       <td><select class="report-status" data-id="${esc(r.id)}">${["open","reviewing","resolved","dismissed"].map(s => `<option value="${s}" ${s===r.status?"selected":""}>${s}</option>`).join("")}</select><br>
       <textarea class="report-note" data-id="${esc(r.id)}" placeholder="管理者メモ">${esc(r.admin_note || "")}</textarea><br><button type="button" class="report-save" data-id="${esc(r.id)}">保存</button></td></tr>`).join("") : '<tr><td colspan="5">通報はありません。</td></tr>';
     document.querySelectorAll(".report-save").forEach(b => b.onclick = () => saveReport(b.dataset.id));
@@ -148,7 +150,7 @@
       status, admin_note:note,
       resolved_at: status === "resolved" || status === "dismissed" ? new Date().toISOString() : null
     }).eq("id",id);
-    if (error) { alert("通報の更新に失敗しました: " + error.message); return; }
+    if (error) { alert("通報の更新に失敗しました: " + errorMessage(error)); return; }
     await loadReports();
   }
 
@@ -158,7 +160,7 @@
       await Promise.all([loadDashboard(),loadUsers(),loadArticles(),loadComments(),loadReports(),loadInquiries()]);
     } catch (e) {
       console.error(e);
-      alert("管理データの読み込みに失敗しました: " + e.message);
+      alert("管理データの読み込みに失敗しました: " + errorMessage(e));
     }
   }
   init();
