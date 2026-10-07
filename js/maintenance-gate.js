@@ -4,22 +4,14 @@
  */
 (() => {
   "use strict";
-  const URL = "https://bimddapbkdakspjaemsm.supabase.co";
-  const KEY = "sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf";
-  const GATE = "kizimin-maintenance-gate";
-  const client = window.supabase?.createClient(URL, KEY);
-  if (!client) return;
+  const URL="https://bimddapbkdakspjaemsm.supabase.co";
+  const KEY="sb_publishable_JSnuaf48KMeQ4sodofBgA8_RGlhFHpf";
+  const GATE="kizimin-maintenance-gate";
+  const client=window.supabase?.createClient(URL,KEY);
+  if(!client)return;
 
-  async function check() {
-    try {
-      const { data, error } = await client.rpc("get_site_maintenance_state");
-      if (error || data !== true) return;
-      render();
-    } catch (_) {}
-  }
-
-  function render() {
-    if (document.getElementById(GATE) || !document.body) return;
+  function render(){
+    if(document.getElementById(GATE)||!document.body)return;
     const overlay=document.createElement("div");
     overlay.id=GATE;
     overlay.style.cssText="position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;padding:24px;background:#f5f7fb;color:#111827;font-family:inherit";
@@ -29,6 +21,16 @@
     document.documentElement.style.overflow="hidden";
   }
 
-  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",check);
+  async function check(){
+    try{
+      const controller=new AbortController();
+      const timer=setTimeout(()=>controller.abort(),4000);
+      const {data,error}=await client.rpc("get_site_maintenance_state",{signal:controller.signal});
+      clearTimeout(timer);
+      if(!error&&data===true)render();
+    }catch(_){}
+  }
+
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",check);
   else check();
 })();
