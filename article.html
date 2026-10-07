@@ -27,11 +27,37 @@ const renderArticleBody=v=>escapeHtml(v).split(/\r?\n/).map(line=>line.trim()===
 const id=new URLSearchParams(location.search).get("id");
 (async()=>{
  if(!id){article.innerHTML='<div class="empty-state">記事が指定されていません。</div>';return;}
- const {data,error}=await sb.from("articles").select("id,title,content,excerpt,published_at,created_at,profiles:author_id(display_name,username),categories:category_id(name)").eq("id",id).eq("status","published").single();
- if(error||!data){article.innerHTML='<div class="empty-state">記事が見つかりません。</div>';return;}
- const author=data.profiles?.display_name||data.profiles?.username||"ユーザー";
- article.innerHTML='<div class="article-meta">'+escapeHtml(new Intl.DateTimeFormat("ja-JP",{year:"numeric",month:"long",day:"numeric"}).format(new Date(data.published_at||data.created_at)))+' · '+escapeHtml(data.categories?.name||"その他")+'</div><h1>'+escapeHtml(data.title)+'</h1><p class="text-muted">'+escapeHtml(author)+'</p><hr><div style="white-space:pre-wrap;line-height:2">'+escapeHtml(data.content)+'</div>';
- document.title=data.title+" | Kizimin";
+ try {
+   // 記事本体と関連情報を分離して取得し、著者・カテゴリ側のRLSや
+   // リレーション解決エラーで記事本文まで表示不能にならないようにする。
+   const {data,error}=await sb.from("articles")
+     .select("id,title,content,excerpt,published_at,created_at,author_id,category_id")
+     .eq("id",id).eq("status","published").single();
+   if(error||!data){article.innerHTML='<div class="empty-state">記事が見つかりません。</div>';return;}
+
+   let author="ユーザー";
+   let category="その他";
+
+   if(data.author_id){
+     const {data:profile,error:profileError}=await sb.from("profiles")
+       .select("display_name,username").eq("id",data.author_id).maybeSingle();
+     if(profileError) console.warn("記事著者情報の取得に失敗しました:",profileError);
+     if(profile) author=profile.display_name||profile.username||author;
+   }
+
+   if(data.category_id){
+     const {data:categoryRow,error:categoryError}=await sb.from("categories")
+       .select("name").eq("id",data.category_id).maybeSingle();
+     if(categoryError) console.warn("記事カテゴリ情報の取得に失敗しました:",categoryError);
+     if(categoryRow?.name) category=categoryRow.name;
+   }
+
+   article.innerHTML='<div class="article-meta">'+escapeHtml(new Intl.DateTimeFormat("ja-JP",{year:"numeric",month:"long",day:"numeric"}).format(new Date(data.published_at||data.created_at)))+' · '+escapeHtml(category)+'</div><h1>'+escapeHtml(data.title)+'</h1><p class="text-muted">'+escapeHtml(author)+'</p><hr><div style="white-space:pre-wrap;line-height:2">'+escapeHtml(data.content)+'</div>';
+   document.title=data.title+" | Kizimin";
+ } catch(error) {
+   console.error("記事の読み込みに失敗しました:",error);
+   article.innerHTML='<div class="empty-state">記事を読み込めませんでした。通信状態または公開記事の権限を確認してください。</div>';
+ }
 })();
 </script>
 <script src="js/access.js"></script>
