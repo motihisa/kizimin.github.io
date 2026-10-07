@@ -87,21 +87,51 @@
     const list = $("#article-list");
     if (list) list.innerHTML = '<div class="loading">記事を読み込んでいます…</div>';
 
-    const { data, error } = await supabase
-      .from("articles")
-      .select("id,title,slug,excerpt,content,published_at,created_at,profiles:author_id(display_name,username),categories:category_id(name,slug)")
-      .eq("status", "published")
-      .order("published_at", { ascending: false, nullsFirst: false })
-      .limit(50);
+    try {
+      // 関連テーブルをPostgRESTの埋め込みSELECTで同時取得すると、
+      // 外部キーやRLSの状態によって一覧全体が失敗することがある。
+      // まず記事本体だけを取得し、著者・カテゴリは補助データとして別取得する。
+      const { data, error } = await supabase
+        .from("articles")
+        .select("id,title,slug,excerpt,content,published_at,created_at,author_id,category_id")
+        .eq("status", "published")
+        .order("published_at", { ascending: false, nullsFirst: false })
+        .limit(50);
 
-    if (error) {
-      console.error(error);
-      if (list) list.innerHTML = '<div class="empty-state">記事を読み込めませんでした。</div>';
-      return;
+      if (error) throw error;
+
+      const articles = data || [];
+      const authorIds = [...new Set(articles.map(a => a.author_id).filter(Boolean))];
+      const categoryIds = [...new Set(articles.map(a => a.category_id).filter(Boolean))];
+
+      const [profilesResult, categoriesResult] = await Promise.all([
+        authorIds.length
+          ? supabase.from("profiles").select("id,display_name,username").in("id", authorIds)
+          : Promise.resolve({ data: [], error: null }),
+        categoryIds.length
+          ? supabase.from("categories").select("id,name,slug").in("id", categoryIds)
+          : Promise.resolve({ data: [], error: null })
+      ]);
+
+      if (profilesResult.error) console.warn("記事著者情報の取得に失敗しました:", profilesResult.error);
+      if (categoriesResult.error) console.warn("記事カテゴリ情報の取得に失敗しました:", categoriesResult.error);
+
+      const profiles = new Map((profilesResult.data || []).map(p => [p.id, p]));
+      const categories = new Map((categoriesResult.data || []).map(c => [c.id, c]));
+
+      state.articles = articles.map(article => ({
+        ...article,
+        profiles: profiles.get(article.author_id) || null,
+        categories: categories.get(article.category_id) || null
+      }));
+
+      renderArticles();
+    } catch (error) {
+      console.error("記事一覧の読み込みに失敗しました:", error);
+      if (list) {
+        list.innerHTML = '<div class="empty-state">記事を読み込めませんでした。通信状態または公開記事の権限を確認してください。</div>';
+      }
     }
-
-    state.articles = data || [];
-    renderArticles();
   }
 
   function updateAccountUI() {
