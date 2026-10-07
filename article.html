@@ -46,7 +46,7 @@ async function loadComments(articleId){
       const p=profiles.get(c.author_id);
       const name=p?.display_name||p?.username||"ユーザー";
       const date=c.created_at?new Intl.DateTimeFormat("ja-JP",{year:"numeric",month:"long",day:"numeric",hour:"2-digit",minute:"2-digit"}).format(new Date(c.created_at)):"";
-      return '<div class="comment" style="padding:14px 0;border-bottom:1px solid #eee"><div style="font-weight:600">'+escapeHtml(name)+'</div><div class="text-muted" style="font-size:.85em">'+escapeHtml(date)+'</div><div style="margin-top:8px;white-space:pre-wrap">'+escapeHtml(c.content)+'</div></div>';
+      return '<div class="comment" style="padding:14px 0;border-bottom:1px solid #eee"><div style="font-weight:600"><a href="profile.html?id='+encodeURIComponent(c.author_id)+'">'+escapeHtml(name)+'</a></div><div class="text-muted" style="font-size:.85em">'+escapeHtml(date)+'</div><div style="margin-top:8px;white-space:pre-wrap">'+escapeHtml(c.content)+'</div></div>';
     }).join("");
   }catch(error){
     console.error("コメントの読み込みに失敗しました:",error);
@@ -78,7 +78,7 @@ async function loadComments(articleId){
       if(categoryError) console.warn("記事カテゴリ情報の取得に失敗しました:",categoryError);
       if(categoryRow?.name) category=categoryRow.name;
     }
-    article.innerHTML='<div class="article-meta">'+escapeHtml(new Intl.DateTimeFormat("ja-JP",{year:"numeric",month:"long",day:"numeric"}).format(new Date(data.published_at||data.created_at)))+' · '+escapeHtml(category)+'</div><h1>'+escapeHtml(data.title)+'</h1><p class="text-muted">'+escapeHtml(author)+'</p><hr><div style="white-space:pre-wrap;line-height:2">'+escapeHtml(data.content)+'</div>';
+    article.innerHTML='<div class="article-meta">'+escapeHtml(new Intl.DateTimeFormat("ja-JP",{year:"numeric",month:"long",day:"numeric"}).format(new Date(data.published_at||data.created_at)))+' · '+escapeHtml(category)+'</div><h1>'+escapeHtml(data.title)+'</h1><p class="text-muted"><a href="profile.html?id='+encodeURIComponent(data.author_id)+'">'+escapeHtml(author)+'</a></p><hr><div style="white-space:pre-wrap;line-height:2">'+escapeHtml(data.content)+'</div>';
     document.title=data.title+" | Kizimin";
     await loadComments(data.id);
   }catch(error){
