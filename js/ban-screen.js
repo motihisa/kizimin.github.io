@@ -6,11 +6,12 @@
   "use strict";
 
   const SUPABASE_URL = "https://bimddapbkdakspjaemsm.supabase.co";
-  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpbWRkYXBia2Rha3NwamFlbXNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzMTU0MTksImV4cCI6MjEwNjg5MTQxOX0.qezG4VOkyYfaa4DxClk1PSV7bZEne7WEbxj52m1l7iM";
+  const SUPABASE_KEY = "sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf";
   const STORAGE_KEY = "sb-bimddapbkdakspjaemsm-auth-token";
   const GATE_ID = "kizimin-account-gate";
   const REFRESH_MS = 60 * 1000;
-  const REQUEST_TIMEOUT_MS = 4000;
+  const REQUEST_TIMEOUT_MS = 8000;
+  const REQUEST_RETRIES = 1;
   const originalFetch = window.fetch.bind(window);
 
   let gate = null;
@@ -29,25 +30,47 @@
 
   async function getAccountState(token) {
     if (!token) return null;
-    try {
+
+    for (let attempt = 0; attempt <= REQUEST_RETRIES; attempt += 1) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-      const response = await originalFetch(SUPABASE_URL + "/rest/v1/rpc/get_my_account_state", {
-        method: "POST",
-        headers: {
-          apikey: SUPABASE_KEY,
-          Authorization: "Bearer " + token,
-          "Content-Type": "application/json"
-        },
-        body: "{}",
-        signal: controller.signal
-      });
-      clearTimeout(timeout);
-      if (!response.ok) return null;
-      return await response.json();
-    } catch (_) {
-      return null;
+
+      try {
+        const response = await originalFetch(SUPABASE_URL + "/rest/v1/rpc/get_my_account_state", {
+          method: "POST",
+          headers: {
+            apikey: SUPABASE_KEY,
+            Authorization: "Bearer " + token,
+            "Content-Type": "application/json"
+          },
+          body: "{}",
+          signal: controller.signal,
+          cache: "no-store"
+        });
+
+        if (!response.ok) {
+          // Authentication/permission errors should not be retried.
+          if (response.status === 401 || response.status === 403) return null;
+          if (attempt < REQUEST_RETRIES) {
+            await new Promise(resolve => setTimeout(resolve, 700));
+            continue;
+          }
+          return null;
+        }
+
+        return await response.json();
+      } catch (_) {
+        if (attempt < REQUEST_RETRIES) {
+          await new Promise(resolve => setTimeout(resolve, 700));
+          continue;
+        }
+        return null;
+      } finally {
+        clearTimeout(timeout);
+      }
     }
+
+    return null;
   }
 
   function setGate(next) {
