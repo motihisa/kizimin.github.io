@@ -111,6 +111,42 @@
     $("access-chart").innerHTML='<svg viewBox="0 0 '+w+' '+h+'" role="img" aria-label="過去30日間のアクセス数"><polyline points="'+poly+'" fill="none" stroke="currentColor" stroke-width="3"/>'+circles+labels+'</svg>';
   }
 
+  async function loadMaintenance() {
+    const { data, error } = await supabase.from("site_settings").select("maintenance_mode").eq("id", true).maybeSingle();
+    if (error) throw error;
+    const enabled = !!data?.maintenance_mode;
+    const toggle = $("maintenance-toggle");
+    if (toggle) toggle.checked = enabled;
+    const status = $("maintenance-status");
+    if (status) status.textContent = enabled
+      ? "現在オンです。一般ユーザーはサイトを利用できません。"
+      : "現在オフです。通常どおりサイトを利用できます。";
+  }
+
+  async function setMaintenance(enabled) {
+    const toggle = $("maintenance-toggle");
+    const status = $("maintenance-status");
+    if (toggle) toggle.disabled = true;
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const uid = sessionData?.session?.user?.id;
+      const { error } = await supabase.from("site_settings").update({
+        maintenance_mode: enabled,
+        updated_at: new Date().toISOString(),
+        updated_by: uid || null
+      }).eq("id", true);
+      if (error) throw error;
+      if (status) status.textContent = enabled
+        ? "メンテナンスモードをオンにしました。一般ユーザーは利用できません。"
+        : "メンテナンスモードをオフにしました。通常利用できます。";
+    } catch (e) {
+      if (toggle) toggle.checked = !enabled;
+      alert("メンテナンス設定の変更に失敗しました: " + errorMessage(e));
+    } finally {
+      if (toggle) toggle.disabled = false;
+    }
+  }
+
   async function loadDashboard() {
     const {data,error}=await supabase.rpc("admin_dashboard_stats");
     if(error) throw error;
@@ -327,6 +363,15 @@
       });
     });
 
+    $("maintenance-toggle")?.addEventListener("change", e => {
+      const enabled = e.target.checked;
+      if (!confirm(enabled ? "メンテナンスモードをオンにしますか？一般ユーザーは閲覧・投稿できなくなります。" : "メンテナンスモードをオフにしますか？")) {
+        e.target.checked = !enabled;
+        return;
+      }
+      setMaintenance(enabled);
+    });
+
     $("user-search")?.addEventListener("input", e => {
       const q = e.target.value.trim().toLowerCase();
       document.querySelectorAll("#users-body tr").forEach(row => {
@@ -359,7 +404,7 @@
     if (!(await checkAdmin())) return;
     setupAdminNavigation();
     try {
-      await Promise.all([loadDashboard(),loadUsers(),loadArticles(),loadComments(),loadReports(),loadInquiries()]);
+      await Promise.all([loadDashboard(),loadMaintenance(),loadUsers(),loadArticles(),loadComments(),loadReports(),loadInquiries()]);
     } catch (e) {
       console.error(e);
       alert("管理データの読み込みに失敗しました: " + errorMessage(e));
