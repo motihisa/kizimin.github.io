@@ -2,7 +2,7 @@
   "use strict";
 
   const SUPABASE_URL = "https://bimddapbkdakspjaemsm.supabase.co";
-  const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpbWRkYXBia2Rha3NwamFlbXNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzMTU0MTksImV4cCI6MjEwNjg5MTQxOX0.qezG4VOkyYfaa4DxClk1PSV7bZEne7WEbxj52m1l7iM";
+  const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzkxMzE1NDE5LCJleHAiOjIxMDY4OTE0MTl9.qezG4VOkyYfaa4DxClk1PSV7bZEne7WEbxj52m1l7iM";
 
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
   const state = { session: null, articles: [], categories: [], searchQuery: "" };
@@ -74,8 +74,10 @@
     list.innerHTML = rows.map((article) => {
       const category = article.categories?.name || "その他";
       const author = article.profiles?.display_name || article.profiles?.username || "ユーザー";
+      const authorTitle = article.profiles?.title || "";
       const authorLink = article.author_id ? 'profile.html?id='+encodeURIComponent(article.author_id) : '#';
-      return '<a class="article" href="article.html?id='+encodeURIComponent(article.id)+'"><div class="article-meta">'+escapeHtml(formatDate(article.published_at || article.created_at))+' · '+escapeHtml(category)+'</div><h3>'+escapeHtml(article.title)+'</h3><p>'+escapeHtml(article.excerpt || String(article.content || "").slice(0,140))+'</p><div class="author" role="link" tabindex="0" onclick="event.preventDefault();event.stopPropagation();location.href=\''+authorLink+'\';" onkeydown="if(event.key===\'Enter\'){event.preventDefault();event.stopPropagation();location.href=\''+authorLink+'\';}">'+escapeHtml(author)+'</div></a>';
+      const badge = authorTitle ? '<span class="official-badge">'+escapeHtml(authorTitle)+'</span>' : "";
+      return '<a class="article" href="article.html?id='+encodeURIComponent(article.id)+'"><div class="article-meta">'+escapeHtml(formatDate(article.published_at || article.created_at))+' · '+escapeHtml(category)+'</div><h3>'+escapeHtml(article.title)+'</h3><p>'+escapeHtml(article.excerpt || String(article.content || "").slice(0,140))+'</p><div class="author" role="link" tabindex="0" onclick="event.preventDefault();event.stopPropagation();location.href=\''+authorLink+'\';" onkeydown="if(event.key===\'Enter\'){event.preventDefault();event.stopPropagation();location.href=\''+authorLink+'\';}">'+escapeHtml(author)+badge+'</div></a>';
     }).join("");
   }
 
@@ -95,6 +97,11 @@
       const profiles = new Map((profilesResult.data || []).map(p=>[p.id,p]));
       const categories = new Map((categoriesResult.data || []).map(c=>[c.id,c]));
       state.articles = articles.map(article=>({...article,profiles:profiles.get(article.author_id)||null,categories:categories.get(article.category_id)||null}));
+      if (authorIds.length) {
+        const {data:titlesData}=await supabase.from("profile_titles").select("user_id,title").in("user_id",authorIds);
+        const titles=new Map((titlesData||[]).map(t=>[t.user_id,t.title]));
+        state.articles=state.articles.map(article=>({...article,profiles:article.profiles?{...article.profiles,title:titles.get(article.author_id)||""}:null}));
+      }
       renderArticles();
     } catch (error) {
       console.error("記事一覧の読み込みに失敗しました:", error);
