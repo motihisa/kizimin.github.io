@@ -212,13 +212,23 @@
   }
 
   async function changeRole(id, current) {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const currentUserId = sessionData?.session?.user?.id;
+    if (currentUserId === id && current === "admin") {
+      alert("自分自身の管理者権限は、この画面から解除できません。");
+      return;
+    }
     const next = current === "admin" ? "user" : "admin";
     if (!confirm("このユーザーを " + next + " に変更しますか？")) return;
     const { error } = await supabase.from("profiles").update({ role:next }).eq("id",id);
     if (error) { alert("権限変更に失敗しました: " + errorMessage(error)); return; }
     await loadUsers();
-    const { data } = await supabase.rpc("admin_access_check");
-    renderAudit((Array.isArray(data) ? data[0] : data)?.recent_role_changes || []);
+    try {
+      const { data } = await supabase.rpc("admin_access_check");
+      renderAudit((Array.isArray(data) ? data[0] : data)?.recent_role_changes || []);
+    } catch (e) {
+      console.warn("権限監査の再取得に失敗", e);
+    }
   }
 
   async function loadArticles() {
@@ -241,7 +251,7 @@
     if (error) throw error;
     $("comments-body").innerHTML = data.length ? data.map(c => `
       <tr><td class="admin-log">${esc(c.content)}</td><td>${esc(c.profiles?.display_name || c.profiles?.username || "-")}</td><td><span class="admin-badge">${esc(statusLabel(c.status))}</span></td><td>${esc(date(c.created_at))}</td>
-      <td><select class="comment-status" data-id="${esc(c.id)}">${["visible","hidden","deleted"].map(s => `<option value="${s}" ${s===c.status?"selected":""}>${s}</option>`).join("")}</select></td></tr>`).join("") : '<tr><td colspan="5">コメントはありません。</td></tr>';
+      <td><select class="comment-status" data-id="${esc(c.id)}">${["visible","hidden","deleted"].map(s => `<option value="${s}" ${s===c.status?"selected":""}>${statusLabel(s)}</option>`).join("")}</select></td></tr>`).join("") : '<tr><td colspan="5">コメントはありません。</td></tr>';
     document.querySelectorAll(".comment-status").forEach(s => s.onchange = () => updateComment(s.dataset.id,s.value));
   }
   async function updateComment(id,status) {
@@ -254,7 +264,7 @@
       .select("id,name,email,subject,message,status,admin_note,created_at,resolved_at")
       .order("created_at",{ascending:false});
     if(error) throw error;
-    $("inquiries-body").innerHTML=data.length?data.map(i=>'<tr><td>'+esc(i.subject)+'</td><td>'+esc(i.name||"-")+'<br>'+esc(i.email||"-")+'</td><td class="inquiry-message">'+esc(i.message)+'</td><td><select class="inquiry-status" data-id="'+esc(i.id)+'">'+["open","reviewing","resolved","closed"].map(s=>'<option value="'+s+'" '+(s===i.status?"selected":"")+''+statusLabel(s)+'</option>').join("")+'</select><br><textarea class="inquiry-note" data-id="'+esc(i.id)+'" placeholder="管理者メモ">'+esc(i.admin_note||"")+'</textarea><br><button type="button" class="inquiry-save" data-id="'+esc(i.id)+'">保存</button></td><td>'+esc(date(i.created_at))+'</td></tr>').join(""):'<tr><td colspan="6">問い合わせはありません。</td></tr>';
+    $("inquiries-body").innerHTML=data.length?data.map(i=>'<tr><td>'+esc(i.subject)+'</td><td>'+esc(i.name||"-")+'<br>'+esc(i.email||"-")+'</td><td class="inquiry-message">'+esc(i.message)+'</td><td><select class="inquiry-status" data-id="'+esc(i.id)+'">'+["open","reviewing","resolved","closed"].map(s=>'<option value="'+s+'" '+(s===i.status?"selected":"")+'>'+statusLabel(s)+'</option>').join("")+'</select><br><textarea class="inquiry-note" data-id="'+esc(i.id)+'" placeholder="管理者メモ">'+esc(i.admin_note||"")+'</textarea><br><button type="button" class="inquiry-save" data-id="'+esc(i.id)+'">保存</button></td><td>'+esc(date(i.created_at))+'</td></tr>').join(""):'<tr><td colspan="6">問い合わせはありません。</td></tr>';
     document.querySelectorAll(".inquiry-save").forEach(b=>b.onclick=()=>saveInquiry(b.dataset.id));
   }
   async function saveInquiry(id){
@@ -307,8 +317,13 @@
         $("admin-view-title").textContent = meta[0];
         $("admin-view-subtitle").textContent = meta[1];
         history.replaceState(null, "", "#" + key);
-        if (key === "users") loadUsers().catch(e => console.error(e));
-        if (key === "dashboard") loadDashboard().catch(e => console.error(e));
+        const loaders = {dashboard: loadDashboard, users: loadUsers, articles: loadArticles, comments: loadComments, reports: loadReports, inquiries: loadInquiries};
+        const loader = loaders[key];
+        if (loader) loader().catch(e => {
+          console.error("管理セクション読み込みエラー", key, e);
+          const body = document.querySelector("#view-" + key + " tbody");
+          if (body) body.innerHTML = '<tr><td colspan="10"><div class="admin-alert">データを読み込めませんでした。'+esc(errorMessage(e))+'</div></td></tr>';
+        });
       });
     });
 
