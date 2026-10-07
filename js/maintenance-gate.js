@@ -5,7 +5,7 @@
 (() => {
   "use strict";
   const URL="https://bimddapbkdakspjaemsm.supabase.co";
-  const KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpbWRkYXBia2Rha3NwamFlbXNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzMTU0MTksImV4cCI6MjEwNjg5MTQxOX0.qezG4VOkyYfaa4DxClk1PSV7bZEne7WEbxj52m1l7iM";
+  const KEY="sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf";
   const GATE="kizimin-maintenance-gate";
   const client=window.supabase?.createClient(URL,KEY);
   if(!client)return;
@@ -25,7 +25,7 @@
     try{
       const controller=new AbortController();
       const timer=setTimeout(()=>controller.abort(),4000);
-      const {data,error}=await client.rpc("get_site_maintenance_state",{signal:controller.signal});
+      const {data,error}=await client.rpc("get_site_maintenance_state",{}, {signal:controller.signal});
       clearTimeout(timer);
       if(!error&&data===true)render();
     }catch(_){}
