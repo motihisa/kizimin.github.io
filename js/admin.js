@@ -275,7 +275,7 @@
         </td>
         <td>${esc(date(u.created_at))}</td>
         <td class="admin-actions">
-          <button type="button" class="user-role" data-id="${esc(u.id)}" data-role="${esc(u.role)}">${u.role === "admin" ? "userに変更" : "adminに変更"}</button>
+          ${currentAdminRole === "admin" ? `<button type="button" class="user-role" data-id="${esc(u.id)}" data-role="${esc(u.role)}">${u.role === "admin" ? "userに変更" : "adminに変更"}</button>` : ""}
           <select class="account-status" data-id="${esc(u.id)}" data-current="${esc(u.account_status || "active")}" aria-label="アカウント状態">
             ${["active","banned","suspended"].map(s => '<option value="'+s+'" '+(s===(u.account_status||"active")?"selected":"")+'>'+statusLabel(s)+'</option>').join("")}
           </select>
