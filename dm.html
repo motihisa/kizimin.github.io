@@ -16,11 +16,11 @@
 </div></main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpbWRkYXBia2Rha3NwamFlbXNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzMTU0MTksImV4cCI6MjEwNjg5MTQxOX0.qezG4VOkyYfaa4DxClk1PSV7bZEne7WEbxj52m1l7iM");
+const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf");
 const $=id=>document.getElementById(id),esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 let uid=null,current=null,conversations=[];
 const fmt=v=>new Intl.DateTimeFormat("ja-JP",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}).format(new Date(v));
-async function api(action,extra={}){const {data,error}=await sb.functions.invoke("secure-content",{body:{action,...extra}});if(error)throw error;if(data?.error)throw new Error(data.error);return data}
+async function api(action,extra={}){const {data:sessionData,error:sessionError}=await sb.auth.getSession();if(sessionError||!sessionData?.session?.access_token)throw new Error("INVALID_SESSION");const {data,error}=await sb.functions.invoke("secure-content",{body:{action,...extra},headers:{Authorization:"Bearer "+sessionData.session.access_token}});if(error)throw error;if(data?.error)throw new Error(data.error);return data}
 async function init(){const {data,error}=await sb.auth.getSession();if(error||!data.session){location.href="login.html";return}uid=data.session.user.id;await loadConversations();const id=new URLSearchParams(location.search).get("conversation");if(id&&conversations.some(x=>x.id===id))selectConversation(id)}
 async function loadConversations(){const data=await api("dm_list");conversations=data.conversations||[];renderConversations()}
 function other(c){return c?.members?.find(m=>m.user_id!==uid)?.profiles||null}
@@ -29,7 +29,7 @@ async function searchUsers(q){if(!q){$("user-results").innerHTML="";return}const
 async function startConversation(target){const {data,error}=await sb.rpc("get_or_create_direct_conversation",{p_target_user:target});if(error){alert("DMを開始できませんでした。");return}await loadConversations();selectConversation(data)}
 async function selectConversation(id){current=id;renderConversations();const c=conversations.find(x=>x.id===id);const u=other(c);$("chat-head").textContent=u?.display_name||u?.username||"ユーザー";try{const data=await api("dm_messages",{conversation_id:id});$("messages").innerHTML=(data.messages||[]).map(m=>'<div class="msg '+(m.sender_id===uid?"mine":"")+'"><div>'+esc(m.content)+'</div><div class="msg-meta">'+esc(fmt(m.created_at))+'</div></div>').join("")||'<div class="empty-chat">まだメッセージはありません。</div>';$("message").disabled=false;$("send").disabled=false;const box=$("messages");box.scrollTop=box.scrollHeight}catch(e){$("messages").innerHTML='<div class="empty-chat">メッセージを読み込めませんでした。</div>';$("message").disabled=true;$("send").disabled=true}}
 $("user-search").addEventListener("input",e=>{clearTimeout(window._searchTimer);window._searchTimer=setTimeout(()=>searchUsers(e.target.value.trim()),180)});
-$("send").onclick=async()=>{const box=$("message"),content=box.value.trim();if(!current||!content)return;box.disabled=true;$("send").disabled=true;try{await api("dm_send",{conversation_id:current,content});box.value="";await selectConversation(current);await loadConversations()}catch(e){alert("送信できませんでした。")}finally{box.disabled=false;$("send").disabled=false;box.focus()}};
+$("send").onclick=async()=>{const box=$("message"),content=box.value.trim();if(!current||!content)return;box.disabled=true;$("send").disabled=true;try{await api("dm_send",{conversation_id:current,content});box.value="";await selectConversation(current);await loadConversations()}catch(e){alert("送信できませんでした。\n\n原因: "+(e?.message||"不明なエラー"))}finally{box.disabled=false;$("send").disabled=false;box.focus()}};
 $("message").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("send").click()}});
 init().catch(()=>{$("messages").innerHTML='<div class="empty-chat">DMを読み込めませんでした。</div>'});
 </script>
