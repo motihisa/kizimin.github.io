@@ -128,13 +128,9 @@
     const status = $("maintenance-status");
     if (toggle) toggle.disabled = true;
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const uid = sessionData?.session?.user?.id;
-      const { error } = await supabase.from("site_settings").update({
-        maintenance_mode: enabled,
-        updated_at: new Date().toISOString(),
-        updated_by: uid || null
-      }).eq("id", true);
+      const { error } = await supabase.rpc("admin_set_maintenance_mode", {
+        p_enabled: enabled
+      });
       if (error) throw error;
       if (status) status.textContent = enabled
         ? "メンテナンスモードをオンにしました。一般ユーザーは利用できません。"
