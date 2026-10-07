@@ -4,6 +4,7 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>記事 | Kizimin</title><link rel="stylesheet" href="css/style.css">
+  <style>.official-badge{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:999px;background:#111;color:#fff;font-size:.72em;font-weight:700;vertical-align:middle;letter-spacing:.02em}</style>
 </head>
 <body>
 <main class="container" style="max-width:820px;padding-top:48px;padding-bottom:90px">
@@ -20,11 +21,12 @@
 <script src="js/maintenance-gate.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpbWRkYXBia2Rha3NwamFlbXNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzMTU0MTksImV4cCI6MjEwNjg5MTQxOX0.qezG4VOkyYfaa4DxClk1PSV7bZEne7WEbxj52m1l7iM");
+const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzkxMzE1NDE5LCJleHAiOjIxMDY4OTE0MTl9.qezG4VOkyYfaa4DxClk1PSV7bZEne7WEbxj52m1l7iM");
 const escapeHtml=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 const id=new URLSearchParams(location.search).get("id");
 const article=document.getElementById("article");
 const commentsList=document.getElementById("comments-list");
+const badge=t=>t?'<span class="official-badge">'+escapeHtml(t)+'</span>':"";
 
 async function loadComments(articleId){
   if(!commentsList) return;
@@ -32,21 +34,21 @@ async function loadComments(articleId){
     const {data,error}=await sb.from("comments").select("id,author_id,content,created_at,parent_id").eq("article_id",articleId).order("created_at",{ascending:true});
     if(error) throw error;
     const comments=data||[];
-    if(!comments.length){
-      commentsList.innerHTML='<div class="empty-state">コメントはまだありません。</div>';
-      return;
-    }
+    if(!comments.length){commentsList.innerHTML='<div class="empty-state">コメントはまだありません。</div>';return;}
     const authorIds=[...new Set(comments.map(c=>c.author_id).filter(Boolean))];
     const {data:profilesData,error:profileError}=authorIds.length
       ? await sb.from("profiles").select("id,display_name,username").in("id",authorIds)
       : {data:[],error:null};
     if(profileError) console.warn("コメント投稿者情報の取得に失敗しました:",profileError);
     const profiles=new Map((profilesData||[]).map(p=>[p.id,p]));
+    const titleIds=authorIds;
+    const {data:titlesData}=titleIds.length?await sb.from("profile_titles").select("user_id,title").in("user_id",titleIds):{data:[]};
+    const titles=new Map((titlesData||[]).map(t=>[t.user_id,t.title]));
     commentsList.innerHTML=comments.map(c=>{
       const p=profiles.get(c.author_id);
       const name=p?.display_name||p?.username||"ユーザー";
       const date=c.created_at?new Intl.DateTimeFormat("ja-JP",{year:"numeric",month:"long",day:"numeric",hour:"2-digit",minute:"2-digit"}).format(new Date(c.created_at)):"";
-      return '<div class="comment" style="padding:14px 0;border-bottom:1px solid #eee"><div style="font-weight:600"><a href="profile.html?id='+encodeURIComponent(c.author_id)+'">'+escapeHtml(name)+'</a></div><div class="text-muted" style="font-size:.85em">'+escapeHtml(date)+'</div><div style="margin-top:8px;white-space:pre-wrap">'+escapeHtml(c.content)+'</div></div>';
+      return '<div class="comment" style="padding:14px 0;border-bottom:1px solid #eee"><div style="font-weight:600"><a href="profile.html?id='+encodeURIComponent(c.author_id)+'">'+escapeHtml(name)+'</a>'+badge(titles.get(c.author_id))+'</div><div class="text-muted" style="font-size:.85em">'+escapeHtml(date)+'</div><div style="margin-top:8px;white-space:pre-wrap">'+escapeHtml(c.content)+'</div></div>';
     }).join("");
   }catch(error){
     console.error("コメントの読み込みに失敗しました:",error);
@@ -55,30 +57,24 @@ async function loadComments(articleId){
 }
 
 (async()=>{
-  if(!id){
-    article.innerHTML='<div class="empty-state">記事が指定されていません。</div>';
-    commentsList.innerHTML='<div class="empty-state">記事が指定されていません。</div>';
-    return;
-  }
+  if(!id){article.innerHTML='<div class="empty-state">記事が指定されていません。</div>';commentsList.innerHTML='<div class="empty-state">記事が指定されていません。</div>';return;}
   try{
     const {data,error}=await sb.from("articles").select("id,title,content,excerpt,published_at,created_at,author_id,category_id").eq("id",id).eq("status","published").single();
-    if(error||!data){
-      article.innerHTML='<div class="empty-state">記事が見つかりません。</div>';
-      commentsList.innerHTML='<div class="empty-state">記事が見つかりません。</div>';
-      return;
-    }
-    let author="ユーザー",category="その他";
+    if(error||!data){article.innerHTML='<div class="empty-state">記事が見つかりません。</div>';commentsList.innerHTML='<div class="empty-state">記事が見つかりません。</div>';return;}
+    let author="ユーザー",category="その他",authorTitle="";
     if(data.author_id){
       const {data:profile,error:profileError}=await sb.from("profiles").select("display_name,username").eq("id",data.author_id).maybeSingle();
       if(profileError) console.warn("記事著者情報の取得に失敗しました:",profileError);
       if(profile) author=profile.display_name||profile.username||author;
+      const {data:titleRow}=await sb.from("profile_titles").select("title").eq("user_id",data.author_id).maybeSingle();
+      authorTitle=titleRow?.title||"";
     }
     if(data.category_id){
       const {data:categoryRow,error:categoryError}=await sb.from("categories").select("name").eq("id",data.category_id).maybeSingle();
       if(categoryError) console.warn("記事カテゴリ情報の取得に失敗しました:",categoryError);
       if(categoryRow?.name) category=categoryRow.name;
     }
-    article.innerHTML='<div class="article-meta">'+escapeHtml(new Intl.DateTimeFormat("ja-JP",{year:"numeric",month:"long",day:"numeric"}).format(new Date(data.published_at||data.created_at)))+' · '+escapeHtml(category)+'</div><h1>'+escapeHtml(data.title)+'</h1><p class="text-muted"><a href="profile.html?id='+encodeURIComponent(data.author_id)+'">'+escapeHtml(author)+'</a></p><hr><div style="white-space:pre-wrap;line-height:2">'+escapeHtml(data.content)+'</div>';
+    article.innerHTML='<div class="article-meta">'+escapeHtml(new Intl.DateTimeFormat("ja-JP",{year:"numeric",month:"long",day:"numeric"}).format(new Date(data.published_at||data.created_at)))+' · '+escapeHtml(category)+'</div><h1>'+escapeHtml(data.title)+'</h1><p class="text-muted"><a href="profile.html?id='+encodeURIComponent(data.author_id)+'">'+escapeHtml(author)+'</a>'+badge(authorTitle)+'</p><hr><div style="white-space:pre-wrap;line-height:2">'+escapeHtml(data.content)+'</div>';
     document.title=data.title+" | Kizimin";
     await loadComments(data.id);
   }catch(error){
