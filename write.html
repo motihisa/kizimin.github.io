@@ -146,7 +146,8 @@ function slugify(s){return s.toLowerCase().trim().replace(/[^a-z0-9ぁ-んァ-�
 function updateStats(){const n=$("content").value.length;$("count").textContent=n.toLocaleString()+"文字";$("reading").textContent="読了 約"+Math.max(0,Math.ceil(n/500))+"分";}
 function saveLocal(){localStorage.setItem(draftKey,JSON.stringify({title:$("title").value,excerpt:$("excerpt").value,content:$("content").value,category:$("category").value,visibility:document.querySelector("input[name=visibility]:checked")?.value||"public"}));$("saveState").textContent="自動保存済み";}
 function restoreLocal(){try{const d=JSON.parse(localStorage.getItem(draftKey)||"null");if(!d)return;if(!$("title").value&&!$("content").value){$("title").value=d.title||"";$("excerpt").value=d.excerpt||"";$("content").value=d.content||"";if(d.category)$("category").value=d.category;if(d.visibility){const el=document.querySelector("input[name=visibility][value="+d.visibility+"]");if(el){el.checked=true;toggleAllowedUsers();}}updateStats();$("saveState").textContent="下書きを復元しました";}}catch{}}
-function updatePreview(){ $("previewTitle").textContent=$("title").value||"無題の記事"; $("previewExcerpt").textContent=$("excerpt").value; $("previewExcerpt").style.display=$("excerpt").value?"block":"none"; $("previewBody").textContent=$("content").value||"本文はまだありません。"; }
+function renderPreviewBody(v){return String(v||"").split(/\r?\n/).map(line=>line.trim()==="---"?"<hr>":escapeHtml(line)).join("<br>");}
+function updatePreview(){ $("previewTitle").textContent=$("title").value||"無題の記事"; $("previewExcerpt").textContent=$("excerpt").value; $("previewExcerpt").style.display=$("excerpt").value?"block":"none"; $("previewBody").innerHTML=$("content").value?renderPreviewBody($("content").value):"本文はまだありません。"; }
 function renderAllowedUsers(){
   const q=($("allowedSearch").value||"").trim().toLowerCase();
   const selected=new Set(Array.from(document.querySelectorAll("#allowedList input:checked")).map(x=>x.value));
