@@ -8,7 +8,7 @@
 </head>
 <body>
 <main class="container" style="max-width:520px;padding-top:72px;padding-bottom:80px">
-<a class="logo" href="/">Kizimin</a>
+<a class="logo" href="index.html">Kizimin</a>
 
 <div class="card" style="padding:28px;margin-top:28px">
 <h1 id="title">ログイン</h1>
@@ -91,7 +91,7 @@ submit.addEventListener("click", async () => {
     if (!signupMode) {
       const { error } = await sb.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      location.href = "/";
+      location.href = "index.html";
       return;
     }
 
@@ -105,7 +105,7 @@ submit.addEventListener("click", async () => {
 
     if (data.session) {
       setMessage("アカウントを作成しました。");
-      location.href = "/";
+      location.href = "index.html";
     } else {
       setMessage("アカウントを作成しました。確認メールを確認してください。");
     }
@@ -119,7 +119,7 @@ submit.addEventListener("click", async () => {
 switchButton.addEventListener("click", () => setMode(!signupMode));
 
 sb.auth.getSession().then(({ data }) => {
-  if (data.session) location.href = "/";
+  if (data.session) location.href = "index.html";
 });
 </script>
 <script src="js/access.js"></script>
