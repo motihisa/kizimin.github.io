@@ -527,6 +527,36 @@
     } catch (e) { head.textContent = "DM管理"; box.innerHTML = '<div class="admin-alert">DMを読み込めませんでした。' + esc(errorMessage(e)) + '</div>'; }
   }
 
+  async function loadNotificationHistory() {
+    const body = $("notification-history-body");
+    if (!body) return;
+    body.innerHTML = '<tr><td colspan="6">読み込み中...</td></tr>';
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("sender_id,title,body,link_url,created_at,type,sender:sender_id(id,username,display_name)")
+      .eq("type", "broadcast")
+      .order("created_at", { ascending:false })
+      .limit(1000);
+    if (error) throw error;
+
+    const groups = new Map();
+    for (const n of data || []) {
+      const key = [n.created_at, n.sender_id, n.title, n.body, n.link_url || ""].join("\u0000");
+      if (!groups.has(key)) groups.set(key, { ...n, count: 0 });
+      groups.get(key).count += 1;
+    }
+    const rows = Array.from(groups.values());
+    body.innerHTML = rows.length ? rows.map(n => '<tr>' +
+      '<td>' + esc(date(n.created_at)) + '</td>' +
+      '<td>' + esc(n.sender?.display_name || n.sender?.username || n.sender_id || "-") +
+      (n.sender?.username ? '<div class="admin-muted">@' + esc(n.sender.username) + '</div>' : '') + '</td>' +
+      '<td>' + esc(n.title) + '</td>' +
+      '<td class="admin-log">' + esc(n.body) + '</td>' +
+      '<td>' + esc(n.link_url || "-") + '</td>' +
+      '<td>' + esc(n.count) + '人</td>' +
+      '</tr>').join("") : '<tr><td colspan="6">送信履歴はありません。</td></tr>';
+  }
+
   async function broadcastNotification() {
     const title = $("broadcast-title")?.value.trim();
     const body = $("broadcast-body")?.value.trim() || "";
@@ -563,7 +593,7 @@
     comments: ["コメント管理","コメントの表示状態を管理します。"],
     reports: ["通報管理","届いた通報を確認して対応します。"],
     inquiries: ["問い合わせ管理","問い合わせの対応状況を管理します。"],
-    notifications: ["通知送信","管理者から全ユーザーへサイト内通知を送信します。"],
+    notifications: ["通知送信","管理者から全ユーザーへサイト内通知を送信し、送信履歴と実行者を確認します。"],
     "dm-management": ["DM管理","DMの確認と削除を管理します。"]
   };
 
@@ -579,7 +609,7 @@
         $("admin-view-title").textContent = meta[0];
         $("admin-view-subtitle").textContent = meta[1];
         history.replaceState(null, "", "#" + key);
-        const loaders = {dashboard: loadDashboard, users: loadUsers, articles: loadArticles, comments: loadComments, reports: loadReports, inquiries: loadInquiries, "dm-management": loadDmManagement};
+        const loaders = {dashboard: loadDashboard, users: loadUsers, articles: loadArticles, comments: loadComments, reports: loadReports, inquiries: loadInquiries, notifications: loadNotificationHistory, "dm-management": loadDmManagement};
         const loader = loaders[key];
         if (loader) loader().catch(e => {
           console.error("管理セクション読み込みエラー", key, e);
