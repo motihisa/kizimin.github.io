@@ -15,23 +15,53 @@
   const statusLabel=v=>({admin:"管理者",user:"一般ユーザー",active:"有効",banned:"BAN",suspended:"一時停止",draft:"下書き",published:"公開中",archived:"アーカイブ",visible:"表示",hidden:"非表示",deleted:"削除済み",open:"未対応",reviewing:"確認中",resolved:"解決済み",dismissed:"却下",closed:"終了"})[v]||v;
   const errorMessage=e=>{const m=String(e?.message||e||"");if(/permission denied|not authorized|row-level security/i.test(m))return "この操作を行う権限がありません。";if(/network|fetch failed/i.test(m))return "通信に失敗しました。";return "処理に失敗しました。しばらくしてからもう一度お試しください。";};
 
-  function forbidden(message) {
+  function forbidden(message, detail = "") {
     $("admin-loading").classList.add("hidden");
     $("admin-app").classList.add("hidden");
     $("admin-forbidden").classList.remove("hidden");
     $("admin-forbidden-reason").textContent = message;
+    const detailEl = $("admin-forbidden-detail");
+    if (detailEl) detailEl.textContent = detail;
   }
 
   async function checkAdmin() {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError || !session) { location.href = "login.html"; return false; }
+
+    if (sessionError) {
+      console.error("管理者チェック: セッション取得失敗", sessionError);
+      forbidden("ログイン状態の確認に失敗しました。", "Supabaseセッションの取得に失敗しました。");
+      return false;
+    }
+
+    if (!session?.user?.id) {
+      location.href = "login.html";
+      return false;
+    }
+
+    const userId = session.user.id;
+    console.info("管理者チェック: ログイン中ユーザー", userId);
 
     const { data, error } = await supabase.rpc("admin_access_check");
-    if (error) { console.error(error); forbidden("Supabase側の管理者チェックに失敗しました。"); return false; }
+
+    if (error) {
+      console.error("管理者チェックRPCエラー", error);
+      forbidden("Supabase側の管理者チェックに失敗しました。", "admin_access_check の呼び出しに失敗しました。");
+      return false;
+    }
 
     const result = Array.isArray(data) ? data[0] : data;
-    if (!result || result.allowed !== true || result.role !== "admin") {
-      forbidden("現在のSupabaseプロフィールにadmin権限がありません。");
+    console.info("管理者チェック結果", result);
+
+    if (!result) {
+      forbidden("Supabase側から管理者チェック結果が返されませんでした。", "ログインユーザーID: " + userId);
+      return false;
+    }
+
+    if (result.allowed !== true || result.role !== "admin") {
+      forbidden(
+        "管理画面へのアクセスが拒否されました。",
+        "現在のKiziminプロフィール権限: " + (result.role || "不明") + " / ログインユーザーID: " + userId
+      );
       return false;
     }
 
