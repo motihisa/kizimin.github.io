@@ -486,13 +486,43 @@
     await loadReports();
   }
 
+  async function broadcastNotification() {
+    const title = $("broadcast-title")?.value.trim();
+    const body = $("broadcast-body")?.value.trim() || "";
+    const link = $("broadcast-link")?.value.trim() || null;
+    const result = $("broadcast-result");
+    const button = $("broadcast-send");
+    if (!title) { alert("通知タイトルを入力してください。"); return; }
+    if (!confirm("この通知を全ユーザーに送信しますか？")) return;
+    button.disabled = true;
+    result.textContent = "送信しています...";
+    try {
+      const { data, error } = await supabase.rpc("admin_broadcast_notification", {
+        p_title: title,
+        p_body: body,
+        p_link_url: link
+      });
+      if (error) throw error;
+      result.textContent = String(data || 0) + "人に通知を送信しました。";
+      $("broadcast-title").value = "";
+      $("broadcast-body").value = "";
+      $("broadcast-link").value = "";
+    } catch (e) {
+      result.textContent = "";
+      alert("通知の送信に失敗しました: " + errorMessage(e));
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   const viewMeta = {
     dashboard: ["ダッシュボード","Kiziminの状態をまとめて確認します。"],
     users: ["ユーザー管理","権限とアカウント状態を管理します。"],
     articles: ["記事管理","記事の公開状態を管理します。"],
     comments: ["コメント管理","コメントの表示状態を管理します。"],
     reports: ["通報管理","届いた通報を確認して対応します。"],
-    inquiries: ["問い合わせ管理","問い合わせの対応状況を管理します。"]
+    inquiries: ["問い合わせ管理","問い合わせの対応状況を管理します。"],
+    notifications: ["通知送信","管理者から全ユーザーへサイト内通知を送信します。"]
   };
 
   function setupAdminNavigation() {
@@ -516,6 +546,8 @@
         });
       });
     });
+
+    $("broadcast-send")?.addEventListener("click", broadcastNotification);
 
     $("maintenance-toggle")?.addEventListener("change", e => {
       const enabled = e.target.checked;
