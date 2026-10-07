@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DM | Kizimin</title><link rel="stylesheet" href="css/style.css">
+<style>
+.dm-wrap{max-width:1050px;margin:auto;padding:34px 20px 70px}.dm-grid{display:grid;grid-template-columns:300px 1fr;gap:18px;height:calc(100vh - 150px);min-height:560px}.dm-panel{border:1px solid var(--border);border-radius:16px;background:#fff;overflow:hidden}.dm-panel h2{font-size:17px;margin:0;padding:18px;border-bottom:1px solid var(--border)}.dm-search{padding:12px;border-bottom:1px solid var(--border)}.dm-search input{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:9px}.user-result,.conversation{display:block;width:100%;padding:12px 16px;border:0;border-bottom:1px solid #eee;background:#fff;text-align:left;cursor:pointer}.user-result:hover,.conversation:hover,.conversation.active{background:#f7f7f5}.user-name{font-weight:700}.user-handle{font-size:12px;color:#999}.chat{display:flex;flex-direction:column;height:100%}.chat-head{padding:18px;border-bottom:1px solid var(--border);font-weight:700}.messages{flex:1;overflow:auto;padding:20px;background:#fafafa}.msg{max-width:72%;margin:0 0 12px;padding:10px 13px;border-radius:13px;background:#fff;border:1px solid #e7e7e7;white-space:pre-wrap;overflow-wrap:anywhere}.msg.mine{margin-left:auto;background:#111;color:#fff;border-color:#111}.msg-meta{font-size:10px;opacity:.55;margin-top:3px}.send{display:flex;gap:8px;padding:12px;border-top:1px solid var(--border)}.send textarea{flex:1;resize:none;min-height:44px;max-height:120px;border:1px solid #ddd;border-radius:10px;padding:10px}.send button{border:0;border-radius:10px;padding:0 17px;background:#111;color:#fff;font-weight:700}.empty-chat{height:100%;display:grid;place-items:center;color:#999;padding:30px;text-align:center}.new-user-note{padding:12px;color:#999;font-size:12px}@media(max-width:760px){.dm-grid{grid-template-columns:1fr;height:auto;min-height:0}.dm-panel:first-child{max-height:360px}.chat{height:600px}.dm-wrap{padding:20px 12px 50px}}
+</style></head>
+<body>
+<header class="header"><div class="header-inner"><a class="logo" href="index.html">Kizimin</a><div class="header-actions"><a class="login" href="notifications.html">通知</a><a class="login" href="index.html">ホーム</a></div></div></header>
+<main class="dm-wrap"><h1>DM</h1><p class="text-muted">ユーザー同士で直接メッセージを送れます。</p>
+<div class="dm-grid">
+<section class="dm-panel"><h2>会話</h2><div class="dm-search"><input id="user-search" placeholder="ユーザーを検索"></div><div id="user-results"></div><div id="conversation-list"></div></section>
+<section class="dm-panel chat"><div id="chat-head" class="chat-head">会話を選択してください</div><div id="messages" class="messages"><div class="empty-chat">左から会話を選択するか、ユーザーを検索してDMを開始してください。</div></div><div class="send"><textarea id="message" maxlength="5000" placeholder="メッセージを入力" disabled></textarea><button id="send" disabled>送信</button></div></section>
+</div></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","sb_publishable_JSnuaf48KMeQ4sodofBgA8_RGlhFHpf");
+const $=id=>document.getElementById(id),esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+let uid=null,current=null,conversations=[],membersCache=new Map();
+const fmt=v=>new Intl.DateTimeFormat("ja-JP",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}).format(new Date(v));
+async function init(){const {data,error}=await sb.auth.getSession();if(error||!data.session){location.href="login.html";return}uid=data.session.user.id;await loadConversations();const id=new URLSearchParams(location.search).get("conversation");if(id&&conversations.some(x=>x.id===id))selectConversation(id)}
+async function loadConversations(){
+ const {data:mine,error}=await sb.from("conversation_members").select("conversation_id,last_read_at").eq("user_id",uid);
+ if(error)return;
+ conversations=[];
+ for(const m of mine||[]){const {data:c}=await sb.from("conversations").select("id,updated_at").eq("id",m.conversation_id).maybeSingle();if(!c)continue;
+  const {data:ms}=await sb.from("conversation_members").select("user_id,profiles:user_id(id,username,display_name)").eq("conversation_id",c.id);
+  conversations.push({...c,members:ms||[]});
+ }
+ conversations.sort((a,b)=>new Date(b.updated_at)-new Date(a.updated_at));renderConversations();
+}
+function other(c){return c.members.find(m=>m.user_id!==uid)?.profiles||null}
+function renderConversations(){$("conversation-list").innerHTML=conversations.length?conversations.map(c=>{const u=other(c);return '<button class="conversation '+(current===c.id?"active":"")+'" data-id="'+esc(c.id)+'"><div class="user-name">'+esc(u?.display_name||u?.username||"ユーザー")+'</div><div class="user-handle">'+esc(u?.username?"@"+u.username:"")+'</div></button>'}).join(""):'<div class="new-user-note">まだ会話はありません。</div>';document.querySelectorAll(".conversation").forEach(b=>b.onclick=()=>selectConversation(b.dataset.id))}
+async function searchUsers(q){if(!q){$("user-results").innerHTML="";return}const {data}=await sb.from("profiles").select("id,username,display_name").neq("id",uid).or("username.ilike.%"+q+"%,display_name.ilike.%"+q+"%").limit(8);$("user-results").innerHTML=(data||[]).map(u=>'<button class="user-result" data-user="'+esc(u.id)+'"><div class="user-name">'+esc(u.display_name||u.username||"ユーザー")+'</div><div class="user-handle">'+esc(u.username?"@"+u.username:"")+'</div></button>').join("");document.querySelectorAll(".user-result").forEach(b=>b.onclick=()=>startConversation(b.dataset.user))}
+async function startConversation(target){const {data,error}=await sb.rpc("get_or_create_direct_conversation",{p_target_user:target});if(error){alert("DMを開始できませんでした。");return}await loadConversations();selectConversation(data)}
+async function selectConversation(id){current=id;renderConversations();const c=conversations.find(x=>x.id===id);const u=other(c);$("chat-head").textContent=u?.display_name||u?.username||"ユーザー";const {data,error}=await sb.from("messages").select("id,sender_id,content,created_at,edited_at").eq("conversation_id",id).order("created_at",{ascending:true}).limit(200);if(error){$("messages").innerHTML='<div class="empty-chat">メッセージを読み込めませんでした。</div>';return}$("messages").innerHTML=(data||[]).map(m=>'<div class="msg '+(m.sender_id===uid?"mine":"")+'"><div>'+esc(m.content)+'</div><div class="msg-meta">'+esc(fmt(m.created_at))+'</div></div>').join("")||'<div class="empty-chat">まだメッセージはありません。</div>';$("message").disabled=false;$("send").disabled=false;const box=$("messages");box.scrollTop=box.scrollHeight;await sb.from("conversation_members").update({last_read_at:new Date().toISOString()}).eq("conversation_id",id).eq("user_id",uid)}
+$("user-search").addEventListener("input",e=>{clearTimeout(window._searchTimer);window._searchTimer=setTimeout(()=>searchUsers(e.target.value.trim()),180)});
+$("send").onclick=async()=>{const box=$("message"),content=box.value.trim();if(!current||!content)return;box.disabled=true;$("send").disabled=true;const {error}=await sb.from("messages").insert({conversation_id:current,sender_id:uid,content});if(error)alert("送信できませんでした。");else{box.value="";await selectConversation(current);await loadConversations()}box.disabled=false;$("send").disabled=false;box.focus()};
+$("message").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("send").click()}});
+init();
+</script>
+</body></html>
