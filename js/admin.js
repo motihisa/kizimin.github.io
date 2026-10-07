@@ -3,7 +3,8 @@
   const SUPABASE_URL = "https://bimddapbkdakspjaemsm.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf";
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
-  const $ = (id) => document.getElementById(id);\n  let currentAdminRole = "user";
+  const $ = (id) => document.getElementById(id);
+  let currentAdminRole = "user";
 
   const esc = (v) => String(v ?? "").replace(/[&<>"']/g, c => ({
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
@@ -12,7 +13,7 @@
   const date = v => v ? new Date(v).toLocaleString("ja-JP", JST_OPTIONS) : "-";
   const jstDateTimeValue = v => { if (!v) return ""; const d = new Date(v); if (Number.isNaN(d.getTime())) return ""; return new Intl.DateTimeFormat("sv-SE", { timeZone:"Asia/Tokyo", year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:false }).format(d).replace(" ", "T"); };
   const jstInputToIso = value => { if (!value) return null; const m = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/); if (!m) return null; return new Date(Date.UTC(Number(m[1]), Number(m[2])-1, Number(m[3]), Number(m[4])-9, Number(m[5]), Number(m[6] || 0))).toISOString(); };
-  const statusLabel=v=>({admin:"管理者",user:"一般ユーザー",active:"有効",banned:"BAN",suspended:"一時停止",draft:"下書き",published:"公開中",archived:"アーカイブ",visible:"表示",hidden:"非表示",deleted:"削除済み",open:"未対応",reviewing:"確認中",resolved:"解決済み",dismissed:"却下",closed:"終了"})[v]||v;
+  const statusLabel=v=>({admin:"管理者",moderator:"モデレーター",user:"一般ユーザー",active:"有効",banned:"BAN",suspended:"一時停止",draft:"下書き",published:"公開中",archived:"アーカイブ",visible:"表示",hidden:"非表示",deleted:"削除済み",open:"未対応",reviewing:"確認中",resolved:"解決済み",dismissed:"却下",closed:"終了"})[v]||v;
   const errorMessage=e=>{const m=String(e?.message||e||"");if(/permission denied|not authorized|row-level security/i.test(m))return "この操作を行う権限がありません。";if(/network|fetch failed/i.test(m))return "通信に失敗しました。";return "処理に失敗しました。しばらくしてからもう一度お試しください。";};
 
   function forbidden(message, detail = "") {
@@ -74,8 +75,11 @@
       return false;
     }
 
+    currentAdminRole = profile.role;
     $("admin-loading").classList.add("hidden");
     $("admin-app").classList.remove("hidden");
+    const maintenancePanel = $("maintenance-panel");
+    if (maintenancePanel) maintenancePanel.classList.toggle("hidden", currentAdminRole !== "admin");
 
     // 監査情報は補助機能。ここが失敗しても管理画面自体は表示する。
     try {
