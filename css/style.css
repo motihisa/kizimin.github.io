@@ -633,3 +633,9 @@ footer {
     animation-iteration-count: 1 !important;
   }
 }
+
+
+/* Admin-pinned homepage articles */
+.article-pinned{padding-left:14px;border-left:3px solid #111827;background:linear-gradient(90deg,#f7f7f8 0%,#fff 42%)}
+.pinned-label{display:inline-flex;align-items:center;margin:0 0 9px;padding:3px 9px;border:1px solid #e5e7eb;border-radius:999px;background:#f3f4f6;color:#111827;font-size:11px;font-weight:700;line-height:1.5}
+.article-pinned:hover{padding-left:18px}
