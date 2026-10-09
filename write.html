@@ -55,10 +55,45 @@
 @media(max-width:900px){.writer-grid{display:block}.writer-side{position:static;margin-top:18px}.writer-main{padding:32px 16px 70px}}
 @media(max-width:600px){.writer-top{padding:0 14px}.writer-top-left .save-state{display:none}.writer-main{padding-top:18px}.writer-title{padding:25px 22px 8px;font-size:32px}.writer-excerpt{padding:0 22px 20px}.writer-content{min-height:480px;padding:24px 22px 36px;font-size:17px}.preview{padding:26px 22px 38px}.preview-title{font-size:29px}.writer-actions .writer-btn{padding:0 11px}}
 /* Kizimin writer publishing controls */
-.publish-settings{display:grid;gap:10px}.publish-option{display:flex;align-items:flex-start;gap:10px;padding:11px;border:1px solid #e5e5e5;border-radius:11px;cursor:pointer}.publish-option:has(input:checked){border-color:#111;background:#fafafa}.publish-option input{margin-top:3px}.publish-option strong{display:block;font-size:13px}.publish-option small{display:block;color:#777;font-size:11px;margin-top:3px;line-height:1.5}.publish-note{padding:10px 11px;background:#f7f7f7;border-radius:9px;color:#666;font-size:11px;line-height:1.6}.category-status{font-size:11px;color:#777;margin-top:7px}.allowed-users{display:none;margin-top:12px}.allowed-users.active{display:block}.allowed-list{max-height:220px;overflow:auto;border:1px solid #eee;border-radius:10px}.allowed-user{display:flex!important;align-items:center;gap:9px;padding:9px 10px;margin:0!important;border-bottom:1px solid #f1f1f1}.allowed-user input{width:auto!important;height:auto!important}</style>
+.publish-settings{display:grid;gap:10px}.publish-option{display:flex;align-items:flex-start;gap:10px;padding:11px;border:1px solid #e5e5e5;border-radius:11px;cursor:pointer}.publish-option:has(input:checked){border-color:#111;background:#fafafa}.publish-option input{margin-top:3px}.publish-option strong{display:block;font-size:13px}.publish-option small{display:block;color:#777;font-size:11px;margin-top:3px;line-height:1.5}.publish-note{padding:10px 11px;background:#f7f7f7;border-radius:9px;color:#666;font-size:11px;line-height:1.6}.category-status{font-size:11px;color:#777;margin-top:7px}.allowed-users{display:none;margin-top:12px}.allowed-users.active{display:block}.allowed-list{max-height:220px;overflow:auto;border:1px solid #eee;border-radius:10px}.allowed-user{display:flex!important;align-items:center;gap:9px;padding:9px 10px;margin:0!important;border-bottom:1px solid #f1f1f1}.allowed-user input{width:auto!important;height:auto!important}
+/* Writer Studio refresh: clearer hierarchy, live preview, focus mode */
+.writer-shell{background:radial-gradient(ellipse at 12% 0%,rgba(117,99,255,.09),transparent 34rem),#f7f7fc;color:#252341}
+.writer-top{height:70px;padding:0 max(18px,calc((100vw - 1180px)/2));border-bottom-color:#e7e5f5;background:rgba(255,255,255,.86);box-shadow:0 4px 24px rgba(42,35,100,.04)}
+.writer-top .logo{display:flex;align-items:center;gap:9px;font-weight:900;letter-spacing:-.06em;color:#29264a}
+.writer-top .logo:before{content:"K";display:grid;place-items:center;width:32px;height:32px;border-radius:11px;background:linear-gradient(145deg,#9286ff,#5949dd);color:#fff;box-shadow:0 5px 13px #6558e833}
+.back-link{color:#777592}.save-state{padding:5px 9px;border-radius:999px;background:#f1efff;color:#6a5ce1;font-weight:700}
+.writer-btn{border-color:#e4e2f2;border-radius:12px;color:#555371;font-weight:750;transition:transform .18s,box-shadow .18s,background .18s}
+.writer-btn:hover{background:#f5f3ff;box-shadow:0 4px 12px #39306b0d;transform:translateY(-1px)}
+.writer-btn.primary{border-color:#6558e8;background:linear-gradient(135deg,#8175fa,#594add);box-shadow:0 7px 16px #6558e82b;color:#fff}
+.writer-btn.primary:hover{background:linear-gradient(135deg,#7164f0,#4e41ce)}
+.writer-main{width:min(100%,1180px);padding-top:34px}
+.writer-grid{grid-template-columns:minmax(0,790px) 280px;gap:26px}
+.writer-editor{border:1px solid #e8e6f5;border-radius:24px;box-shadow:0 18px 50px rgba(43,37,99,.07)}
+.writer-title{padding:38px 42px 13px;color:#282542;font-size:clamp(32px,4vw,46px);letter-spacing:-.055em}
+.writer-excerpt{padding:0 42px 25px;color:#77748f}
+.editor-bar{position:sticky;top:70px;z-index:10;gap:6px;padding:11px 18px;border-top:1px solid #f0eef8;border-bottom:1px solid #ebe9f5;background:rgba(255,255,255,.94);backdrop-filter:blur(12px)}
+.tool{border:1px solid transparent;background:#f5f4fc;color:#5d5980;border-radius:10px}.tool:hover{border-color:#d8d3ff;background:#eeebff;color:#584bd9}
+.writer-content{min-height:600px;padding:32px 42px 48px;font-size:17px;line-height:1.95;color:#34314f;resize:vertical}
+.writer-content:focus{outline:none;background:linear-gradient(180deg,#fff,#fefeff)}
+.editor-footer{padding:13px 22px;border-top-color:#eeecf6;background:#fcfbff;color:#8986a3}
+.writer-side{top:88px}.side-panel{border-color:#e8e6f5;border-radius:19px;box-shadow:0 6px 22px rgba(42,35,100,.035)}.side-panel h2{color:#302d50;font-size:14px;font-weight:850}
+.side-panel input:focus,.side-panel select:focus{border-color:#b9b1ff;box-shadow:0 0 0 4px #6558e814}
+.publish-option:has(input:checked){border-color:#aaa0ff;background:#f5f3ff}
+.markdown-guide{margin:0 20px 16px;border-color:#e9e6fb;background:linear-gradient(135deg,#faf9ff,#f6f4ff);color:#666282}
+.markdown-guide-title{color:#4e45b6}
+.preview{padding:40px 44px 60px;color:#383451;white-space:normal}
+.preview-title{color:#292542;font-size:clamp(30px,4vw,42px);font-weight:850;letter-spacing:-.045em}
+.preview-body{overflow-wrap:anywhere;line-height:1.95}.preview-body h1,.preview-body h2,.preview-body h3{line-height:1.35;color:#292542;margin:1.5em 0 .6em}.preview-body h1{font-size:1.8em}.preview-body h2{font-size:1.45em}.preview-body h3{font-size:1.2em}.preview-body blockquote{margin:1.1em 0;padding:12px 18px;border-left:4px solid #8b7fff;border-radius:0 12px 12px 0;background:#f6f4ff;color:#666080}.preview-body code{padding:2px 6px;border-radius:6px;background:#f0eef9;color:#5a4cbd;font-family:ui-monospace,monospace;font-size:.9em}.preview-body hr{border:0;border-top:1px solid #e6e2f7;margin:2em 0}.preview-body li{margin:.25em 0}.preview-body ul{padding-left:1.5em}
+.writer-grid.split-mode{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}.split-mode .writer-editor{min-width:0}.split-mode .writer-title{padding:28px 28px 10px;font-size:32px}.split-mode .writer-excerpt{padding:0 28px 20px}.split-mode .writer-content{min-height:480px;padding:24px 28px;font-size:15px}.split-mode .preview{display:block!important;min-height:480px;padding:28px;overflow-wrap:anywhere}.split-mode .editor-hidden{display:block!important}.split-mode .writer-side{grid-column:1/-1;position:static;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.split-mode .side-panel{margin:0}.writer-shell.focus-mode .writer-side{display:none}.writer-shell.focus-mode .writer-grid{grid-template-columns:minmax(0,820px);justify-content:center}.writer-shell.focus-mode .writer-main{width:min(100%,900px)}.writer-shell.focus-mode .writer-content{min-height:65vh}
+.studio-tools{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 14px}.studio-chip{border:1px solid #e6e3f5;background:#fff;border-radius:999px;padding:8px 12px;color:#686388;font-size:12px;font-weight:750}.studio-chip:hover{background:#f2efff;border-color:#c9c1ff;color:#594bd6}.studio-kicker{margin:0 0 12px 2px;color:#8b87aa;font-size:10px;font-weight:900;letter-spacing:.16em}.writer-progress{height:3px;background:#eeecfb;position:relative;overflow:hidden}.writer-progress-fill{height:100%;width:0;background:linear-gradient(90deg,#a69cff,#5d4bdd);transition:width .2s}
+@media(max-width:900px){.writer-grid,.writer-grid.split-mode{display:grid;grid-template-columns:minmax(0,1fr)}.writer-grid.split-mode .writer-side{grid-template-columns:1fr}.split-mode .preview{border-top:1px solid #efedf8}.writer-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.writer-side .side-panel{margin:0}}
+@media(max-width:600px){.writer-top{height:60px;padding:0 12px}.writer-top .logo{font-size:18px}.writer-top .logo:before{width:27px;height:27px;border-radius:9px}.writer-top-left,.writer-top-right{gap:7px}.back-link{font-size:12px}.writer-actions{gap:5px}.writer-btn{height:35px;padding:0 10px;font-size:12px}.writer-main{padding:18px 10px 48px}.writer-grid{gap:14px}.writer-editor{border-radius:18px}.writer-title{padding:25px 22px 10px;font-size:31px}.writer-excerpt{padding:0 22px 20px;font-size:14px}.editor-bar{top:60px;padding:8px 10px}.tool{min-width:32px;height:32px}.writer-content{min-height:440px;padding:24px 22px 34px;font-size:16px}.markdown-guide{margin:0 10px 12px}.writer-side{grid-template-columns:1fr}.split-mode .writer-title{padding:24px 22px 8px}.split-mode .writer-excerpt{padding:0 22px 18px}.split-mode .writer-content,.split-mode .preview{padding:22px;min-height:380px}.preview{padding:26px 22px 38px}.writer-shell.focus-mode .writer-content{min-height:70vh}}
+@media(prefers-reduced-motion:reduce){.writer-btn,.writer-progress-fill{transition:none!important}}
+
+</style>
 </head>
 <body>
-<div class="writer-shell">
+<div class="writer-shell" id="writerShell">
 <header class="writer-top">
   <div class="writer-top-left">
     <a class="logo" href="index.html">Kizimin</a>
@@ -74,8 +109,21 @@
   </div>
 </header>
 
+<div class="writer-progress" aria-hidden="true"><div class="writer-progress-fill" id="writingProgress"></div></div>
 <main class="writer-main">
-  <div class="writer-grid">
+  <p class="studio-kicker">KIZIMIN WRITER STUDIO / YOUR IDEAS, YOUR SPACE</p>
+  <div class="studio-tools" aria-label="執筆モード">
+    <button id="splitBtn" class="studio-chip" type="button">◫ 分割プレビュー</button>
+    <button id="focusBtn" class="studio-chip" type="button">◎ 集中モード</button>
+    <button id="templateBtn" class="studio-chip" type="button">✦ 書き出しテンプレート</button>
+  </div>
+  <div id="templatePanel" class="studio-tools" hidden>
+    <button class="studio-chip" type="button" data-template="diary">日常・日記</button>
+    <button class="studio-chip" type="button" data-template="review">レビュー</button>
+    <button class="studio-chip" type="button" data-template="guide">解説・ガイド</button>
+    <button class="studio-chip" type="button" data-template="story">創作・物語</button>
+  </div>
+  <div class="writer-grid" id="writerGrid">
     <section class="writer-editor">
       <input id="title" class="writer-title" maxlength="160" placeholder="タイトルを入力…" autocomplete="off">
       <input id="excerpt" class="writer-excerpt" maxlength="300" placeholder="記事の概要をひとこと。読む前の人に伝える文章です。" autocomplete="off">
@@ -171,8 +219,8 @@ const draftKey="kizimin:writer:draft";
 const friendlyError=e=>{const m=String(e?.message||"");if(/duplicate key|unique/i.test(m))return "同じ記事の識別情報がすでに使用されています。";if(/permission denied|row-level security/i.test(m))return "記事を保存する権限がありません。";return "記事の保存に失敗しました。しばらくしてからもう一度お試しください。";};
 
 function slugify(s){return s.toLowerCase().trim().replace(/[^a-z0-9ぁ-んァ-ン一-龥]+/g,"-").replace(/^-+|-+$/g,"")+"-"+Date.now();}
-function updateStats(){const n=$("content").value.length;$("count").textContent=n.toLocaleString()+"文字";$("reading").textContent="読了 約"+Math.max(0,Math.ceil(n/500))+"分";}
-function saveLocal(){localStorage.setItem(draftKey,JSON.stringify({title:$("title").value,excerpt:$("excerpt").value,content:$("content").value,category:$("category").value,visibility:document.querySelector("input[name=visibility]:checked")?.value||"public"}));$("saveState").textContent="自動保存済み";}
+function updateStats(){const text=$("content").value;const n=text.length;const words=text.trim()?text.trim().split(/\s+/).length:0;$("count").textContent=n.toLocaleString()+"文字";$("reading").textContent="読了 約"+Math.max(0,Math.ceil(n/500))+"分";const p=$("writingProgress");if(p)p.style.width=Math.min(100,n/50000*100)+"%";const shell=$("writerShell");if(shell)shell.dataset.words=words;}
+function saveLocal(){try{localStorage.setItem(draftKey,JSON.stringify({title:$("title").value,excerpt:$("excerpt").value,content:$("content").value,category:$("category").value,visibility:document.querySelector("input[name=visibility]:checked")?.value||"public"}));$("saveState").textContent="✓ 自動保存済み";}catch(e){$("saveState").textContent="端末への保存ができません";}}
 function restoreLocal(){try{const d=JSON.parse(localStorage.getItem(draftKey)||"null");if(!d)return;if(!$("title").value&&!$("content").value){$("title").value=d.title||"";$("excerpt").value=d.excerpt||"";$("content").value=d.content||"";if(d.category)$("category").value=d.category;if(d.visibility){const el=document.querySelector("input[name=visibility][value="+d.visibility+"]");if(el){el.checked=true;toggleAllowedUsers();}}updateStats();$("saveState").textContent="下書きを復元しました";}}catch{}}
 function escapeHtml(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
 function renderMarkdown(v){
@@ -209,10 +257,19 @@ const {data:article,error}=await sb.from("articles").insert({author_id:uid,categ
 (async()=>{const {data}=await sb.auth.getSession();if(!data.session){location.href="login.html";return;}uid=data.session.user.id;const fallback=[{id:"060ac597-ebc7-433c-ac01-404818cf7186",name:"勉強"},{id:"18cb10b2-e649-4852-ad90-b8f3b9fcfb80",name:"その他"},{id:"7a13ab2f-0985-4394-999c-dbae4016e031",name:"創作"},{id:"7c58b262-1ef0-4338-b0b7-c347d3b63b42",name:"ゲーム"},{id:"ccc5fab9-73d0-4a42-8a5a-73b2048967e6",name:"テクノロジー"},{id:"de0fefbf-a0fc-4a4c-b603-cf8e06e3d63a",name:"日常"}];const {data:c,error:ce}=await sb.from("categories").select("id,name").order("name");const categories=ce||!c?.length?fallback:c;$("category").innerHTML='<option value="">カテゴリを選択</option>'+categories.map(x=>'<option value="'+x.id+'">'+x.name+'</option>').join("");$("categoryStatus").textContent=categories.length+"カテゴリから選択できます";restoreLocal();updateStats();})();
 $("content").addEventListener("input",()=>{updateStats();clearTimeout(window.__saveTimer);window.__saveTimer=setTimeout(saveLocal,500);});
 ["title","excerpt","category"].forEach(id=>$(id).addEventListener("input",saveLocal));
-$("previewBtn").onclick=()=>{const active=$("preview").classList.toggle("active");$("content").classList.toggle("editor-hidden",active);$("editorWrap").classList.toggle("previewing",active);$("previewBtn").textContent=active?"編集に戻る":"プレビュー";if(active)updatePreview();};
+$("previewBtn").onclick=()=>{const active=$("preview").classList.toggle("active");$("content").classList.toggle("editor-hidden",active);$("editorWrap").classList.toggle("previewing",active);$("previewBtn").textContent=active?"編集に戻る":"プレビュー";$("writerGrid").classList.remove("split-mode");$("splitBtn").textContent="◫ 分割プレビュー";if(active)updatePreview();};
 $("clearBtn").onclick=()=>{if(confirm("本文を消去しますか？")){$("content").value="";updateStats();saveLocal();}};
 document.querySelectorAll(".tool[data-insert]").forEach(btn=>btn.addEventListener("click",()=>{const ta=$("content"),v=btn.dataset.insert,caret=ta.selectionStart;ta.focus();ta.setRangeText(v,caret,ta.selectionEnd,"end");if(btn.dataset.caret==="-1")ta.selectionStart=ta.selectionEnd=caret+1;updateStats();saveLocal();}));
 document.querySelectorAll('input[name="visibility"]').forEach(el=>el.addEventListener("change",()=>{toggleAllowedUsers();saveLocal();}));$("allowedSearch").addEventListener("input",renderAllowedUsers);$("allowedList").addEventListener("change",()=>{renderAllowedUsers();saveLocal();});
+
+$("splitBtn").addEventListener("click",()=>{const grid=$("writerGrid");const active=grid.classList.toggle("split-mode");$("preview").classList.add("active");$("content").classList.remove("editor-hidden");$("previewBtn").textContent="プレビュー";$("splitBtn").textContent=active?"▣ 分割を終了":"◫ 分割プレビュー";updatePreview();});
+$("focusBtn").addEventListener("click",()=>{const active=$("writerShell").classList.toggle("focus-mode");$("focusBtn").textContent=active?"◎ 集中モードを終了":"◎ 集中モード";});
+$("templateBtn").addEventListener("click",()=>{const panel=$("templatePanel");panel.hidden=!panel.hidden;});
+const templates={diary:"# 今日のこと\n\n## きっかけ\n\n## 印象に残ったこと\n\n## 思ったこと\n",review:"# 作品・サービス名\n\n## どんな内容？\n\n## 良かったところ\n\n## 気になったところ\n\n## まとめ\n",guide:"# この記事でわかること\n\n## はじめに\n\n## 手順・ポイント\n\n1. \n2. \n3. \n\n## まとめ\n",story:"# タイトル\n\n## 第一章\n\n場面や登場人物を書き始めよう。\n"};
+document.querySelectorAll("[data-template]").forEach(btn=>btn.addEventListener("click",()=>{const ta=$("content");if(ta.value.trim()&&!confirm("テンプレートを本文の末尾に追加しますか？"))return;ta.value+=(ta.value.trim()?"\n\n":"")+templates[btn.dataset.template];updateStats();saveLocal();updatePreview();ta.focus();}));
+["title","excerpt","content"].forEach(id=>$(id).addEventListener("input",()=>{if($("preview").classList.contains("active")||$("writerGrid").classList.contains("split-mode"))updatePreview();}));
+document.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="s"){e.preventDefault();saveLocal();}if((e.ctrlKey||e.metaKey)&&e.shiftKey&&e.key.toLowerCase()==="p"){e.preventDefault();$("splitBtn").click();}});
+
 $("publish").onclick=()=>save();
 </script>
 <script src="js/access.js"></script>
