@@ -2,7 +2,7 @@
   "use strict";
 
   const SUPABASE_URL = "https://bimddapbkdakspjaemsm.supabase.co";
-  const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzkxMzE1NDE5LCJleHAiOjIxMDY4OTE0MTl9.qezG4VOkyYfaa4DxClk1PSV7bZEne7WEbxj52m1l7iM";
+  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf";
 
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
   const state = { session: null, articles: [], categories: [], searchQuery: "" };
