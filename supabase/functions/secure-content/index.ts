@@ -250,7 +250,7 @@ async function main(req: Request) {
     if (!content || content.length > 5000) return json({error:"INVALID_CONTENT"},400);
     const encrypted = await encryptText(key,content);
     const { data, error } = await admin.from("comments").insert({
-      article_id:articleId, author_id:userId, parent_id:parentId, content:"",
+      article_id:articleId, author_id:userId, parent_id:parentId, content:"[暗号化コメント]",
       content_encrypted:encrypted.ciphertext, content_iv:encrypted.iv, status:"visible"
     }).select("id,article_id,author_id,parent_id,status,created_at").single();
     if (error) return json({error:error.message},500);
