@@ -416,27 +416,66 @@
     if (!body) return;
     body.innerHTML = '<tr><td colspan="5"><div class="admin-muted">記事を読み込んでいます...</div></td></tr>';
     try {
-      const { data, error } = await supabase.rpc("admin_list_articles");
+      const { data, error } = await supabase.from("articles")
+        .select("id,title,status,created_at,author_id,is_pinned")
+        .order("is_pinned", { ascending:false })
+        .order("created_at", { ascending:false });
       if (error) throw error;
-      const rows = Array.isArray(data) ? data : [];
-      body.innerHTML = rows.length ? rows.map(a => `
+      const rows = data || [];
+      const authorIds = [...new Set(rows.map(a => a.author_id).filter(Boolean))];
+      const { data: profiles, error: profilesError } = authorIds.length
+        ? await supabase.from("profiles").select("id,display_name,username").in("id", authorIds)
+        : { data:[], error:null };
+      if (profilesError) throw profilesError;
+      const authors = new Map((profiles || []).map(p => [p.id, p]));
+      body.innerHTML = rows.length ? rows.map(a => {
+        const author = authors.get(a.author_id);
+        return `
         <tr>
-          <td>${esc(a.title)}</td>
-          <td>${esc(a.author_name || "-")}</td>
+          <td>${esc(a.title)} ${a.is_pinned ? '<span class="admin-badge">📌 ホーム固定中</span>' : ''}</td>
+          <td>${esc(author?.display_name || author?.username || "-")}</td>
           <td><span class="admin-badge">${esc(statusLabel(a.status))}</span></td>
           <td>${esc(date(a.created_at))}</td>
           <td>
             <select class="article-status" data-id="${esc(a.id)}" aria-label="記事状態">
               ${["draft","published","archived"].map(s => `<option value="${s}" ${s===a.status?"selected":""}>${statusLabel(s)}</option>`).join("")}
             </select>
+            ${currentAdminRole === "admin" ? `<button type="button" class="article-pin admin-btn" data-id="${esc(a.id)}" data-pinned="${a.is_pinned ? "true" : "false"}">${a.is_pinned ? "固定を解除" : "ホーム上部に固定"}</button>` : '<span class="admin-muted">固定操作は管理者のみ</span>'}
           </td>
-        </tr>`).join("") : '<tr><td colspan="5">記事はありません。</td></tr>';
+        </tr>`;
+      }).join("") : '<tr><td colspan="5">記事はありません。</td></tr>';
       document.querySelectorAll(".article-status").forEach(s => {
         s.onchange = () => updateArticle(s.dataset.id, s.value, s);
+      });
+      document.querySelectorAll(".article-pin").forEach(b => {
+        b.onclick = () => updateArticlePin(b.dataset.id, b.dataset.pinned === "true", b);
       });
     } catch (error) {
       console.error("記事一覧の読み込みに失敗しました:", error);
       body.innerHTML = '<tr><td colspan="5"><div class="admin-alert">記事を読み込めませんでした。権限または通信状態を確認してください。</div></td></tr>';
+    }
+  }
+
+  async function updateArticlePin(id, currentlyPinned, button) {
+    if (currentAdminRole !== "admin") {
+      alert("ホーム固定を変更できるのは管理者のみです。");
+      return;
+    }
+    if (!confirm(currentlyPinned ? "この記事のホーム固定を解除しますか？" : "この記事を全ユーザーのホーム上部に固定しますか？")) return;
+    button.disabled = true;
+    try {
+      const { data, error } = await supabase.from("articles")
+        .update({ is_pinned: !currentlyPinned })
+        .eq("id", id)
+        .select("id,is_pinned")
+        .single();
+      if (error) throw error;
+      if (!data) throw new Error("記事の固定状態を更新できませんでした。");
+      await loadArticles();
+    } catch (error) {
+      console.error("記事固定の変更に失敗しました:", error);
+      alert("ホーム固定を変更できませんでした: " + (error?.message || "権限または通信状態を確認してください。"));
+      button.disabled = false;
     }
   }
 
