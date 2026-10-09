@@ -177,13 +177,13 @@ async function main(req: Request) {
 
     const { error: conversationError } = await admin.from("conversations")
       .update({ updated_at: new Date().toISOString() }).eq("id", conversationId);
-    if (conversationError) return json({ error: conversationError.message }, 500);
+    if (conversationError) console.error("DM conversation timestamp update failed:", conversationError.message);
 
     const { data: recipients, error: recipientsError } = await admin.from("conversation_members")
       .select("user_id").eq("conversation_id", conversationId).neq("user_id", userId);
-    if (recipientsError) return json({ error: recipientsError.message }, 500);
+    if (recipientsError) console.error("DM recipient lookup failed:", recipientsError.message);
 
-    if (recipients?.length) {
+    if (!recipientsError && recipients?.length) {
       const { error: notificationError } = await admin.from("notifications").insert(recipients.map(r => ({
         recipient_id: r.user_id,
         sender_id: userId,
