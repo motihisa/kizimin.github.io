@@ -14,6 +14,7 @@
 </article>
 <section id="comments-section" class="card" style="padding:32px;margin-top:24px">
 <h2>コメント</h2>
+<form id="comment-form" style="margin:16px 0 24px"><label for="comment-content">コメントを書く</label><textarea id="comment-content" rows="4" maxlength="5000" required style="display:block;width:100%;box-sizing:border-box;margin:8px 0;padding:12px;border:1px solid #ddd;border-radius:8px;font:inherit" placeholder="コメントを入力…"></textarea><button type="submit" id="comment-submit" class="login">コメントを投稿</button><p id="comment-message" class="text-muted" role="status"></p></form>
 <div id="comments-list"><div class="loading">コメントを読み込んでいます…</div></div>
 </section>
 </main>
@@ -28,33 +29,53 @@ const article=document.getElementById("article");
 const commentsList=document.getElementById("comments-list");
 const badge=t=>t?'<span class="official-badge">'+escapeHtml(t)+'</span>':"";
 
+async function secureContent(action, payload={}) {
+  const {data:{session}} = await sb.auth.getSession();
+  if(!session?.access_token) throw new Error("ログインが必要です。");
+  const response = await fetch("https://bimddapbkdakspjaemsm.supabase.co/functions/v1/secure-content", {
+    method:"POST",
+    headers:{"Content-Type":"application/json","apikey":"sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf","Authorization":"Bearer "+session.access_token},
+    body:JSON.stringify({action,...payload})
+  });
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok) throw new Error(result.error||"コメント処理に失敗しました。");
+  return result;
+}
 async function loadComments(articleId){
   if(!commentsList) return;
   try{
-    const {data,error}=await sb.from("comments").select("id,author_id,content,created_at,parent_id").eq("article_id",articleId).order("created_at",{ascending:true});
-    if(error) throw error;
-    const comments=data||[];
+    const result=await secureContent("comment_list",{article_id:articleId});
+    const comments=result.comments||[];
     if(!comments.length){commentsList.innerHTML='<div class="empty-state">コメントはまだありません。</div>';return;}
-    const authorIds=[...new Set(comments.map(c=>c.author_id).filter(Boolean))];
-    const {data:profilesData,error:profileError}=authorIds.length
-      ? await sb.from("profiles").select("id,display_name,username").in("id",authorIds)
-      : {data:[],error:null};
-    if(profileError) console.warn("コメント投稿者情報の取得に失敗しました:",profileError);
-    const profiles=new Map((profilesData||[]).map(p=>[p.id,p]));
-    const titleIds=authorIds;
-    const {data:titlesData}=titleIds.length?await sb.from("profile_titles").select("user_id,title").in("user_id",titleIds):{data:[]};
-    const titles=new Map((titlesData||[]).map(t=>[t.user_id,t.title]));
+    const titlesResult=await sb.from("profile_titles").select("user_id,title").in("user_id",[...new Set(comments.map(c=>c.author_id).filter(Boolean))]);
+    const titles=new Map((titlesResult.data||[]).map(t=>[t.user_id,t.title]));
     commentsList.innerHTML=comments.map(c=>{
-      const p=profiles.get(c.author_id);
-      const name=p?.display_name||p?.username||"ユーザー";
+      const p=c.profiles||{};
+      const name=p.display_name||p.username||"ユーザー";
       const date=c.created_at?new Intl.DateTimeFormat("ja-JP",{year:"numeric",month:"long",day:"numeric",hour:"2-digit",minute:"2-digit"}).format(new Date(c.created_at)):"";
-      return '<div class="comment" style="padding:14px 0;border-bottom:1px solid #eee"><div style="font-weight:600"><a href="profile.html?id='+encodeURIComponent(c.author_id)+'">'+escapeHtml(name)+'</a>'+badge(titles.get(c.author_id))+'</div><div class="text-muted" style="font-size:.85em">'+escapeHtml(date)+'</div><div style="margin-top:8px;white-space:pre-wrap">'+escapeHtml(c.content)+'</div></div>';
+      return '<div class="comment" style="padding:14px 0;border-bottom:1px solid #eee"><div style="font-weight:600"><a href="profile.html?id='+encodeURIComponent(c.author_id||"")+'">'+escapeHtml(name)+'</a>'+badge(titles.get(c.author_id))+'</div><div class="text-muted" style="font-size:.85em">'+escapeHtml(date)+'</div><div style="margin-top:8px;white-space:pre-wrap">'+escapeHtml(c.content)+'</div></div>';
     }).join("");
   }catch(error){
     console.error("コメントの読み込みに失敗しました:",error);
-    commentsList.innerHTML='<div class="empty-state">コメントを読み込めませんでした。権限または通信状態を確認してください。</div>';
+    commentsList.innerHTML='<div class="empty-state">'+escapeHtml(error.message||"コメントを読み込めませんでした。")+'</div>';
   }
 }
+document.getElementById("comment-form").addEventListener("submit",async event=>{
+  event.preventDefault();
+  const input=document.getElementById("comment-content");
+  const message=document.getElementById("comment-message");
+  const button=document.getElementById("comment-submit");
+  const content=input.value.trim();
+  if(!content)return;
+  button.disabled=true; message.textContent="投稿しています…";
+  try{
+    await secureContent("comment_add",{article_id:id,content});
+    input.value=""; message.textContent="コメントを投稿しました。";
+    await loadComments(id);
+  }catch(error){
+    message.textContent=error.message==="ログインが必要です。"?"コメントするにはログインしてください。":("投稿できませんでした: "+error.message);
+  }finally{button.disabled=false;}
+});
 
 (async()=>{
   if(!id){article.innerHTML='<div class="empty-state">記事が指定されていません。</div>';commentsList.innerHTML='<div class="empty-state">記事が指定されていません。</div>';return;}
