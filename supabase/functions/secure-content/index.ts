@@ -139,13 +139,13 @@ async function main(req: Request) {
   if (action === "dm_messages") {
     const conversationId = String(body.conversation_id || "");
     if (!conversationId || !(await isMember(conversationId))) return json({ error: "FORBIDDEN" }, 403);
-    const { data, error } = await admin.from("messages").select("id,sender_id,content,content_encrypted,content_iv,created_at,edited_at").eq("conversation_id", conversationId).order("created_at",{ascending:true}).limit(500);
+    const { data, error } = await admin.from("messages").select("id,sender_id,content,content_encrypted,content_iv,created_at").eq("conversation_id", conversationId).order("created_at",{ascending:true}).limit(500);
     if (error) return json({ error: error.message }, 500);
     const messages = [];
     for (const m of data || []) {
       let content = "";
       try { content = m.content_encrypted && m.content_iv ? await decryptText(key,m.content_encrypted,m.content_iv) : ""; } catch { content = "メッセージを復号できませんでした。"; }
-      messages.push({ id:m.id, sender_id:m.sender_id, content, created_at:m.created_at, edited_at:m.edited_at });
+      messages.push({ id:m.id, sender_id:m.sender_id, content, created_at:m.created_at });
     }
     await admin.from("conversation_members").update({ last_read_at: new Date().toISOString() }).eq("conversation_id", conversationId).eq("user_id", userId);
     return json({ messages });
@@ -195,13 +195,13 @@ async function main(req: Request) {
   if (action === "dm_admin_messages") {
     if (!isStaff) return json({ error: "ADMIN_REQUIRED" }, 403);
     const conversationId = String(body.conversation_id || "");
-    const { data, error } = await admin.from("messages").select("id,sender_id,content_encrypted,content_iv,created_at,edited_at").eq("conversation_id",conversationId).order("created_at",{ascending:true}).limit(500);
+    const { data, error } = await admin.from("messages").select("id,sender_id,content_encrypted,content_iv,created_at").eq("conversation_id",conversationId).order("created_at",{ascending:true}).limit(500);
     if (error) return json({ error: error.message }, 500);
     const messages = [];
     for (const m of data || []) {
       let content = "";
       try { content = await decryptText(key,m.content_encrypted,m.content_iv); } catch { content = "メッセージを復号できませんでした。"; }
-      messages.push({id:m.id,sender_id:m.sender_id,content,created_at:m.created_at,edited_at:m.edited_at});
+      messages.push({id:m.id,sender_id:m.sender_id,content,created_at:m.created_at});
     }
     return json({ messages });
   }
