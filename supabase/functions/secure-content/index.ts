@@ -279,4 +279,12 @@ async function main(req: Request) {
   return json({ error: "UNKNOWN_ACTION" }, 400);
 }
 
-Deno.serve(main);
+Deno.serve(async (req: Request) => {
+  try {
+    return await main(req);
+  } catch (error) {
+    console.error("secure-content unhandled error:", error);
+    const message = error instanceof Error ? error.message : String(error);
+    return json({ error: "INTERNAL_ERROR", detail: message.slice(0, 500) }, 500);
+  }
+});
