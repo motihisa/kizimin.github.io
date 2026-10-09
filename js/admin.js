@@ -443,7 +443,7 @@
             <select class="article-status" data-id="${esc(a.id)}" aria-label="記事状態">
               ${["draft","published","archived"].map(s => `<option value="${s}" ${s===a.status?"selected":""}>${statusLabel(s)}</option>`).join("")}
             </select>
-            ${currentAdminRole === "admin" ? `<button type="button" class="article-pin admin-btn" data-id="${esc(a.id)}" data-pinned="${a.is_pinned ? "true" : "false"}">${a.is_pinned ? "固定を解除" : "ホーム上部に固定"}</button>` : '<span class="admin-muted">固定操作は管理者のみ</span>'}
+            ${["admin","owner"].includes(currentAdminRole) ? `<button type="button" class="article-pin admin-btn" data-id="${esc(a.id)}" data-pinned="${a.is_pinned ? "true" : "false"}">${a.is_pinned ? "固定を解除" : "ホーム上部に固定"}</button>` : '<span class="admin-muted">固定操作は管理者のみ</span>'}
           </td>
         </tr>`;
       }).join("") : '<tr><td colspan="5">記事はありません。</td></tr>';
@@ -460,7 +460,7 @@
   }
 
   async function updateArticlePin(id, currentlyPinned, button) {
-    if (currentAdminRole !== "admin") {
+    if (!["admin","owner"].includes(currentAdminRole)) {
       alert("ホーム固定を変更できるのは管理者のみです。");
       return;
     }
