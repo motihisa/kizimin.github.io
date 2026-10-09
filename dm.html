@@ -20,7 +20,7 @@ const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","sb_pu
 const $=id=>document.getElementById(id),esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 let uid=null,current=null,conversations=[];
 const fmt=v=>new Intl.DateTimeFormat("ja-JP",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}).format(new Date(v));
-async function api(action,extra={}){const {data:sessionData,error:sessionError}=await sb.auth.getSession();if(sessionError||!sessionData?.session?.access_token)throw new Error("INVALID_SESSION");const {data,error}=await sb.functions.invoke("secure-content",{body:{action,...extra},headers:{Authorization:"Bearer "+sessionData.session.access_token}});if(error)throw error;if(data?.error)throw new Error(data.error);return data}
+async function api(action,extra={}){const {data:sessionData,error:sessionError}=await sb.auth.getSession();if(sessionError||!sessionData?.session?.access_token)throw new Error("INVALID_SESSION");const {data,error}=await sb.functions.invoke("secure-dm",{body:{action,...extra},headers:{Authorization:"Bearer "+sessionData.session.access_token}});if(error)throw error;if(data?.error)throw new Error(data.error);return data}
 async function init(){const {data,error}=await sb.auth.getSession();if(error||!data.session){location.href="login.html";return}uid=data.session.user.id;await loadConversations();const id=new URLSearchParams(location.search).get("conversation");if(id&&conversations.some(x=>x.id===id))selectConversation(id)}
 async function loadConversations(){const data=await api("dm_list");conversations=data.conversations||[];renderConversations()}
 function other(c){return c?.members?.find(m=>m.user_id!==uid)?.profiles||null}
