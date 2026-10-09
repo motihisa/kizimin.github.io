@@ -3,7 +3,7 @@
 <head>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>記事 | Kizimin</title><link rel="stylesheet" href="css/style.css">
+  <title>記事 | Kizimin</title><link rel="stylesheet" href="css/style.css"><link rel="stylesheet" href="css/features.css"><link rel="stylesheet" href="css/site-features.css">
   <style>
     :root{--reader-ink:#18202f;--reader-muted:#788196;--reader-line:#e6eaf1;--reader-accent:#6558f5;--reader-accent-soft:#f0efff}
     body{background:#f6f7fb;color:var(--reader-ink)}
@@ -72,6 +72,11 @@
   <article id="article" class="card article-shell">
     <div class="loading">記事を読み込んでいます…</div>
   </article>
+  <section class="site-widget article-save-widget" aria-label="記事を保存">
+    <h2>🔖 この記事を保存</h2><p class="site-widget-hint">あとで読み返せるようにコレクションに追加できます。</p>
+    <form id="save-article" class="feature-form"><label>保存先<select id="collection-select"></select></label><label>記事<select id="save-article-select" data-article-options></select></label><button class="feature-primary">この記事を保存する</button></form>
+    <div id="saved-box" class="site-saved-compact"></div>
+  </section>
   <section id="comments-section" class="card comments-shell">
     <h2 class="comments-heading">コメント</h2>
     <p class="comments-subtitle">この記事について、あなたの考えも聞かせてください。</p>
@@ -182,5 +187,7 @@ document.getElementById("comment-form").addEventListener("submit",async event=>{
  window.addEventListener("scroll",update,{passive:true});window.addEventListener("resize",update);update();
 })();
 </script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/features-app.js?v=20261010-site-integration"></script>
 <script src="js/access.js?v=20261009-apikey-fix"></script>
 </body></html>
