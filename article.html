@@ -74,7 +74,7 @@
   </article>
   <section class="site-widget article-save-widget" aria-label="記事を保存">
     <h2>🔖 この記事を保存</h2><p class="site-widget-hint">あとで読み返せるようにコレクションに追加できます。</p>
-    <form id="save-article" class="feature-form"><label>保存先<select id="collection-select"></select></label><label>記事<select id="save-article-select" data-article-options></select></label><button class="feature-primary">この記事を保存する</button></form>
+    <form id="save-article" class="feature-form"><label>保存先<select id="collection-select"></select></label><select id="save-article-select" data-article-options data-current-article="true" hidden aria-hidden="true" tabindex="-1"></select><button class="feature-primary">この記事を保存する</button></form>
     <div id="saved-box" class="site-saved-compact"></div>
   </section>
   <section id="comments-section" class="card comments-shell">
@@ -153,7 +153,7 @@ document.getElementById("comment-form").addEventListener("submit",async event=>{
   if(!id){article.innerHTML='<div class="empty-state">記事が指定されていません。</div>';commentsList.innerHTML='<div class="empty-state">記事が指定されていません。</div>';return;}
   try{
     const {data,error}=await sb.from("articles").select("id,title,content,excerpt,published_at,created_at,author_id,category_id").eq("id",id).eq("status","published").single();
-    if(error||!data){article.innerHTML='<div class="empty-state">記事が見つかりません。</div>';commentsList.innerHTML='<div class="empty-state">記事が見つかりません。</div>';return;}
+    if(error||!data){article.innerHTML='<div class="empty-state">記事が見つかりません。</div>';commentsList.innerHTML='<div class="empty-state">記事が見つかりません。</div>';return;}const currentArticleSelect=document.getElementById("save-article-select");if(currentArticleSelect)currentArticleSelect.innerHTML='<option value="'+escapeHtml(data.id)+'">'+escapeHtml(data.title)+'</option>';
     let author="ユーザー",category="その他",authorTitle="";
     if(data.author_id){
       const {data:profile,error:profileError}=await sb.from("profiles").select("display_name,username").eq("id",data.author_id).maybeSingle();
@@ -188,6 +188,6 @@ document.getElementById("comment-form").addEventListener("submit",async event=>{
 })();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/features-app.js?v=20261010-site-integration"></script>
+<script src="js/features-app.js?v=20261010-placement-fix2"></script>
 <script src="js/access.js?v=20261009-apikey-fix"></script>
 </body></html>
