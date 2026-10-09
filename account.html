@@ -14,7 +14,7 @@ body{background:#fafaf8;color:#171717}.account-shell{max-width:1100px;margin:aut
 </head>
 <body>
 <main class="account-shell">
-<header class="account-top"><a class="logo" href="index.html">Kizimin</a><div style="display:flex;gap:8px;align-items:center"><a class="back-link" href="notifications.html">通知</a><a class="back-link" href="dm.html">DM</a><a class="back-link" href="index.html">← ホームへ戻る</a></div></header>
+<header class="account-top"><a class="logo" href="index.html">Kizimin</a><div style="display:flex;gap:8px;align-items:center"><a class="back-link" href="notifications.html">通知</a><a class="back-link" href="dm.html">DM</a><a class="back-link" href="index.html">← ホームへ戻る</a><a class="back-link" href="#account-community-features">活動・保存記事</a></div></header>
 <div class="account-layout">
 <nav class="account-nav" aria-label="アカウント設定"><button class="active" type="button">プロフィール</button><button type="button" disabled>アカウント</button><button type="button" disabled>セキュリティ</button></nav>
 <section class="settings-card">
@@ -28,7 +28,7 @@ body{background:#fafaf8;color:#171717}.account-shell{max-width:1100px;margin:aut
 <div class="form-section"><h2>ログイン情報</h2><p class="section-note">メールアドレスはプロフィール情報とは別に管理されています。</p><div id="email" class="email-box">読み込み中…</div></div>
 <div class="save-row"><p id="message" aria-live="polite"></p><button id="save" class="save-button" type="button">変更を保存</button></div>
 <div class="hint-card">プロフィールを保存しても、パスワードやログイン用メールアドレスは変更されません。</div>
-</section></div>  <section class="site-account-features" aria-label="アカウントのコミュニティ機能">
+</section></div>  <section id="account-community-features" class="site-account-features" aria-label="アカウントのコミュニティ機能"><div class="account-features-heading"><h1>活動・保存した記事</h1><p>コレクションの作成・保存記事の管理はこちら。</p></div>
     <section class="site-widget"><h2>🌱 貢献プロフィール</h2><div id="contribution-box"><p>活動を読み込んでいます…</p></div></section>
     <section class="site-widget"><h2>📈 マイ活動レポート</h2><div id="report-box"><p>レポートを読み込んでいます…</p></div></section>
     <section class="site-widget"><h2>🔖 保存した記事</h2>
@@ -97,6 +97,6 @@ if(file){if(file.size>MAX_AVATAR_SIZE){msg.textContent="画像は2MB以下にし
 const {error}=await sb.from("profiles").update({display_name:$("display").value.trim(),username:$("username").value.trim()||null,bio:$("bio").value.trim()||null,avatar_url:nextAvatarUrl}).eq("id",uid);b.disabled=false;msg.textContent=error?friendlyError(error):"保存しました。";if(!error){avatarUrl=nextAvatarUrl;if(previewObjectUrl){URL.revokeObjectURL(previewObjectUrl);previewObjectUrl=null}$("avatar-file").value="";updatePreview();try{localStorage.setItem(PROFILE_CACHE_PREFIX+uid,JSON.stringify({data:{display_name:$("display").value.trim(),username:$("username").value.trim()||null,bio:$("bio").value.trim()||null,avatar_url:nextAvatarUrl},updatedAt:Date.now()}))}catch{}}};
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/features-app.js?v=20261010-site-integration"></script>
+<script src="js/features-app.js?v=20261010-placement-fix2"></script>
 <script src="js/access.js"></script>
 </body></html>
