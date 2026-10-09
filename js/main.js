@@ -77,7 +77,7 @@
       const authorTitle = article.profiles?.title || "";
       const authorLink = article.author_id ? 'profile.html?id='+encodeURIComponent(article.author_id) : '#';
       const badge = authorTitle ? '<span class="official-badge">'+escapeHtml(authorTitle)+'</span>' : "";
-      return '<a class="article" href="article.html?id='+encodeURIComponent(article.id)+'"><div class="article-meta">'+escapeHtml(formatDate(article.published_at || article.created_at))+' · '+escapeHtml(category)+'</div><h3>'+escapeHtml(article.title)+'</h3><p>'+escapeHtml(article.excerpt || String(article.content || "").slice(0,140))+'</p><div class="author" role="link" tabindex="0" onclick="event.preventDefault();event.stopPropagation();location.href=\''+authorLink+'\';" onkeydown="if(event.key===\'Enter\'){event.preventDefault();event.stopPropagation();location.href=\''+authorLink+'\';}">'+escapeHtml(author)+badge+'</div></a>';
+      return '<a class="article'+(article.is_pinned?' article-pinned':'')+'" href="article.html?id='+encodeURIComponent(article.id)+'">'+(article.is_pinned?'<div class="pinned-label">📌 管理者固定記事</div>':'')+'<div class="article-meta">'+escapeHtml(formatDate(article.published_at || article.created_at))+' · '+escapeHtml(category)+'</div><h3>'+escapeHtml(article.title)+'</h3><p>'+escapeHtml(article.excerpt || String(article.content || "").slice(0,140))+'</p><div class="author" role="link" tabindex="0" onclick="event.preventDefault();event.stopPropagation();location.href=\''+authorLink+'\';" onkeydown="if(event.key===\'Enter\'){event.preventDefault();event.stopPropagation();location.href=\''+authorLink+'\';}">'+escapeHtml(author)+badge+'</div></a>';
     }).join("");
   }
 
@@ -85,7 +85,7 @@
     const list = $("#article-list");
     if (list) list.innerHTML = '<div class="loading">記事を読み込んでいます…</div>';
     try {
-      const {data,error} = await supabase.from("articles").select("id,title,slug,excerpt,content,published_at,created_at,author_id,category_id").eq("status","published").order("published_at",{ascending:false,nullsFirst:false}).limit(50);
+      const {data,error} = await supabase.from("articles").select("id,title,slug,excerpt,content,published_at,created_at,author_id,category_id,is_pinned").eq("status","published").order("is_pinned",{ascending:false}).order("published_at",{ascending:false,nullsFirst:false}).limit(50);
       if (error) throw error;
       const articles = data || [];
       const authorIds = [...new Set(articles.map(a=>a.author_id).filter(Boolean))];
