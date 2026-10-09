@@ -631,6 +631,58 @@
     }
   }
 
+
+  const permissionMeta = [
+    ["write_content","記事・コメントの投稿"],
+    ["moderate_comments","コメントの管理"],
+    ["ban_users","ユーザーのBAN・利用制限"],
+    ["delete_accounts","アカウントの削除"],
+    ["manage_roles","ユーザー権限の変更"],
+    ["manage_settings","サイト設定の変更"],
+    ["view_logs","監査ログの閲覧"],
+    ["manage_reports","通報の管理"],
+    ["broadcast_notifications","全員への通知送信"]
+  ];
+  const roleNames = {user:"user",moderator:"moderator",admin:"admin"};
+  async function loadPermissions() {
+    const notice = $("permissions-notice");
+    const grid = $("permissions-grid");
+    if (currentAdminRole !== "admin") {
+      if (notice) notice.textContent = "権限設定を変更できるのはadminのみです。";
+      if (grid) grid.innerHTML = "";
+      return;
+    }
+    if (notice) notice.textContent = "読み込み中...";
+    const {data,error} = await supabase.rpc("admin_get_role_permissions");
+    if (error) throw error;
+    const values = new Map((data || []).map(row => [row.role + ":" + row.permission_key, !!row.allowed]));
+    grid.innerHTML = '<table class="admin-table"><thead><tr><th>権限</th><th>user</th><th>moderator</th><th>admin</th></tr></thead><tbody>' +
+      permissionMeta.map(([key,label]) => '<tr><td>' + esc(label) + '</td>' +
+        ["user","moderator","admin"].map(role => {
+          const locked = role === "admin" && ["manage_roles","delete_accounts"].includes(key);
+          const checked = values.get(role + ":" + key) === true;
+          return '<td><label style="display:flex;justify-content:center;align-items:center;gap:7px"><input type="checkbox" class="role-permission-toggle" data-role="' + role + '" data-permission="' + key + '" ' + (checked ? "checked" : "") + (locked ? " disabled" : "") + ' aria-label="' + role + ' ' + esc(label) + '">' + (locked ? '<span class="admin-muted">必須</span>' : '') + '</label></td>';
+        }).join("") + '</tr>').join("") + '</tbody></table>';
+    if (notice) notice.textContent = "変更するとすぐに保存されます。adminの権限変更・アカウント削除権限はロックされています。";
+    grid.querySelectorAll(".role-permission-toggle").forEach(input => {
+      input.addEventListener("change", async () => {
+        input.disabled = true;
+        const {error:saveError} = await supabase.rpc("admin_set_role_permission", {
+          p_role: input.dataset.role,
+          p_permission_key: input.dataset.permission,
+          p_allowed: input.checked
+        });
+        if (saveError) {
+          input.checked = !input.checked;
+          alert("権限設定を保存できませんでした: " + errorMessage(saveError));
+        } else if (notice) {
+          notice.textContent = input.dataset.role + " / " + (permissionMeta.find(x => x[0] === input.dataset.permission)?.[1] || input.dataset.permission) + " を保存しました。";
+        }
+        input.disabled = false;
+      });
+    });
+  }
+
   const viewMeta = {
     dashboard: ["ダッシュボード","Kiziminの状態をまとめて確認します。"],
     users: ["ユーザー管理","権限とアカウント状態を管理します。"],
@@ -639,6 +691,7 @@
     reports: ["通報管理","届いた通報を確認して対応します。"],
     inquiries: ["問い合わせ管理","問い合わせの対応状況を管理します。"],
     notifications: ["通知送信","管理者から全ユーザーへサイト内通知を送信し、送信履歴と実行者を確認します。"],
+    permissions: ["権限設定","ロールごとに機能の許可・禁止を設定します。"],
   };
 
   function setupAdminNavigation() {
@@ -653,7 +706,7 @@
         $("admin-view-title").textContent = meta[0];
         $("admin-view-subtitle").textContent = meta[1];
         history.replaceState(null, "", "#" + key);
-        const loaders = {dashboard: loadDashboard, users: loadUsers, articles: loadArticles, comments: loadComments, reports: loadReports, inquiries: loadInquiries, notifications: loadNotificationHistory};
+        const loaders = {dashboard: loadDashboard, users: loadUsers, articles: loadArticles, comments: loadComments, reports: loadReports, inquiries: loadInquiries, notifications: loadNotificationHistory, permissions: loadPermissions};
         const loader = loaders[key];
         if (loader) loader().catch(e => {
           console.error("管理セクション読み込みエラー", key, e);
