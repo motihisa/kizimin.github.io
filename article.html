@@ -4,20 +4,87 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>記事 | Kizimin</title><link rel="stylesheet" href="css/style.css">
-  <style>.official-badge{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:999px;background:#111;color:#fff;font-size:.72em;font-weight:700;vertical-align:middle;letter-spacing:.02em}</style>
+  <style>
+    :root{--reader-ink:#18202f;--reader-muted:#788196;--reader-line:#e6eaf1;--reader-accent:#6558f5;--reader-accent-soft:#f0efff}
+    body{background:#f6f7fb;color:var(--reader-ink)}
+    .reader-topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:16px max(22px,calc((100vw - 1120px)/2));border-bottom:1px solid rgba(226,230,240,.85);background:rgba(255,255,255,.86);backdrop-filter:blur(18px)}
+    .reader-brand{display:flex;align-items:center;gap:10px;font-size:22px;font-weight:900;letter-spacing:-.06em}
+    .reader-brand-mark{display:grid;place-items:center;width:34px;height:34px;border-radius:12px;background:linear-gradient(135deg,#7468ff,#4b43d9);color:#fff;font-size:17px;box-shadow:0 5px 14px #6558f533}
+    .reader-top-actions{display:flex;align-items:center;gap:12px}
+    .reader-top-label{color:#8790a4;font-size:11px;font-weight:800;letter-spacing:.14em}
+    .reader-back{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border:1px solid #e5e8f0;border-radius:999px;background:#fff;color:#333b4e;font-size:13px;font-weight:700;transition:.2s}
+    .reader-back:hover{transform:translateY(-1px);border-color:#c9c5ff;color:var(--reader-accent);box-shadow:0 8px 24px #1f2a4410}
+    .article-page{max-width:920px!important;padding:40px 20px 100px!important}
+    .reader-breadcrumb{display:flex;align-items:center;gap:9px;margin:0 0 20px;color:#929aab;font-size:12px;font-weight:600}
+    .reader-breadcrumb a{color:#6558f5}
+    .reader-breadcrumb span{opacity:.6}
+    .article-shell{overflow:hidden;margin:0!important;padding:0!important;border:1px solid #e8ebf3!important;border-radius:28px!important;background:#fff!important;box-shadow:0 24px 80px rgba(32,42,74,.08)!important}
+    .article-cover{position:relative;overflow:hidden;padding:clamp(26px,6vw,62px);background:radial-gradient(ellipse at 92% 0%,rgba(139,128,255,.18),transparent 38%),linear-gradient(135deg,#fff 0%,#fbfbff 62%,#f4f3ff 100%)}
+    .article-cover:after{position:absolute;right:-50px;bottom:-130px;width:250px;height:250px;border:1px solid rgba(101,88,245,.12);border-radius:50%;content:"";pointer-events:none;box-shadow:0 0 0 28px rgba(101,88,245,.025),0 0 0 58px rgba(101,88,245,.02)}
+    .article-kicker{display:inline-flex;align-items:center;gap:8px;margin-bottom:28px;color:#6558f5;font-size:10px;font-weight:900;letter-spacing:.17em}
+    .article-dot{width:7px;height:7px;border-radius:50%;background:#6558f5;box-shadow:0 0 0 5px #6558f51a}
+    .article-meta{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin-bottom:18px;color:#8991a3;font-size:12px}
+    .article-category{display:inline-flex;align-items:center;padding:5px 11px;border:1px solid #e4e0ff;border-radius:999px;background:#f3f1ff;color:#5b4ee8;font-size:11px;font-weight:800}
+    .article-title{position:relative;z-index:1;margin:0 0 28px!important;color:#171e30!important;font-size:clamp(30px,5.5vw,52px)!important;font-weight:850!important;line-height:1.28!important;letter-spacing:-.055em!important;overflow-wrap:anywhere}
+    .article-author-row{position:relative;z-index:1;display:flex;align-items:center;gap:12px}
+    .author-avatar{display:grid;flex:0 0 44px;place-items:center;width:44px;height:44px;border:1px solid #e5e2ff;border-radius:16px;background:linear-gradient(145deg,#eeecff,#dcd8ff);color:#5548dc;font-size:18px;font-weight:900}
+    .article-author-details{display:flex;flex-direction:column;gap:1px;min-width:0}
+    .author-label{color:#9aa1b1;font-size:10px;font-weight:700;letter-spacing:.08em}
+    .author-name{font-size:14px;font-weight:800}
+    .official-badge{display:inline-block;margin-left:6px;padding:3px 8px;border:1px solid #292b3c;border-radius:999px;background:#292b3c;color:#fff;font-size:10px;font-weight:800;vertical-align:middle}
+    .article-divider{height:1px;background:linear-gradient(90deg,#6558f52b,#e9ebf2 45%,#fff)}
+    .article-body{padding:clamp(28px,6vw,64px);color:#333d51;font-size:17px;line-height:2.05;overflow-wrap:anywhere}
+    .article-body p{margin:0 0 1.4em}
+    .article-body a{color:#5c50e8;text-decoration:underline;text-underline-offset:3px}
+    .article-endnote{display:flex;align-items:center;gap:12px;margin:0 clamp(28px,6vw,64px) 34px;padding-top:20px;border-top:1px solid #edf0f5;color:#8d95a6;font-size:11px;font-weight:700;letter-spacing:.08em}
+    .article-endnote:before{width:26px;height:3px;border-radius:9px;background:#6558f5;content:""}
+    .comments-shell{margin-top:28px!important;padding:clamp(22px,4vw,36px)!important;border:1px solid #e8ebf3!important;border-radius:24px!important;background:#fff!important;box-shadow:0 14px 45px rgba(32,42,74,.045)!important}
+    .comments-heading{display:flex;align-items:center;gap:12px;margin:0 0 6px;font-size:24px;font-weight:850;letter-spacing:-.04em}
+    .comments-heading:before{display:block;width:5px;height:25px;border-radius:9px;background:linear-gradient(#8378ff,#5144df);content:""}
+    .comments-subtitle{margin:0 0 24px;color:#8991a3;font-size:13px}
+    .comment-composer{padding:18px;border:1px solid #eceef5;border-radius:18px;background:#fafbfe}
+    #comment-form label{display:block;margin-bottom:8px;color:#343d50;font-size:12px;font-weight:800}
+    #comment-content{min-height:120px;padding:14px!important;border:1px solid #e1e5ef!important;border-radius:13px!important;background:#fff!important;resize:vertical;line-height:1.8;transition:border-color .2s,box-shadow .2s}
+    #comment-content:focus{border-color:#aaa2ff!important;outline:none;box-shadow:0 0 0 4px #6558f514}
+    #comment-submit{min-height:42px;height:auto;padding:0 20px;border:0!important;border-radius:999px!important;background:linear-gradient(135deg,#7468ff,#5145df)!important;color:#fff!important;font-weight:800;box-shadow:0 8px 20px #6558f52c;transition:transform .2s,box-shadow .2s}
+    #comment-submit:hover{transform:translateY(-1px);box-shadow:0 12px 26px #6558f540}
+    #comment-submit:disabled{opacity:.55;cursor:wait;transform:none}
+    #comment-message{min-height:1.5em;margin:10px 0 0;font-size:12px}
+    .comment{padding:18px 4px!important;border-bottom:1px solid #eef0f5!important}
+    .comment:last-child{border-bottom:0!important}
+    .comment a{font-weight:800}
+    .comment .text-muted{margin-top:2px;color:#9aa1b1;font-size:11px!important}
+    .comment-content{margin-top:10px;color:#424b5f;line-height:1.9;overflow-wrap:anywhere}
+    .reader-progress{position:fixed;top:0;left:0;z-index:100;width:0;height:3px;background:linear-gradient(90deg,#8b7fff,#4d42dc);box-shadow:0 0 12px #6558f54d}
+    .reader-footer{text-align:center;padding:0 20px 32px;color:#a0a6b4;font-size:11px;letter-spacing:.08em}
+    @media(max-width:600px){.reader-topbar{padding:13px 16px}.reader-top-label{display:none}.reader-brand{font-size:20px}.reader-brand-mark{width:31px;height:31px}.article-page{padding:25px 13px 64px!important}.article-shell{border-radius:21px!important}.article-cover{padding:28px 23px 30px}.article-kicker{margin-bottom:23px}.article-title{font-size:32px!important}.article-body{padding:28px 23px;font-size:16px;line-height:1.95}.article-endnote{margin:0 23px 26px}.comments-shell{border-radius:20px!important}.comment-composer{padding:13px}}
+    @media(prefers-reduced-motion:reduce){.reader-back,#comment-submit{transition:none}}
+  </style>
 </head>
 <body>
-<main class="container" style="max-width:820px;padding-top:48px;padding-bottom:90px">
-<a class="logo" href="index.html">Kizimin</a>
-<article id="article" class="card" style="padding:32px;margin-top:28px">
-<div class="loading">記事を読み込んでいます…</div>
-</article>
-<section id="comments-section" class="card" style="padding:32px;margin-top:24px">
-<h2>コメント</h2>
-<form id="comment-form" style="margin:16px 0 24px"><label for="comment-content">コメントを書く</label><textarea id="comment-content" rows="4" maxlength="5000" required style="display:block;width:100%;box-sizing:border-box;margin:8px 0;padding:12px;border:1px solid #ddd;border-radius:8px;font:inherit" placeholder="コメントを入力…"></textarea><button type="submit" id="comment-submit" class="login">コメントを投稿</button><p id="comment-message" class="text-muted" role="status"></p></form>
-<div id="comments-list"><div class="loading">コメントを読み込んでいます…</div></div>
-</section>
+<div class="reader-progress" id="reader-progress" aria-hidden="true"></div>
+<header class="reader-topbar">
+  <a class="reader-brand" href="index.html"><span class="reader-brand-mark">K</span><span>Kizimin</span></a>
+  <div class="reader-top-actions"><span class="reader-top-label">YOUR READING SPACE</span><a class="reader-back" href="index.html">← 記事一覧へ</a></div>
+</header>
+<main class="container article-page">
+  <nav class="reader-breadcrumb" aria-label="パンくずリスト"><a href="index.html">ホーム</a><span>／</span><span>記事を読む</span></nav>
+  <article id="article" class="card article-shell">
+    <div class="loading">記事を読み込んでいます…</div>
+  </article>
+  <section id="comments-section" class="card comments-shell">
+    <h2 class="comments-heading">コメント</h2>
+    <p class="comments-subtitle">この記事について、あなたの考えも聞かせてください。</p>
+    <form id="comment-form" class="comment-composer" style="margin:0 0 24px">
+      <label for="comment-content">コメントを書く</label>
+      <textarea id="comment-content" rows="4" maxlength="5000" required style="display:block;width:100%;box-sizing:border-box;margin:8px 0 12px;font:inherit" placeholder="感想や考えを入力…"></textarea>
+      <button type="submit" id="comment-submit" class="login">コメントを投稿する　↗</button>
+      <p id="comment-message" class="text-muted" role="status"></p>
+    </form>
+    <div id="comments-list"><div class="loading">コメントを読み込んでいます…</div></div>
+  </section>
 </main>
+<footer class="reader-footer">KIZIMIN · READ, THINK, SHARE</footer>
 <script src="js/ban-screen.js"></script>
 <script src="js/maintenance-gate.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -53,7 +120,7 @@ async function loadComments(articleId){
       const p=c.profiles||{};
       const name=p.display_name||p.username||"ユーザー";
       const date=c.created_at?new Intl.DateTimeFormat("ja-JP",{year:"numeric",month:"long",day:"numeric",hour:"2-digit",minute:"2-digit"}).format(new Date(c.created_at)):"";
-      return '<div class="comment" style="padding:14px 0;border-bottom:1px solid #eee"><div style="font-weight:600"><a href="profile.html?id='+encodeURIComponent(c.author_id||"")+'">'+escapeHtml(name)+'</a>'+badge(titles.get(c.author_id))+'</div><div class="text-muted" style="font-size:.85em">'+escapeHtml(date)+'</div><div style="margin-top:8px;white-space:pre-wrap">'+escapeHtml(c.content)+'</div></div>';
+      return '<div class="comment"><div style="font-weight:600"><a href="profile.html?id='+encodeURIComponent(c.author_id||"")+'">'+escapeHtml(name)+'</a>'+badge(titles.get(c.author_id))+'</div><div class="text-muted">'+escapeHtml(date)+'</div><div class="comment-content" style="white-space:pre-wrap">'+escapeHtml(c.content)+'</div></div>';
     }).join("");
   }catch(error){
     console.error("コメントの読み込みに失敗しました:",error);
@@ -95,7 +162,9 @@ document.getElementById("comment-form").addEventListener("submit",async event=>{
       if(categoryError) console.warn("記事カテゴリ情報の取得に失敗しました:",categoryError);
       if(categoryRow?.name) category=categoryRow.name;
     }
-    article.innerHTML='<div class="article-meta">'+escapeHtml(new Intl.DateTimeFormat("ja-JP",{year:"numeric",month:"long",day:"numeric"}).format(new Date(data.published_at||data.created_at)))+' · '+escapeHtml(category)+'</div><h1>'+escapeHtml(data.title)+'</h1><p class="text-muted"><a href="profile.html?id='+encodeURIComponent(data.author_id)+'">'+escapeHtml(author)+'</a>'+badge(authorTitle)+'</p><hr><div style="white-space:pre-wrap;line-height:2">'+escapeHtml(data.content)+'</div>';
+    const publishedDate=escapeHtml(new Intl.DateTimeFormat("ja-JP",{year:"numeric",month:"long",day:"numeric"}).format(new Date(data.published_at||data.created_at)));
+    const authorInitial=escapeHtml((author||"K").trim().slice(0,1).toUpperCase());
+    article.innerHTML='<div class="article-cover"><div class="article-kicker"><span class="article-dot"></span> KIZIMIN JOURNAL</div><div class="article-meta"><span class="article-category">'+escapeHtml(category)+'</span><span>'+publishedDate+'</span><span>·</span><span>読む時間のひととき</span></div><h1 class="article-title">'+escapeHtml(data.title)+'</h1><div class="article-author-row"><span class="author-avatar" aria-hidden="true">'+authorInitial+'</span><div class="article-author-details"><span class="author-label">この記事を書いた人</span><div><a class="author-name" href="profile.html?id='+encodeURIComponent(data.author_id||"")+'">'+escapeHtml(author)+'</a>'+badge(authorTitle)+'</div></div></div></div><div class="article-divider"></div><div class="article-body" style="white-space:pre-wrap">'+escapeHtml(data.content)+'</div><div class="article-endnote">最後まで読んでくれてありがとう</div>';
     document.title=data.title+" | Kizimin";
     await loadComments(data.id);
   }catch(error){
@@ -103,6 +172,14 @@ document.getElementById("comment-form").addEventListener("submit",async event=>{
     article.innerHTML='<div class="empty-state">記事を読み込めませんでした。権限または通信状態を確認してください。</div>';
     commentsList.innerHTML='<div class="empty-state">コメントを読み込めませんでした。権限または通信状態を確認してください。</div>';
   }
+})();
+</script>
+<script>
+(function(){
+ const bar=document.getElementById("reader-progress");
+ if(!bar)return;
+ const update=()=>{const max=document.documentElement.scrollHeight-window.innerHeight;const pct=max>0?(window.scrollY/max)*100:0;bar.style.width=Math.min(100,Math.max(0,pct))+"%";};
+ window.addEventListener("scroll",update,{passive:true});window.addEventListener("resize",update);update();
 })();
 </script>
 <script src="js/access.js?v=20261009-apikey-fix"></script>
