@@ -278,8 +278,8 @@
         </td>
         <td>${esc(date(u.created_at))}</td>
         <td class="admin-actions">
-          ${currentAdminRole === "admin" ? `<select class="user-role-select" data-id="${esc(u.id)}" data-current="${esc(u.role || "user")}" aria-label="ユーザー権限">${["user","moderator","admin"].map(r => '<option value="'+r+'" '+(r===(u.role||"user")?"selected":"")+'>'+statusLabel(r)+'</option>').join("")}</select>` : `<span class="admin-muted">${esc(statusLabel(u.role || "user"))}</span>`}
-          <select class="account-status" data-id="${esc(u.id)}" data-current="${esc(u.account_status || "active")}" aria-label="アカウント状態">
+          ${["admin","owner"].includes(currentAdminRole) && u.id !== "9589135e-4f75-4913-b13f-35407eeedf3b" && (u.role !== "admin" || currentAdminRole === "owner") ? `<select class="user-role-select" data-id="${esc(u.id)}" data-current="${esc(u.role || "user")}" aria-label="ユーザー権限">${["user","moderator","admin"].map(r => '<option value="'+r+'" '+(r===(u.role||"user")?"selected":"")+'>'+statusLabel(r)+'</option>').join("")}</select>` : `<span class="admin-muted">${esc(statusLabel(u.role || "user"))}</span>`}
+          <select class="account-status" data-id="${esc(u.id)}" data-current="${esc(u.account_status || "active")}" aria-label="アカウント状態" ${(u.id === "9589135e-4f75-4913-b13f-35407eeedf3b" || (u.role === "admin" && currentAdminRole !== "owner")) ? "disabled" : ""}>
             ${["active","banned","suspended"].map(s => '<option value="'+s+'" '+(s===(u.account_status||"active")?"selected":"")+'>'+statusLabel(s)+'</option>').join("")}
           </select>
           <label class="ban-expiry-field">
@@ -287,7 +287,7 @@
             <input class="ban-expires" data-id="${esc(u.id)}" type="datetime-local" step="1" value="${esc(jstDateTimeValue(u.ban_expires_at))}" aria-label="BAN解除日時（JST）">
           </label>
           <button type="button" class="account-status-save" data-id="${esc(u.id)}">状態を保存</button>
-          ${currentAdminRole === "admin" ? `<button type="button" class="user-delete" data-id="${esc(u.id)}" data-name="${esc(u.display_name || u.username || u.id)}">強制削除</button>` : ""}
+          ${["admin","owner"].includes(currentAdminRole) && u.id !== "9589135e-4f75-4913-b13f-35407eeedf3b" && (u.role !== "admin" || currentAdminRole === "owner") ? `<button type="button" class="user-delete" data-id="${esc(u.id)}" data-name="${esc(u.display_name || u.username || u.id)}">強制削除</button>` : ""}
         </td>
       </tr>`).join("") : '<tr><td colspan="6">ユーザーはいません。</td></tr>';
     document.querySelectorAll(".user-role-select").forEach(s => s.onchange = () => changeRole(s.dataset.id, s.dataset.current, s.value, s));
@@ -374,7 +374,7 @@
   }
 
   async function changeRole(id, current, next, selectEl) {
-    if (currentAdminRole !== "admin") {
+    if (!["admin","owner"].includes(currentAdminRole)) {
       if (selectEl) selectEl.value = current;
       alert("権限の変更は管理者のみ実行できます。");
       return;
@@ -658,7 +658,7 @@
     const {data,error} = await supabase.rpc("admin_get_role_permissions");
     if (error) throw error;
     const values = new Map((data || []).map(row => [row.role + ":" + row.permission_key, !!row.allowed]));
-    grid.innerHTML = '<table class="admin-table"><thead><tr><th>権限</th><th>user</th><th>moderator</th><th>admin</th></tr></thead><tbody>' +
+    grid.innerHTML = '<table class="admin-table"><thead><tr><th>権限</th><th>user</th><th>moderator</th><th>admin</th><th>owner</th></tr></thead><tbody>' +
       permissionMeta.map(([key,label]) => '<tr><td>' + esc(label) + '</td>' +
         ["user","moderator","admin","owner"].map(role => {
           const locked = role === "owner" || (role === "admin" && currentAdminRole !== "owner");
