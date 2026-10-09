@@ -667,9 +667,12 @@
     grid.innerHTML = '<table class="admin-table"><thead><tr><th>権限</th><th>user</th><th>moderator</th><th>admin</th><th>owner</th></tr></thead><tbody>' +
       permissionMeta.map(([key,label]) => '<tr><td>' + esc(label) + '</td>' +
         ["user","moderator","admin","owner"].map(role => {
-          const locked = role === "owner" || (role === "admin" && currentAdminRole !== "owner");
+          if (currentAdminRole !== "owner" && (role === "admin" || role === "owner")) {
+            return '<td><span class="admin-muted">オーナー専用</span></td>';
+          }
+          const locked = role === "owner";
           const checked = values.get(role + ":" + key) === true;
-          return '<td><label style="display:flex;justify-content:center;align-items:center;gap:7px"><input type="checkbox" class="role-permission-toggle" data-role="' + role + '" data-permission="' + key + '" ' + (checked ? "checked" : "") + (locked ? " disabled" : "") + ' aria-label="' + role + ' ' + esc(label) + '">' + (locked ? '<span class="admin-muted">必須</span>' : '') + '</label></td>';
+          return '<td><label style="display:flex;justify-content:center;align-items:center;gap:7px"><input type="checkbox" class="role-permission-toggle" data-role="' + role + '" data-permission="' + key + '" ' + (checked ? "checked" : "") + (locked ? " disabled" : "") + ' aria-label="' + role + ' ' + esc(label) + '">' + (locked ? '<span class="admin-muted">固定</span>' : '') + '</label></td>';
         }).join("") + '</tr>').join("") + '</tbody></table>';
     if (notice) notice.textContent = currentAdminRole === "owner" ? "オーナーはadminを含む各ロールの権限を変更できます。owner自身の権限は固定されています。" : "管理者はuser・moderatorの権限だけ変更できます。admin・ownerの権限は変更できません。";
     grid.querySelectorAll(".role-permission-toggle").forEach(input => {
