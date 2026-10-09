@@ -271,7 +271,7 @@
       <tr>
         <td>${esc(u.username || u.id)}</td>
         <td>${esc(u.display_name || "-")}</td>
-        <td><span class="admin-badge">${esc(statusLabel(u.role))}</span></td>
+        <td><span class="admin-badge">${u.id === "9589135e-4f75-4913-b13f-35407eeedf3b" ? "👑 オーナー" : esc(statusLabel(u.role))}</span></td>
         <td>
           <span class="admin-badge">${esc(statusLabel(u.account_status || "active"))}</span>
           ${u.ban_reason ? '<div class="admin-muted" style="margin-top:6px;white-space:pre-wrap">'+esc(u.ban_reason)+'</div>' : ''}
