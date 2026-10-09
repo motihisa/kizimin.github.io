@@ -40,6 +40,7 @@
     }
 
     const userId = session.user.id;
+    window.__kiziminCurrentUserId = userId;
     console.info("管理者チェック: ログイン中ユーザー", userId);
 
     // 管理者判定はRPCだけに依存せず、現在のユーザー自身のprofiles.roleを
@@ -278,7 +279,7 @@
         </td>
         <td>${esc(date(u.created_at))}</td>
         <td class="admin-actions">
-          ${["admin","owner"].includes(currentAdminRole) && u.id !== "9589135e-4f75-4913-b13f-35407eeedf3b" && (u.role !== "admin" || currentAdminRole === "owner") ? `<select class="user-role-select" data-id="${esc(u.id)}" data-current="${esc(u.role || "user")}" aria-label="ユーザー権限">${["user","moderator","admin"].map(r => '<option value="'+r+'" '+(r===(u.role||"user")?"selected":"")+'>'+statusLabel(r)+'</option>').join("")}</select>` : `<span class="admin-muted">${esc(statusLabel(u.role || "user"))}</span>`}
+          ${["admin","owner"].includes(currentAdminRole) && u.id !== "9589135e-4f75-4913-b13f-35407eeedf3b" && (currentAdminRole === "owner" || (u.id !== window.__kiziminCurrentUserId && ["user","moderator"].includes(u.role || "user"))) ? `<select class="user-role-select" data-id="${esc(u.id)}" data-current="${esc(u.role || "user")}" aria-label="ユーザー権限">${(currentAdminRole === "owner" ? ["user","moderator","admin"] : ["user","moderator"]).map(r => '<option value="'+r+'" '+(r===(u.role||"user")?"selected":"")+'>'+statusLabel(r)+'</option>').join("")}</select>` : `<span class="admin-muted">${esc(statusLabel(u.role || "user"))}</span>`}
           <select class="account-status" data-id="${esc(u.id)}" data-current="${esc(u.account_status || "active")}" aria-label="アカウント状態" ${(u.id === "9589135e-4f75-4913-b13f-35407eeedf3b" || (u.role === "admin" && currentAdminRole !== "owner")) ? "disabled" : ""}>
             ${["active","banned","suspended"].map(s => '<option value="'+s+'" '+(s===(u.account_status||"active")?"selected":"")+'>'+statusLabel(s)+'</option>').join("")}
           </select>
@@ -377,6 +378,11 @@
     if (!["admin","owner"].includes(currentAdminRole)) {
       if (selectEl) selectEl.value = current;
       alert("権限の変更は管理者のみ実行できます。");
+      return;
+    }
+    if (currentAdminRole !== "owner" && (id === window.__kiziminCurrentUserId || !["user","moderator"].includes(current) || !["user","moderator"].includes(next))) {
+      if (selectEl) selectEl.value = current;
+      alert("管理者は自分自身の権限や、管理者以上の権限を変更できません。変更できるのは一般ユーザーとモデレーターのみです。");
       return;
     }
     if (!["user","moderator","admin"].includes(next)) {
@@ -665,9 +671,14 @@
           const checked = values.get(role + ":" + key) === true;
           return '<td><label style="display:flex;justify-content:center;align-items:center;gap:7px"><input type="checkbox" class="role-permission-toggle" data-role="' + role + '" data-permission="' + key + '" ' + (checked ? "checked" : "") + (locked ? " disabled" : "") + ' aria-label="' + role + ' ' + esc(label) + '">' + (locked ? '<span class="admin-muted">必須</span>' : '') + '</label></td>';
         }).join("") + '</tr>').join("") + '</tbody></table>';
-    if (notice) notice.textContent = currentAdminRole === "owner" ? "オーナーはadminの権限を変更できます。owner自身の権限は固定されています。" : "変更するとすぐに保存されます。adminの権限はオーナーのみ変更できます。";
+    if (notice) notice.textContent = currentAdminRole === "owner" ? "オーナーはadminを含む各ロールの権限を変更できます。owner自身の権限は固定されています。" : "管理者はuser・moderatorの権限だけ変更できます。admin・ownerの権限は変更できません。";
     grid.querySelectorAll(".role-permission-toggle").forEach(input => {
       input.addEventListener("change", async () => {
+        if (currentAdminRole !== "owner" && !["user","moderator"].includes(input.dataset.role)) {
+          input.checked = !input.checked;
+          alert("管理者はuser・moderatorの権限だけ変更できます。");
+          return;
+        }
         input.disabled = true;
         const {error:saveError} = await supabase.rpc("admin_set_role_permission", {
           p_role: input.dataset.role,
