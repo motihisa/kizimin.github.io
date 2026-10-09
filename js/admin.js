@@ -552,7 +552,21 @@
   }
 
   async function secureContent(action, extra = {}) {
-    const { data, error } = await supabase.functions.invoke("secure-content", { body: { action, ...extra } });
+    let { data: { session } } = await supabase.auth.getSession();
+    if (!session || !session.expires_at || session.expires_at * 1000 < Date.now() + 30000) {
+      const { data, error: refreshError } = await supabase.auth.refreshSession();
+      if (!refreshError && data?.session) session = data.session;
+    }
+    if (!session?.access_token) {
+      throw new Error("ログインセッションが切れています。再ログインしてください。");
+    }
+    const { data, error } = await supabase.functions.invoke("secure-content", {
+      body: { action, ...extra },
+      headers: {
+        Authorization: "Bearer " + session.access_token,
+        apikey: SUPABASE_PUBLISHABLE_KEY
+      }
+    });
     if (error) throw error;
     if (data?.error) throw new Error(data.error);
     return data;
