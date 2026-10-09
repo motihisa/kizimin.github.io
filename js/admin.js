@@ -572,39 +572,6 @@
     return data;
   }
 
-  async function loadDmManagement() {
-    const box = $("dm-admin-conversations");
-    if (!box) return;
-    box.textContent = "読み込み中…";
-    const data = await secureContent("dm_admin_conversations");
-    const conversations = data.conversations || [];
-    box.innerHTML = conversations.length ? conversations.map(c => {
-      const names = (c.members || []).map(m => m.profiles?.display_name || m.profiles?.username || "ユーザー").join(" / ");
-      return '<button class="dm-admin-conv" data-id="' + esc(c.id) + '"><div class="dm-admin-conv-name">' + esc(names || "ユーザー") + '</div><div class="dm-admin-conv-meta">' + esc(date(c.updated_at)) + '</div></button>';
-    }).join("") : '<div class="admin-muted" style="padding:18px">DMはありません。</div>';
-    document.querySelectorAll(".dm-admin-conv").forEach(b => b.onclick = () => loadDmAdminMessages(b.dataset.id));
-  }
-
-  async function loadDmAdminMessages(id) {
-    const head = $("dm-admin-head"), box = $("dm-admin-messages");
-    if (!box) return;
-    head.textContent = "DMを読み込んでいます…";
-    box.innerHTML = '<div class="admin-muted">読み込み中…</div>';
-    try {
-      const data = await secureContent("dm_admin_messages", { conversation_id: id });
-      const conv = document.querySelector('.dm-admin-conv[data-id="' + CSS.escape(id) + '"]');
-      document.querySelectorAll(".dm-admin-conv").forEach(x => x.classList.toggle("active", x === conv));
-      head.textContent = "DM管理";
-      box.innerHTML = (data.messages || []).map(m => '<div class="dm-admin-message"><div class="dm-admin-message-text">' + esc(m.content) + '</div><div class="dm-admin-message-meta"><span>' + esc(date(m.created_at)) + '</span><button class="dm-admin-delete" type="button" data-message="' + esc(m.id) + '">このメッセージを削除</button></div></div>').join("") || '<div class="admin-muted">メッセージはありません。</div>';
-      document.querySelectorAll(".dm-admin-delete").forEach(b => b.onclick = async () => {
-        if (!confirm("このDMを削除しますか？")) return;
-        b.disabled = true;
-        try { await secureContent("dm_admin_delete_message", { message_id: b.dataset.message }); await loadDmAdminMessages(id); }
-        catch (e) { alert("DMの削除に失敗しました: " + errorMessage(e)); b.disabled = false; }
-      });
-    } catch (e) { head.textContent = "DM管理"; box.innerHTML = '<div class="admin-alert">DMを読み込めませんでした。' + esc(errorMessage(e)) + '</div>'; }
-  }
-
   async function loadNotificationHistory() {
     const body = $("notification-history-body");
     if (!body) return;
@@ -672,7 +639,6 @@
     reports: ["通報管理","届いた通報を確認して対応します。"],
     inquiries: ["問い合わせ管理","問い合わせの対応状況を管理します。"],
     notifications: ["通知送信","管理者から全ユーザーへサイト内通知を送信し、送信履歴と実行者を確認します。"],
-    "dm-management": ["DM管理","DMの確認と削除を管理します。"]
   };
 
   function setupAdminNavigation() {
@@ -687,7 +653,7 @@
         $("admin-view-title").textContent = meta[0];
         $("admin-view-subtitle").textContent = meta[1];
         history.replaceState(null, "", "#" + key);
-        const loaders = {dashboard: loadDashboard, users: loadUsers, articles: loadArticles, comments: loadComments, reports: loadReports, inquiries: loadInquiries, notifications: loadNotificationHistory, "dm-management": loadDmManagement};
+        const loaders = {dashboard: loadDashboard, users: loadUsers, articles: loadArticles, comments: loadComments, reports: loadReports, inquiries: loadInquiries, notifications: loadNotificationHistory};
         const loader = loaders[key];
         if (loader) loader().catch(e => {
           console.error("管理セクション読み込みエラー", key, e);
@@ -763,7 +729,6 @@
       ["コメント", loadComments],
       ["通報", loadReports],
       ["問い合わせ", loadInquiries],
-      ["DM管理", loadDmManagement]
     ];
     const results = await Promise.allSettled(loaders.map(([, loader]) => loader()));
     results.forEach((result, i) => {
