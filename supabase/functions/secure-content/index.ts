@@ -186,7 +186,7 @@ async function main(req: Request) {
     if (error) return json({ error: error.message }, 500);
     const result = [];
     for (const conv of data || []) {
-      const { data: members } = await admin.from("conversation_members").select("user_id,profiles:user_id(id,username,display_name)").eq("conversation_id",conv.id);
+      const { data: members } = await admin.from("conversation_members").select("user_id,profiles:profiles!conversation_members_user_id_fkey(id,username,display_name)").eq("conversation_id",conv.id);
       result.push({...conv,members:members||[]});
     }
     return json({ conversations: result });
@@ -217,7 +217,7 @@ async function main(req: Request) {
 
   if (action === "admin_comments_list") {
     if (!isStaff) return json({ error: "ADMIN_REQUIRED" }, 403);
-    const { data, error } = await admin.from("comments").select("id,article_id,author_id,content,content_encrypted,content_iv,parent_id,status,created_at,edited_at,profiles:author_id(id,username,display_name)").order("created_at",{ascending:false}).limit(500);
+    const { data, error } = await admin.from("comments").select("id,article_id,author_id,content,content_encrypted,content_iv,parent_id,status,created_at,edited_at,profiles:profiles!comments_author_id_fkey(id,username,display_name)").order("created_at",{ascending:false}).limit(500);
     if (error) return json({ error:error.message },500);
     const comments = [];
     for (const c of data || []) {
@@ -231,7 +231,7 @@ async function main(req: Request) {
   if (action === "comment_list") {
     const articleId = String(body.article_id || "");
     if (!articleId || !(await canViewArticle(articleId))) return json({ error:"FORBIDDEN" },403);
-    const { data, error } = await admin.from("comments").select("id,article_id,author_id,content,content_encrypted,content_iv,parent_id,status,created_at,edited_at,profiles:author_id(id,username,display_name)").eq("article_id",articleId).order("created_at",{ascending:true}).limit(500);
+    const { data, error } = await admin.from("comments").select("id,article_id,author_id,content,content_encrypted,content_iv,parent_id,status,created_at,edited_at,profiles:profiles!comments_author_id_fkey(id,username,display_name)").eq("article_id",articleId).order("created_at",{ascending:true}).limit(500);
     if (error) return json({ error:error.message },500);
     const comments = [];
     for (const c of data || []) {
