@@ -4,6 +4,8 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>アカウント設定 | Kizimin</title><link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/features.css">
+<link rel="stylesheet" href="css/site-features.css">
 <style>
 /* UI spacing refinement */
 .account-shell{padding:40px 28px 96px}.account-top{margin-bottom:36px}.account-layout{grid-template-columns:260px minmax(0,1fr);gap:32px}.account-nav{padding:14px;top:28px}.account-nav button{padding:14px 15px;margin:2px 0}.settings-card{padding:40px}.settings-head{padding-bottom:30px}.profile-preview{padding:30px 0}.form-section{padding:32px 0}.field{margin-bottom:22px}.field input,.field textarea{padding:14px 15px}.field textarea{min-height:140px}.save-row{padding-top:28px}.hint-card{margin-top:28px;padding:18px 20px}@media(max-width:760px){.account-shell{padding:24px 16px 64px}.account-top{margin-bottom:24px}.account-layout{gap:18px}.account-nav{padding:8px}.account-nav button{padding:12px 14px}.settings-card{padding:26px 20px}.settings-head{padding-bottom:24px}.profile-preview{padding:24px 0}.form-section{padding:26px 0}.field{margin-bottom:20px}.save-row{padding-top:24px}.hint-card{margin-top:22px}}
@@ -26,7 +28,16 @@ body{background:#fafaf8;color:#171717}.account-shell{max-width:1100px;margin:aut
 <div class="form-section"><h2>ログイン情報</h2><p class="section-note">メールアドレスはプロフィール情報とは別に管理されています。</p><div id="email" class="email-box">読み込み中…</div></div>
 <div class="save-row"><p id="message" aria-live="polite"></p><button id="save" class="save-button" type="button">変更を保存</button></div>
 <div class="hint-card">プロフィールを保存しても、パスワードやログイン用メールアドレスは変更されません。</div>
-</section></div></main>
+</section></div>  <section class="site-account-features" aria-label="アカウントのコミュニティ機能">
+    <section class="site-widget"><h2>🌱 貢献プロフィール</h2><div id="contribution-box"><p>活動を読み込んでいます…</p></div></section>
+    <section class="site-widget"><h2>📈 マイ活動レポート</h2><div id="report-box"><p>レポートを読み込んでいます…</p></div></section>
+    <section class="site-widget"><h2>🔖 保存した記事</h2>
+      <form id="collection-create" class="feature-form"><label>新しいコレクション名<input id="collection-name" required maxlength="100" placeholder="あとで読む"></label><button class="feature-primary">コレクションを作成</button></form>
+      <form id="save-article" class="feature-form"><label>保存先<select id="collection-select"></select></label><label>記事<select id="save-article-select" data-article-options></select></label><button class="feature-primary">記事を保存</button></form>
+      <div id="saved-box"><p>保存一覧を読み込んでいます…</p></div>
+    </section>
+  </section>
+</main>
 <script src="js/ban-screen.js"></script>
 <script src="js/maintenance-gate.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -85,5 +96,7 @@ $("save").onclick=async()=>{const b=$("save"),file=$("avatar-file").files?.[0];b
 if(file){if(file.size>MAX_AVATAR_SIZE){msg.textContent="画像は2MB以下にしてください。";b.disabled=false;return}const ext=({"image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/gif":"gif"})[file.type];const path=uid+"/avatar."+ext;const {error:upErr}=await sb.storage.from("avatars").upload(path,file,{upsert:true,contentType:file.type,cacheControl:"3600"});if(upErr){msg.textContent="プロフィール画像のアップロードに失敗しました。";b.disabled=false;return}nextAvatarUrl=sb.storage.from("avatars").getPublicUrl(path).data.publicUrl+"?v="+Date.now()}
 const {error}=await sb.from("profiles").update({display_name:$("display").value.trim(),username:$("username").value.trim()||null,bio:$("bio").value.trim()||null,avatar_url:nextAvatarUrl}).eq("id",uid);b.disabled=false;msg.textContent=error?friendlyError(error):"保存しました。";if(!error){avatarUrl=nextAvatarUrl;if(previewObjectUrl){URL.revokeObjectURL(previewObjectUrl);previewObjectUrl=null}$("avatar-file").value="";updatePreview();try{localStorage.setItem(PROFILE_CACHE_PREFIX+uid,JSON.stringify({data:{display_name:$("display").value.trim(),username:$("username").value.trim()||null,bio:$("bio").value.trim()||null,avatar_url:nextAvatarUrl},updatedAt:Date.now()}))}catch{}}};
 </script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/features-app.js?v=20261010-site-integration"></script>
 <script src="js/access.js"></script>
 </body></html>
