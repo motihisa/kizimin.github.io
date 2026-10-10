@@ -314,8 +314,8 @@ select:focus-visible {
 /* Sidebar */
 
 .sidebar {
-  position: sticky;
-  top: 88px;
+  position: static;
+  top: auto;
   align-self: start;
   height: fit-content;
 }
@@ -847,7 +847,7 @@ textarea:focus-visible, select:focus-visible {
   background: #f1efff;
   color: #5d50d6;
 }
-.sidebar { top: 96px; }
+.sidebar { top: auto; }
 .side-card {
   padding: 25px;
   border-color: #e5e1fb;
