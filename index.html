@@ -18,9 +18,10 @@
         <a href="#latest">新着</a>
         <a href="#popular">人気</a>
         <a href="#categories">カテゴリ</a>
-        <a href="#community-daily">コミュニティ</a>
+        <a href="#community-daily">今日のお題</a>
       </nav>
       <div class="header-actions">
+        <a id="qa-link" class="login header-qa-link" href="#community-qa">🧩 質問・回答</a>
         <input id="article-search" class="search" type="search" placeholder="記事を検索" aria-label="記事を検索">
         <button id="auth-button" class="login" type="button">ログイン</button><a id="notifications-link" class="login" href="notifications.html">🔔 通知</a><a id="dm-link" class="login" href="dm.html">💬 DM</a>
       </div>
@@ -33,31 +34,24 @@
       <p>Kiziminは、記事を読んだり、書いたりできる場所です。</p>
     </section>
 
-        <section class="site-community" aria-label="コミュニティ">
-          <section class="site-widget" id="community-daily"><h2>💡 今日のお題</h2><p class="site-widget-hint">お題から記事を書き始められます。</p><div id="daily-topic"><p>お題を読み込んでいます…</p></div></section>
-          <section class="site-widget"><h2>🧭 あなた向けの発見</h2><div id="interest-box"><p>おすすめを読み込んでいます…</p></div></section>
-          <section class="site-widget" id="community-trending"><h2>🔥 人気の記事</h2><div id="trending-list"><p>読み込んでいます…</p></div></section>
-          <section class="site-widget" id="community-polls"><h2>📊 みんなの投票</h2>
-            <form id="poll-create" class="feature-form"><label>アンケートの質問<input id="poll-title" required maxlength="180" placeholder="みんなに聞きたいこと"></label><label>説明<input id="poll-description" maxlength="1000" placeholder="任意"></label><label>選択肢（1行に1つ、2〜8個）<textarea id="poll-options" required placeholder="選択肢A&#10;選択肢B"></textarea></label><button class="feature-primary">アンケートを作成</button></form><div id="poll-list"><p>投票を読み込んでいます…</p></div>
-          </section>
-          <section class="site-widget" id="community-challenges"><h2>🎯 コミュニティチャレンジ</h2>
-            <form id="challenge-create" class="feature-form"><label>企画名<input id="challenge-title" required maxlength="160" placeholder="今週のおすすめ紹介"></label><label>説明<textarea id="challenge-description" maxlength="2000"></textarea></label><label>終了日時<input id="challenge-ends" type="datetime-local" required></label><button class="feature-primary">企画を作成</button></form><div id="challenge-list"><p>企画を読み込んでいます…</p></div>
-          </section>
-          <section class="site-widget" id="community-qa"><h2>🧩 質問・回答</h2>
-            <form id="qa-create" class="feature-form"><label>質問タイトル<input id="qa-title" required minlength="5" maxlength="180"></label><label>質問内容<textarea id="qa-body" required maxlength="8000"></textarea></label><button class="feature-primary">質問を投稿</button></form><div id="qa-list"><p>質問を読み込んでいます…</p></div>
-          </section>
-          <section class="site-widget" id="community-library"><h2>📚 みんなの情報ライブラリ</h2>
-            <form id="library-create" class="feature-form"><input type="hidden" id="library-id"><label>知識のタイトル<input id="library-title" required minlength="3" maxlength="180"></label><label>内容<textarea id="library-body" required maxlength="12000"></textarea></label><label>タグ<input id="library-tags" placeholder="勉強, 初心者向け"></label><button class="feature-primary" id="library-submit">知識を追加</button></form><div id="library-list"><p>情報を読み込んでいます…</p></div>
-          </section>
-        </section>
+    <section class="site-community site-community-top" aria-label="今日のお題">
+      <section class="site-widget daily-widget" id="community-daily">
+        <div><h2>💡 今日のお題</h2><p class="site-widget-hint">お題から記事を書き始められます。</p></div>
+        <div id="daily-topic"><p>お題を読み込んでいます…</p></div>
+      </section>
+    </section>
 
     <div class="content">
-      <section id="latest">
-        <h2 class="section-title">新着記事</h2>
-        <div id="article-list" class="articles">
-          <div class="loading">記事を読み込んでいます…</div>
-        </div>
-      </section>
+      <div class="article-columns">
+        <section id="latest">
+          <h2 class="section-title">新着記事</h2>
+          <div id="article-list" class="articles"><div class="loading">記事を読み込んでいます…</div></div>
+        </section>
+        <section id="community-trending" class="popular-panel">
+          <h2 class="section-title">🔥 人気の記事</h2>
+          <div id="trending-list"><p>読み込んでいます…</p></div>
+        </section>
+      </div>
 
       <aside class="sidebar">
         <div class="side-card">
@@ -78,13 +72,54 @@
           </div>
         </div>
 
+        <section class="site-widget discovery-widget" aria-label="あなた向けの発見">
+          <h2>🧭 あなた向けの発見</h2>
+          <div id="interest-box"><p>おすすめを読み込んでいます…</p></div>
+        </section>
+
         <div class="categories" id="account-panel">
           <h2>アカウント</h2>
           <p id="account-status" class="text-muted">確認しています…</p>
           <button id="logout-button" class="login hidden" type="button">ログアウト</button>
         </div>
       </aside>
-    </div>
+    </
+    <section class="site-community-secondary" aria-label="コミュニティ機能">
+      <section class="site-widget poll-widget" id="community-polls">
+        <h2>📊 みんなの投票</h2>
+        <p class="site-widget-hint">記事を書く画面からアンケートを作成できます。</p>
+        <div id="poll-list"><p>投票を読み込んでいます…</p></div>
+        <a class="feature-secondary poll-create-link" href="write.html#article-poll">記事を書くときに投票を作成 →</a>
+      </section>
+
+      <section class="site-widget challenge-widget" id="community-challenges">
+        <h2>🎯 コミュニティチャレンジ</h2>
+        <p class="site-widget-hint">テーマに沿って投稿し、みんなで参加しよう。</p>
+        <details class="compact-create"><summary>チャレンジを作成</summary>
+          <form id="challenge-create" class="feature-form"><label>企画名<input id="challenge-title" required maxlength="160" placeholder="今週のおすすめ紹介"></label><label>説明<textarea id="challenge-description" maxlength="2000"></textarea></label><label>終了日時<input id="challenge-ends" type="datetime-local" required></label><button class="feature-primary">企画を作成</button></form>
+        </details>
+        <div id="challenge-list"><p>企画を読み込んでいます…</p></div>
+      </section>
+
+      <section class="site-widget qa-widget" id="community-qa">
+        <h2>🧩 質問・回答</h2>
+        <p class="site-widget-hint">困ったことを質問したり、知っていることに回答したりできます。</p>
+        <details class="compact-create"><summary>質問を投稿</summary>
+          <form id="qa-create" class="feature-form"><label>質問タイトル<input id="qa-title" required minlength="5" maxlength="180"></label><label>質問内容<textarea id="qa-body" required maxlength="8000"></textarea></label><button class="feature-primary">質問を投稿</button></form>
+        </details>
+        <div id="qa-list"><p>質問を読み込んでいます…</p></div>
+      </section>
+
+      <section class="site-widget library-widget" id="community-library">
+        <h2>📚 みんなの情報ライブラリ</h2>
+        <p class="site-widget-hint">役立つ知識や手順を、あとから探せる形で共有。</p>
+        <details class="compact-create"><summary>知識を追加・編集</summary>
+          <form id="library-create" class="feature-form"><input type="hidden" id="library-id"><label>知識のタイトル<input id="library-title" required minlength="3" maxlength="180"></label><label>内容<textarea id="library-body" required maxlength="12000"></textarea></label><label>タグ<input id="library-tags" placeholder="勉強, 初心者向け"></label><button class="feature-primary" id="library-submit">知識を追加</button></form>
+        </details>
+        <div id="library-list"><p>情報を読み込んでいます…</p></div>
+      </section>
+    </section>
+div>
 
   </main>
 
