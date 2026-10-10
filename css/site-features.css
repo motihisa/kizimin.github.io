@@ -84,3 +84,10 @@
  .site-community-secondary{width:calc(100% - 24px)}
  .popular-panel .feature-list-card{grid-template-columns:24px minmax(0,1fr);padding:10px}
 }
+
+.mobile-shortcuts{display:none}
+@media(max-width:760px){
+ .mobile-shortcuts{display:flex;gap:8px;overflow-x:auto;white-space:nowrap;padding:8px 14px;border-bottom:1px solid #e9e8f4;background:rgba(255,255,255,.92);scrollbar-width:none}
+ .mobile-shortcuts::-webkit-scrollbar{display:none}
+ .mobile-shortcuts a{flex:0 0 auto;padding:5px 10px;border:1px solid #e8e6f5;border-radius:999px;background:#fff;color:#5a50b5;font-size:11px;font-weight:750}
+}
