@@ -91,3 +91,117 @@
  .mobile-shortcuts::-webkit-scrollbar{display:none}
  .mobile-shortcuts a{flex:0 0 auto;padding:5px 10px;border:1px solid #e8e6f5;border-radius:999px;background:#fff;color:#5a50b5;font-size:11px;font-weight:750}
 }
+
+/* Layout stabilization: prevent feature panels and header controls from overflowing */
+.content,
+.article-columns,
+.article-columns > section,
+.sidebar,
+.site-community-top,
+.site-community-secondary,
+.site-widget,
+.popular-panel,
+#trending-list,
+#article-list {
+  min-width: 0;
+}
+.content {
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 265px);
+  align-items: start;
+}
+.article-columns {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.article-columns > section {
+  overflow-wrap: anywhere;
+}
+.popular-panel .feature-list-card {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 900px) {
+  .content {
+    grid-template-columns: minmax(0, 1fr) 220px;
+    gap: 20px;
+  }
+  .article-columns {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+  .sidebar {
+    position: static;
+    top: auto;
+  }
+}
+@media (max-width: 760px) {
+  .header-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    padding: 10px 14px;
+  }
+  .header-inner > .logo {
+    justify-self: start;
+  }
+  .header-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "search search search"
+      "auth notifications dm";
+    gap: 7px;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+  }
+  #article-search {
+    grid-area: search;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+  #auth-button {
+    grid-area: auth;
+  }
+  #notifications-link {
+    grid-area: notifications;
+  }
+  #dm-link {
+    grid-area: dm;
+  }
+  .header-actions .login {
+    min-width: 0;
+    justify-content: center;
+    padding: 0 9px;
+    white-space: nowrap;
+  }
+  .header-qa-link {
+    display: none;
+  }
+  .content {
+    display: block;
+    width: 100%;
+    padding: 0 14px 40px;
+  }
+  .article-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .site-community-top,
+  .site-community-secondary {
+    width: calc(100% - 28px);
+  }
+}
+@media (max-width: 360px) {
+  .header-actions {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 5px;
+  }
+  .header-actions .login {
+    padding: 0 7px;
+    font-size: 11px;
+  }
+  .site-widget {
+    padding: 14px;
+  }
+}
+
