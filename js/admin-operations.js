@@ -1,9 +1,9 @@
 (() => {
 "use strict";
 const $ = id => document.getElementById(id);
-const URL = "https://bimddapbkdakspjaemsm.supabase.co";
+const SUPABASE_URL = "https://bimddapbkdakspjaemsm.supabase.co";
 const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6ImJpbWRkYXBia2Rha3NwamFlbXNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzMTU0MTksImV4cCI6MjEwNjg5MTQxOX0.qezG4VOkyYfaa4DxClk1PSV7bZEne7WEbxj52m1l7iM";
-const db = window.supabase.createClient(URL, KEY);
+const db = window.supabase.createClient(SUPABASE_URL, KEY);
 let sessionUser = null, role = "user", lastSnapshot = null, lastStats = {};
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const date = s => s ? new Date(s).toLocaleString("ja-JP",{timeZone:"Asia/Tokyo"}) : "未記録";
@@ -49,7 +49,7 @@ async function refreshData() {
  perf();
  const alerts=[], errors=[];
  const safe = async (name,fn) => { try { const v=await fn(); lastStats[name]=v; return v; } catch(e) { errors.push(name+"："+e.message); return null; } };
- const [users, articles, visits, reports, inquiries, settings, roles, cats, comments] = await Promise.all([
+ const [users, articles, visits, reports, inquiries, settings, roles, cats, comments, polls, questions, collections, challenges] = await Promise.all([
   safe("ユーザー数",()=>count("profiles")),
   safe("記事数",()=>count("articles")),
   safe("アクセスログ数",()=>count("access_logs")),
@@ -64,7 +64,7 @@ async function refreshData() {
   ["ユーザー",users],["記事",articles],["アクセスログ",visits],["コメント",comments]
  ];
  $("ops-db-kpis") && ($("ops-db-kpis").innerHTML=kpis.map(([n,v])=>'<div class="ops-kpi"><strong>'+esc(v===null?"取得不可":v)+'</strong><span>'+esc(n)+'</span></div>').join(""));
- $("ops-community").textContent = "確認できた既存データ（総数）\n記事："+(articles??"取得不可")+"\nコメント："+(comments??"取得不可")+"\nカテゴリ："+(cats??"取得不可")+"\n投票・質問・保存コレクションの集計は個別権限と構造を確認してから追加します。";
+ $("ops-community").textContent = "確認できた既存データ（総数）\n記事："+(articles??"取得不可")+"\nコメント："+(comments??"取得不可")+"\nカテゴリ："+(cats??"取得不可")+"\n投票："+(polls??"取得不可")+"\n質問："+(questions??"取得不可")+"\n保存コレクション："+(collections??"取得不可")+"\nチャレンジ："+(challenges??"取得不可");
  if(reports>0) alerts.push({title:"未解決の通報",detail:"対応が必要な通報が "+reports+" 件あります。管理画面の通報欄を確認してください。",level:"要確認"});
  if(inquiries>0) alerts.push({title:"未対応の問い合わせ",detail:"未対応の問い合わせが "+inquiries+" 件あります。",level:"要確認"});
  if(Array.isArray(settings)&&settings.length) {
