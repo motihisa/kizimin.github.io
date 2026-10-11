@@ -233,6 +233,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/ban-screen.js"></script>
 <script src="js/maintenance-gate.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"><\/script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"><\/script>
 <script>
 const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpbWRkYXBia2Rha3NwamFlbXNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzMTU0MTksImV4cCI6MjEwNjg5MTQxOX0.qezG4VOkyYfaa4DxClk1PSV7bZEne7WEbxj52m1l7iM");
 const $=id=>document.getElementById(id);
@@ -247,22 +249,21 @@ function saveLocal(){try{localStorage.setItem(draftKey,JSON.stringify({title:$("
 function restoreLocal(){try{const d=JSON.parse(localStorage.getItem(draftKey)||"null");if(!d)return;if(!$("title").value&&!$("content").value){$("title").value=d.title||"";$("excerpt").value=d.excerpt||"";$("content").value=d.content||"";if(d.category)$("category").value=d.category;if(d.visibility){const el=document.querySelector("input[name=visibility][value="+d.visibility+"]");if(el){el.checked=true;toggleAllowedUsers();}}updateStats();$("saveState").textContent="下書きを復元しました";}}catch{}}
 function escapeHtml(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
 function renderMarkdown(v){
-  let s=escapeHtml(v);
-  s=s.replace(/\{\{color:(#[0-9a-fA-F]{6})\|([\s\S]*?)\}\}/g,(_,color,text)=>'<span style="color:'+color+'">'+text+'</span>');
-  const code=[];
-  s=s.replace(/\`([^\`]+)\`/g,(_,x)=>{code.push(x);return "@@CODE"+(code.length-1)+"@@";});
-  s=s.replace(/^### (.+)$/gm,"<h3>$1</h3>")
-   .replace(/^## (.+)$/gm,"<h2>$1</h2>")
-   .replace(/^# (.+)$/gm,"<h1>$1</h1>")
-   .replace(/^> (.+)$/gm,"<blockquote>$1</blockquote>")
-   .replace(/^---$/gm,"<hr>")
-   .replace(/^[-*] (.+)$/gm,"<li>$1</li>")
-   .replace(/^\d+\. (.+)$/gm,"<li>$1</li>");
-  s=s.replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>")
-   .replace(/\*([^*]+)\*/g,"<em>$1</em>");
-  s=s.replace(/(?:<li>.*<\/li>\n?)+/g,x=>"<ul>"+x+"</ul>");
-  s=s.replace(/\n/g,"<br>");
-  return s.replace(/@@CODE(\d+)@@/g,(_,i)=>"<code>"+code[i]+"</code>");
+  const colorTokens=[];
+  const source=String(v??"").replace(/\{\{color:(#[0-9a-fA-F]{6})\|([\s\S]*?)\}\}/g,(_,color,text)=>{
+    const token="KIZIMINCOLOR"+colorTokens.length+"TOKEN";
+    colorTokens.push({token,color,text});
+    return token;
+  });
+  const options={gfm:true,breaks:true};
+  let html=window.marked?marked.parse(source,options):escapeHtml(source).replace(/\n/g,"<br>");
+  html=window.DOMPurify?DOMPurify.sanitize(html,{USE_PROFILES:{html:true}}):escapeHtml(source).replace(/\n/g,"<br>");
+  for(const item of colorTokens){
+    let inner=window.marked?marked.parseInline(item.text,options):escapeHtml(item.text);
+    if(window.DOMPurify)inner=DOMPurify.sanitize(inner,{USE_PROFILES:{html:true}});
+    html=html.split(item.token).join('<span style="color:'+item.color+'">'+inner+'</span>');
+  }
+  return html;
 }
 function renderPreviewBody(v){return renderMarkdown(v);}
 function updatePreview(){ $("previewTitle").textContent=$("title").value||"無題の記事"; $("previewExcerpt").textContent=$("excerpt").value; $("previewExcerpt").style.display=$("excerpt").value?"block":"none"; $("previewBody").innerHTML=$("content").value?renderPreviewBody($("content").value):"本文はまだありません。"; }
