@@ -113,6 +113,7 @@
       location.href = "login.html?next=" + encodeURIComponent(next);
       return;
     }
+    void refreshUsage();
     sb.from("profiles").select("account_status").eq("id", session.user.id).maybeSingle().then(({data: profile, error}) => {
       if (error || !profile) return;
       if (["banned", "suspended", "disabled"].includes(String(profile.account_status || "").toLowerCase())) {
@@ -121,5 +122,8 @@
       }
     });
   });
-  sb.auth.onAuthStateChange((_event, nextSession) => { session = nextSession; });
+  sb.auth.onAuthStateChange((_event, nextSession) => {
+    session = nextSession;
+    void refreshUsage();
+  });
 })();
