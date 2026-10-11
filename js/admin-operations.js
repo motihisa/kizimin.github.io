@@ -19,15 +19,26 @@ async function guard() {
 
   // Owner 判定を先に行う。profiles の SELECT が RLS で失敗しても、
   // site_owners に登録されたオーナーをそこで誤拒否しない。
+  // 先にオーナーを確認。RPCが失敗した場合は site_owners の本人行を直接照会する。
+  let isOwner=false, ownerCheckError=null;
   const {data:ownerFlag,error:ownerError}=await db.rpc("is_site_owner");
-  const isOwner=!ownerError && ownerFlag===true;
+  if(!ownerError && ownerFlag===true) isOwner=true;
+  else if(ownerError) ownerCheckError=ownerError;
+  if(!isOwner) {
+   const {data:ownerRow,error:ownerRowError}=await db.from("site_owners").select("user_id").eq("user_id",session.user.id).maybeSingle();
+   if(!ownerRowError && ownerRow?.user_id===session.user.id) isOwner=true;
+   else if(ownerRowError) ownerCheckError=ownerRowError;
+  }
 
   const {data:p,error:pe}=await db.from("profiles").select("role,account_status").eq("id",session.user.id).maybeSingle();
   if(pe && !isOwner) {
-   console.error("運営ツール: profiles 権限確認失敗",pe);
-   return showDenied("プロフィールの権限確認に失敗しました。");
+   console.error("運営ツール: profiles 権限確認失敗",pe,"owner check:",ownerCheckError);
+   return showDenied("プロフィールの権限確認に失敗しました。詳細はブラウザの開発者ツール Console を確認してください。");
   }
-  if(!p && !isOwner) return showDenied("プロフィールの権限確認に失敗しました。");
+  if(!p && !isOwner) {
+   console.error("運営ツール: プロフィールなし、オーナー確認失敗",{profileError:pe,ownerCheckError});
+   return showDenied("プロフィールが取得できず、オーナー確認にも失敗しました。Supabaseの権限設定または通信を確認してください。");
+  }
   if(p?.account_status && p.account_status!=="active") return showDenied("このアカウントは利用できません。");
   if(!isOwner && !["admin","moderator"].includes(p?.role)) return showDenied("管理者またはオーナーのみ利用できます。");
 
