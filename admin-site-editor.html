@@ -10,8 +10,8 @@
 </style>
 </head>
 <body class="admin-page">
-<div id="editor-loading" class="admin-loading admin-panel"><strong>管理者権限を確認しています…</strong><p class="admin-muted">サイト設定の変更権限を確認しています。</p></div>
-<div id="editor-denied" class="admin-forbidden-wrap admin-panel hidden"><div class="admin-alert"><strong>サイト編集へのアクセスが拒否されました。</strong><p id="editor-denied-reason">管理者権限が必要です。</p></div><a class="admin-btn" href="admin.html">管理画面へ戻る</a></div>
+<div id="editor-loading" class="admin-loading admin-panel"><strong>オーナー権限を確認しています…</strong><p class="admin-muted">オーナー権限のみサイト設定を変更できます。</p></div>
+<div id="editor-denied" class="admin-forbidden-wrap admin-panel hidden"><div class="admin-alert"><strong>サイト編集へのアクセスが拒否されました。</strong><p id="editor-denied-reason">オーナー権限が必要です。</p></div><a class="admin-btn" href="admin.html">管理画面へ戻る</a></div>
 <main id="editor-app" class="editor-wrap admin-main hidden">
 <header class="admin-topbar"><div><h1>サイト編集</h1><p>コードを書き換えずに、Kiziminのデザインと表示内容を調整します。</p></div><div class="admin-top-actions"><a class="admin-btn" href="admin.html">← 管理画面</a><a class="admin-btn" href="index.html" target="_blank" rel="noopener">サイトを見る ↗</a></div></header>
 <div class="editor-grid">
@@ -41,7 +41,7 @@
 </div>
 <div class="editor-actions"><button class="admin-btn primary" type="submit">設定を保存</button><button id="editor-preview-button" class="admin-btn" type="button">プレビューを更新</button><button id="editor-reset" class="admin-btn" type="button">保存済み設定に戻す</button></div>
 <p id="editor-status" class="editor-status" role="status">設定を読み込んでいます…</p>
-<p class="editor-note">安全のため、この画面は許可されたデザイン設定だけを編集します。任意のJavaScript実行やSupabaseの権限変更はできません。</p>
+<p class="editor-note">安全のため、この画面はオーナーのみが許可されたデザイン設定を編集できます。任意のJavaScript実行やSupabaseの権限変更はできません。</p>
 </form>
 </section>
 <section class="admin-panel">
