@@ -84,7 +84,14 @@
     .reader-footer{text-align:center;padding:0 20px 32px;color:#a0a6b4;font-size:11px;letter-spacing:.08em}
     @media(max-width:600px){.reader-topbar{padding:13px 16px}.reader-top-label{display:none}.reader-brand{font-size:20px}.reader-brand-mark{width:31px;height:31px}.article-page{padding:25px 13px 64px!important}.article-shell{border-radius:21px!important}.article-cover{padding:28px 23px 30px}.article-kicker{margin-bottom:23px}.article-title{font-size:32px!important}.article-body{padding:28px 23px;font-size:16px;line-height:1.95}.article-endnote{margin:0 23px 26px}.comments-shell{border-radius:20px!important}.comment-composer{padding:13px}}
     @media(prefers-reduced-motion:reduce){.reader-back,#comment-submit{transition:none}}
-  </style>
+  
+.article-body.markdown-rendered{white-space:normal;overflow-wrap:anywhere;line-height:1.95}
+.article-body.markdown-rendered h1,.article-body.markdown-rendered h2,.article-body.markdown-rendered h3{line-height:1.35;margin:1.35em 0 .55em}
+.article-body.markdown-rendered h1{font-size:1.8em}.article-body.markdown-rendered h2{font-size:1.45em}.article-body.markdown-rendered h3{font-size:1.2em}
+.article-body.markdown-rendered p{margin:.7em 0}.article-body.markdown-rendered blockquote{margin:1em 0;padding:12px 18px;border-left:4px solid #8b7fff;border-radius:0 12px 12px 0;background:#f6f4ff}
+.article-body.markdown-rendered pre{white-space:pre-wrap;overflow:auto;padding:14px;border-radius:12px;background:#f4f3fa}.article-body.markdown-rendered code{padding:2px 5px;border-radius:5px;background:#f0eef9;font-family:ui-monospace,monospace}
+.article-body.markdown-rendered ul,.article-body.markdown-rendered ol{padding-left:1.6em}.article-body.markdown-rendered li{margin:.25em 0}.article-body.markdown-rendered hr{border:0;border-top:1px solid #e6e2f7;margin:1.8em 0}.article-body.markdown-rendered a{color:#594bd6;text-decoration:underline}
+</style>
 </head>
 <body>
 <div class="reader-progress" id="reader-progress" aria-hidden="true"></div>
@@ -142,10 +149,28 @@
 <script src="js/ban-screen.js"></script>
 <script src="js/maintenance-gate.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"><\/script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"><\/script>
 <script>
 const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf");
 const escapeHtml=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
-function renderArticleContent(v){return escapeHtml(v).replace(/\{\{color:(#[0-9a-fA-F]{6})\|([\s\S]*?)\}\}/g,(_,color,text)=>'<span style="color:'+color+'">'+text+'</span>');}
+function renderArticleContent(v){
+  const colorTokens=[];
+  const source=String(v??"").replace(/\{\{color:(#[0-9a-fA-F]{6})\|([\s\S]*?)\}\}/g,(_,color,text)=>{
+    const token="KIZIMINCOLOR"+colorTokens.length+"TOKEN";
+    colorTokens.push({token,color,text});
+    return token;
+  });
+  const options={gfm:true,breaks:true};
+  let html=window.marked?marked.parse(source,options):escapeHtml(source).replace(/\n/g,"<br>");
+  html=window.DOMPurify?DOMPurify.sanitize(html,{USE_PROFILES:{html:true}}):escapeHtml(source).replace(/\n/g,"<br>");
+  for(const item of colorTokens){
+    let inner=window.marked?marked.parseInline(item.text,options):escapeHtml(item.text);
+    if(window.DOMPurify)inner=DOMPurify.sanitize(inner,{USE_PROFILES:{html:true}});
+    html=html.split(item.token).join('<span style="color:'+item.color+'">'+inner+'</span>');
+  }
+  return html;
+}
 const id=new URLSearchParams(location.search).get("id");
 const article=document.getElementById("article");
 const commentsList=document.getElementById("comments-list");
@@ -356,7 +381,7 @@ document.getElementById("comment-form").addEventListener("submit",async event=>{
     const publishedDate=escapeHtml(new Intl.DateTimeFormat("ja-JP",{year:"numeric",month:"long",day:"numeric"}).format(new Date(data.published_at||data.created_at)));
     const authorInitial=escapeHtml((author||"K").trim().slice(0,1).toUpperCase());
     const authorAvatar=authorAvatarUrl?'<img src="'+escapeHtml(authorAvatarUrl)+'" alt="" loading="lazy">':authorInitial;
-    article.innerHTML='<div class="article-cover"><div class="article-kicker"><span class="article-dot"></span> KIZIMIN JOURNAL</div><div class="article-meta"><span class="article-category">'+escapeHtml(category)+'</span><span>'+publishedDate+'</span><span>·</span><span>読む時間のひととき</span></div><h1 class="article-title">'+escapeHtml(data.title)+'</h1><div class="article-author-row"><span class="author-avatar" aria-hidden="true">'+authorAvatar+'</span><div class="article-author-details"><span class="author-label">この記事を書いた人</span><div><a class="author-name" href="profile.html?id='+encodeURIComponent(data.author_id||"")+'">'+escapeHtml(author)+'</a>'+badge(authorTitle)+(data.author_id?'<button type="button" class="inline-follow-button" data-follow-user="'+escapeHtml(data.author_id)+'">フォロー</button>':'')+'</div></div></div></div><div class="article-divider"></div><div class="article-body" style="white-space:pre-wrap">'+renderArticleContent(data.content)+'</div><div class="article-endnote">最後まで読んでくれてありがとう</div>';
+    article.innerHTML='<div class="article-cover"><div class="article-kicker"><span class="article-dot"></span> KIZIMIN JOURNAL</div><div class="article-meta"><span class="article-category">'+escapeHtml(category)+'</span><span>'+publishedDate+'</span><span>·</span><span>読む時間のひととき</span></div><h1 class="article-title">'+escapeHtml(data.title)+'</h1><div class="article-author-row"><span class="author-avatar" aria-hidden="true">'+authorAvatar+'</span><div class="article-author-details"><span class="author-label">この記事を書いた人</span><div><a class="author-name" href="profile.html?id='+encodeURIComponent(data.author_id||"")+'">'+escapeHtml(author)+'</a>'+badge(authorTitle)+(data.author_id?'<button type="button" class="inline-follow-button" data-follow-user="'+escapeHtml(data.author_id)+'">フォロー</button>':'')+'</div></div></div></div><div class="article-divider"></div><div class="article-body markdown-rendered">'+renderArticleContent(data.content)+'</div><div class="article-endnote">最後まで読んでくれてありがとう</div>';
     const articleAvatarImage=article.querySelector(".author-avatar img");
     if(articleAvatarImage)articleAvatarImage.addEventListener("error",()=>{articleAvatarImage.replaceWith(document.createTextNode(authorInitial));},{once:true});
     document.title=data.title+" | Kizimin";
