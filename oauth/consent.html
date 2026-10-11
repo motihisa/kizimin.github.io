@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+  <title>外部アプリのアクセス確認 | Kizimin</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    body{background:#f7f7fc;color:#282542}.oauth-shell{max-width:620px;margin:7vh auto;padding:20px}.oauth-card{background:#fff;border:1px solid #e7e4f7;border-radius:22px;padding:28px;box-shadow:0 14px 40px #39306b0c}.oauth-card h1{font-size:25px;margin:0 0 10px}.oauth-muted{color:#77748f;line-height:1.8}.oauth-details{padding:14px;border-radius:12px;background:#f7f6ff;line-height:1.8;overflow-wrap:anywhere;margin:16px 0}.oauth-actions{display:flex;gap:10px;flex-wrap:wrap}.oauth-actions button{border:1px solid #ddd9f3;border-radius:12px;padding:11px 16px;font-weight:800;cursor:pointer}.oauth-approve{background:#6558e8;color:#fff;border-color:#6558e8!important}.oauth-deny{background:#fff;color:#5a5677}.oauth-status{min-height:22px;font-size:13px;color:#7b7698;margin-top:14px}.oauth-status.error{color:#a33}
+  </style>
+</head>
+<body>
+  <main class="oauth-shell">
+    <a href="../index.html" class="logo">Kizimin</a>
+    <section class="oauth-card">
+      <h1>🔐 外部アプリのアクセス確認</h1>
+      <p class="oauth-muted">ChatGPTなどの外部アプリがKiziminのアカウント情報や記事機能にアクセスしようとしています。内容を確認してから許可してください。</p>
+      <div id="oauth-details" class="oauth-details">認証リクエストを確認しています…</div>
+      <p class="oauth-muted">許可したアプリは、あなたのログイン権限でKiziminにアクセスします。記事の作成や管理操作は、Kizimin側の権限チェックを通過した場合に限られます。見覚えのないアプリなら拒否してください。</p>
+      <div class="oauth-actions">
+        <button id="oauth-approve" class="oauth-approve" type="button" disabled>許可する</button>
+        <button id="oauth-deny" class="oauth-deny" type="button" disabled>拒否する</button>
+      </div>
+      <div id="oauth-status" class="oauth-status" role="status"></div>
+    </section>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const sb = supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf");
+    const $ = id => document.getElementById(id);
+    const params = new URLSearchParams(location.search);
+    const authorizationId = params.get("authorization_id");
+    let authorizationDetails = null;
+    function status(message, isError=false){$("oauth-status").textContent=message;$("oauth-status").classList.toggle("error",isError);}
+    function safeText(value){return String(value||"").replace(/[<>]/g,"");}
+    async function decide(approve){
+      if(!authorizationId || !sb.auth.oauth){status("OAuth機能を利用できません。設定を確認してください。",true);return;}
+      $("oauth-approve").disabled=true;$("oauth-deny").disabled=true;
+      status(approve?"アクセス許可を処理しています…":"アクセス拒否を処理しています…");
+      try{
+        const result=approve
+          ? await sb.auth.oauth.approveAuthorization(authorizationId)
+          : await sb.auth.oauth.denyAuthorization(authorizationId);
+        if(result.error)throw result.error;
+        const redirectUrl=result.data?.redirect_url;
+        if(!redirectUrl)throw new Error("リダイレクト先が返されませんでした。");
+        location.assign(redirectUrl);
+      }catch(error){
+        console.error("OAuth consent error",error);
+        status("処理に失敗しました。SupabaseのOAuth Server設定を確認してください。",true);
+        $("oauth-approve").disabled=false;$("oauth-deny").disabled=false;
+      }
+    }
+    async function init(){
+      if(!authorizationId){$("oauth-details").textContent="認証IDが見つかりません。ChatGPT側から接続をやり直してください。";status("authorization_id がありません。",true);return;}
+      const {data:sessionData}=await sb.auth.getSession();
+      if(!sessionData?.session){
+        const next=location.pathname+location.search;
+        const loginUrl=new URL("../login.html",location.href);
+        loginUrl.searchParams.set("next",next);
+        location.assign(loginUrl.href);
+        return;
+      }
+      if(!sb.auth.oauth?.getAuthorizationDetails){$("oauth-details").textContent="現在のSupabase JS SDKではOAuth機能が見つかりません。";status("SDKの対応状況を確認してください。",true);return;}
+      try{
+        const {data,error}=await sb.auth.oauth.getAuthorizationDetails(authorizationId);
+        if(error)throw error;
+        authorizationDetails=data;
+        const client=data?.client||{};
+        const redirectUri=data?.redirect_uri||data?.redirectUri||"不明";
+        const scopes=String(data?.scope||"email").split(/\s+/).filter(Boolean).join(", ");
+        $("oauth-details").textContent="アプリ名: "+safeText(client.name||data?.client_name||"外部アプリ")+"\nリダイレクト先: "+safeText(redirectUri)+"\n要求する権限: "+safeText(scopes);
+        $("oauth-approve").disabled=false;$("oauth-deny").disabled=false;
+      }catch(error){
+        console.error("OAuth authorization details error",error);
+        $("oauth-details").textContent="アクセス要求を確認できませんでした。許可せず、設定を確認してください。";
+        status("認証情報の取得に失敗しました。",true);
+      }
+    }
+    $("oauth-approve").addEventListener("click",()=>decide(true));
+    $("oauth-deny").addEventListener("click",()=>decide(false));
+    void init();
+  </script>
+</body>
+</html>
