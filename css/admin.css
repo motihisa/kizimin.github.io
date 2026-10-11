@@ -208,3 +208,28 @@ button:focus-visible,a:focus-visible{outline:3px solid rgba(143,118,236,.65);out
   .admin-view.active{animation:none}
   .admin-btn,.admin-nav button,.stat-card,.admin-table tbody tr{transition:none}
 }
+
+
+/* Custom dropdown controls for user, comment and other moderation tables */
+.custom-select{position:relative;display:inline-block;min-width:150px;max-width:100%;vertical-align:middle;font:inherit}
+.custom-select-native{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important;opacity:0!important;pointer-events:none!important}
+.custom-select-trigger{display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;min-height:40px;padding:9px 12px;border:1px solid #e3dcf5;border-radius:12px;background:linear-gradient(180deg,#fff 0%,#faf8ff 100%);color:#392b5b;font:650 12px/1.35 inherit;text-align:left;cursor:pointer;box-shadow:0 2px 5px rgba(58,40,110,.05);transition:border-color .16s,box-shadow .16s,transform .16s}
+.custom-select-trigger:hover{border-color:#b7a5ef;box-shadow:0 5px 14px rgba(94,68,170,.11);transform:translateY(-1px)}
+.custom-select-trigger:focus-visible,.custom-select-option:focus-visible{outline:3px solid rgba(126,99,222,.28);outline-offset:2px}
+.custom-select-value{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.custom-select-arrow{display:grid;place-items:center;flex:0 0 20px;width:20px;height:20px;border-radius:7px;background:#f0ebff;color:#7254cf;font-size:17px;line-height:1;transition:transform .18s}
+.custom-select.open .custom-select-arrow{transform:rotate(180deg)}
+.custom-select-trigger.is-disabled{opacity:.5;cursor:not-allowed;transform:none}
+.custom-select-menu{position:absolute;z-index:30;top:calc(100% + 7px);left:0;right:0;display:none;min-width:100%;padding:6px;border:1px solid #e5def7;border-radius:14px;background:rgba(255,255,255,.98);box-shadow:0 16px 35px rgba(45,31,87,.17);backdrop-filter:blur(12px);max-height:260px;overflow-y:auto}
+.custom-select.open .custom-select-menu{display:grid;gap:3px;animation:custom-select-in .14s ease-out}
+.custom-select-option{display:flex;align-items:center;gap:9px;width:100%;padding:10px 11px;border:0;border-radius:9px;background:transparent;color:#51446f;text-align:left;font:600 12px/1.35 inherit;cursor:pointer;white-space:nowrap}
+.custom-select-option:before{content:"";flex:0 0 7px;width:7px;height:7px;border-radius:50%;background:#d9d2eb}
+.custom-select-option:hover{background:#f5f1ff;color:#4c329c}
+.custom-select-option.selected{background:linear-gradient(90deg,#f0ebff,#faf8ff);color:#583cb3;font-weight:800}
+.custom-select-option.selected:before{background:#8064df;box-shadow:0 0 0 3px #e6ddff}
+.custom-select-option:disabled{opacity:.45;cursor:not-allowed}
+@keyframes custom-select-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.admin-table .admin-actions .custom-select{min-width:135px}
+#view-comments .custom-select{min-width:140px}
+#view-articles .custom-select,#view-reports .custom-select,#view-inquiries .custom-select{min-width:145px}
+@media(max-width:520px){.custom-select{min-width:130px}.custom-select-trigger{min-height:38px;padding:8px 10px}}
