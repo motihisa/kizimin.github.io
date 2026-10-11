@@ -88,8 +88,8 @@
     async function init(){
       const {data:{session},error:authError}=await sb.auth.getSession();
       if(authError||!session){location.href="login.html?next="+encodeURIComponent("my-articles.html");return;}
-      const {data,error}=await sb.from("articles").select("id,title,excerpt,status,visibility,created_at,published_at,updated_at").eq("author_id",session.user.id).order("updated_at",{ascending:false}).limit(500);
-      if(error){$("mineCount").textContent="読み込み失敗";$("mineStatus").textContent="記事一覧を読み込めませんでした。ログイン状態や通信状態を確認してください。";$("mineList").innerHTML='<div class="mine-empty"><strong>記事を読み込めませんでした</strong><p>時間をおいて再読み込みしてください。</p><button class="mine-btn" id="mineRetry" type="button">再読み込み</button></div>';return;}
+      const {data,error}=await sb.from("articles").select("id,title,excerpt,status,visibility,created_at,published_at").eq("author_id",session.user.id).order("created_at",{ascending:false,nullsFirst:false}).limit(500);
+      if(error){console.error("記事一覧の読み込みに失敗しました",error);$("mineCount").textContent="読み込み失敗";$("mineStatus").textContent="記事一覧を読み込めませんでした。ログイン状態または記事の閲覧権限を確認してください。";$("mineList").innerHTML='<div class="mine-empty"><strong>記事を読み込めませんでした</strong><p>時間をおいて再読み込みしてください。</p><button class="mine-btn" id="mineRetry" type="button">再読み込み</button></div>';return;}
       myArticles=data||[];$("mineStatus").textContent=myArticles.length?"自分の記事を新しい順に表示しています。":"自分が書いた記事はまだありません。";render();
     }
     $("mineSearch").addEventListener("input",render);$("mineFilter").addEventListener("change",render);
