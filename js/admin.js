@@ -81,6 +81,9 @@
 
     currentAdminRole = isOwner ? "owner" : profile.role;
     document.querySelector('a[href="admin-site-editor.html"]')?.classList.toggle("hidden", !isOwner);
+    document.querySelector('.admin-nav [data-view="permissions"]')?.classList.toggle("hidden", !isOwner);
+    $("view-permissions")?.classList.toggle("hidden", !isOwner);
+    if (!isOwner && location.hash === "#permissions") history.replaceState(null, "", "#dashboard");
     $("admin-loading").classList.add("hidden");
     $("admin-app").classList.remove("hidden");
     const maintenancePanel = $("maintenance-panel");
@@ -815,8 +818,8 @@
   async function loadPermissions() {
     const notice = $("permissions-notice");
     const grid = $("permissions-grid");
-    if (!["admin","owner"].includes(currentAdminRole)) {
-      if (notice) notice.textContent = "権限設定を変更できるのは管理者のみです。";
+    if (currentAdminRole !== "owner") {
+      if (notice) notice.textContent = "権限設定を表示・変更できるのはサイトオーナーのみです。";
       if (grid) grid.innerHTML = "";
       return;
     }
@@ -834,12 +837,12 @@
           const checked = values.get(role + ":" + key) === true;
           return '<td><label style="display:flex;justify-content:center;align-items:center;gap:7px"><input type="checkbox" class="role-permission-toggle" data-role="' + role + '" data-permission="' + key + '" ' + (checked ? "checked" : "") + (locked ? " disabled" : "") + ' aria-label="' + role + ' ' + esc(label) + '">' + (locked ? '<span class="admin-muted">固定</span>' : '') + '</label></td>';
         }).join("") + '</tr>').join("") + '</tbody></table>';
-    if (notice) notice.textContent = currentAdminRole === "owner" ? "オーナーはadminを含む各ロールの権限を変更できます。owner自身の権限は固定されています。" : "管理者はuser・moderatorの権限だけ変更できます。admin・ownerの権限は変更できません。";
+    if (notice) notice.textContent = "オーナー専用設定です。adminを含む各ロールの権限を変更できます。owner自身の権限は固定されています.";
     grid.querySelectorAll(".role-permission-toggle").forEach(input => {
       input.addEventListener("change", async () => {
-        if (currentAdminRole !== "owner" && !["user","moderator"].includes(input.dataset.role)) {
+        if (currentAdminRole !== "owner") {
           input.checked = !input.checked;
-          alert("管理者はuser・moderatorの権限だけ変更できます。");
+          alert("権限設定を変更できるのはサイトオーナーのみです。");
           return;
         }
         input.disabled = true;
