@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="favicon.svg"><link rel="stylesheet" href="css/style.css">
+<title>新しく作る | Kizimin</title>
+<style>
+body{margin:0;background:radial-gradient(ellipse at 15% 0%,#e9e6ff 0,transparent 38rem),#f7f7fc;color:#292642}
+.top{display:flex;align-items:center;justify-content:space-between;padding:16px max(16px,calc((100vw - 1000px)/2));background:#ffffffdf;border-bottom:1px solid #e8e6f5}
+.brand{font-size:22px;font-weight:900;letter-spacing:-.05em;color:#292642;text-decoration:none}
+.wrap{width:min(100% - 32px,920px);margin:52px auto 90px}
+.kicker{font-size:10px;font-weight:900;letter-spacing:.16em;color:#8179b2}
+h1{margin:8px 0;font-size:clamp(30px,5vw,42px);letter-spacing:-.05em}
+.lead{color:#77748f;line-height:1.8;margin:0 0 28px}
+.choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.choice{display:flex;flex-direction:column;align-items:flex-start;min-height:250px;padding:25px;border:1px solid #e5e2f4;border-radius:22px;background:#fff;box-shadow:0 12px 32px #30265c0a;text-decoration:none;color:inherit;transition:transform .18s,border-color .18s}
+.choice:hover{transform:translateY(-3px);border-color:#aaa0ff}
+.icon{display:grid;place-items:center;width:52px;height:52px;border-radius:16px;background:#f0edff;color:#6255dc;font-size:25px}
+.choice h2{margin:18px 0 8px;font-size:21px}
+.choice p{margin:0 0 22px;color:#77748f;font-size:13px;line-height:1.8}
+.go{margin-top:auto;padding:10px 14px;border-radius:11px;background:#f1efff;color:#5d50d2;font-weight:850;font-size:13px}
+.choice.primary{border-color:#d8d2ff;background:linear-gradient(150deg,#fff,#f7f5ff)}
+.note{margin-top:20px;padding:14px 16px;border:1px solid #e8e6f5;border-radius:14px;background:#fff;color:#77748f;font-size:12px;line-height:1.8}
+@media(max-width:650px){.wrap{margin-top:30px}.choices{grid-template-columns:1fr}.choice{min-height:0;padding:21px}.top{padding:13px 16px}}
+</style>
+</head>
+<body>
+<header class="top"><a class="brand" href="index.html">Kizimin</a><a href="my-articles.html">記事一覧に戻る</a></header>
+<main class="wrap">
+<div class="kicker">CREATE SOMETHING NEW</div>
+<h1>何を作りますか？</h1>
+<p class="lead">記事をひとりで書くか、誰かと一緒に作るかを選べます。共同編集は専用画面で管理します。</p>
+<section class="choices" aria-label="記事の作成方法">
+<a class="choice" href="write.html">
+<span class="icon">✍️</span><h2>通常の記事</h2><p>自分で記事を書いて、そのまま公開します。いつもの記事作成画面を使います。</p><span class="go">通常の記事を書く →</span>
+</a>
+<a class="choice primary" href="write.html?collaboration=1">
+<span class="icon">🤝</span><h2>共同編集の記事</h2><p>最初の記事を作成したあと、専用の共同編集画面へ移動してユーザーを招待できます。公開操作は記事の所有者が行います。</p><span class="go">共同編集の記事を作る →</span>
+</a>
+</section>
+<div class="note">※ 共同編集を選ぶと、まず記事の内容を作成・公開し、その後に専用画面で共同編集者を招待できます。下書きのまま保存する機能ではありません。</div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="js/ban-screen.js"></script><script src="js/maintenance-gate.js"></script>
+</body></html>
