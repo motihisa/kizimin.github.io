@@ -190,6 +190,14 @@
     </section>
 
     <aside class="writer-side">
+      <div class="side-panel" id="collaboration-entry-panel">
+        <h2>🤝 共同編集</h2>
+        <p style="margin:0 0 12px;color:#777;font-size:12px;line-height:1.7">自分の記事を選んで、共同編集画面を開きます。そこでユーザーを招待できます。</p>
+        <label for="collaborationArticleSelect">共同編集する記事</label>
+        <select id="collaborationArticleSelect"><option value="">記事を読み込み中…</option></select>
+        <button id="openCollaborationBtn" class="writer-btn primary" type="button" style="width:100%;margin-top:10px">共同編集を開く</button>
+        <div id="collaborationEntryStatus" class="category-status" aria-live="polite"></div>
+      </div>
       <div class="side-panel">
         <h2>公開範囲</h2>
         <div class="publish-settings">
@@ -243,6 +251,21 @@ let allowedUsers=[];
 const draftKey="kizimin:writer:draft";
 const friendlyError=e=>{const m=String(e?.message||"");if(/duplicate key|unique/i.test(m))return "同じ記事の識別情報がすでに使用されています。";if(/permission denied|row-level security/i.test(m))return "記事を保存する権限がありません。";return "記事の保存に失敗しました。しばらくしてからもう一度お試しください。";};
 
+async function loadMyArticlesForCollaboration(){
+  const select=$("collaborationArticleSelect"),status=$("collaborationEntryStatus"),button=$("openCollaborationBtn");
+  if(!select||!uid)return;
+  const {data,error}=await sb.from("articles").select("id,title,updated_at,status").eq("author_id",uid).order("updated_at",{ascending:false}).limit(100);
+  if(error){select.innerHTML='<option value="">記事を読み込めません</option>';status.textContent="記事一覧を読み込めませんでした。";return;}
+  const rows=data||[];
+  select.innerHTML='<option value="">記事を選択してください</option>'+rows.map(a=>'<option value="'+escapeHtml(a.id)+'">'+escapeHtml(a.title||"無題の記事")+(a.status==="published"?"":"（未公開）")+'</option>').join("");
+  status.textContent=rows.length?"自分の記事 "+rows.length+" 件":"まだ自分の記事がありません。先に記事を公開してください。";
+  button.disabled=!rows.length;
+}
+$("openCollaborationBtn")?.addEventListener("click",()=>{
+  const id=$("collaborationArticleSelect")?.value;
+  if(!id){$("collaborationEntryStatus").textContent="共同編集する記事を選択してください。";return;}
+  location.href="edit-article.html?id="+encodeURIComponent(id);
+});
 function slugify(s){return s.toLowerCase().trim().replace(/[^a-z0-9ぁ-んァ-ン一-龥]+/g,"-").replace(/^-+|-+$/g,"")+"-"+Date.now();}
 function updateStats(){const text=$("content").value;const n=text.length;const words=text.trim()?text.trim().split(/\s+/).length:0;$("count").textContent=n.toLocaleString()+"文字";$("reading").textContent="読了 約"+Math.max(0,Math.ceil(n/500))+"分";const p=$("writingProgress");if(p)p.style.width=Math.min(100,n/50000*100)+"%";const shell=$("writerShell");if(shell)shell.dataset.words=words;}
 function saveLocal(){try{localStorage.setItem(draftKey,JSON.stringify({title:$("title").value,excerpt:$("excerpt").value,content:$("content").value,category:$("category").value,visibility:document.querySelector("input[name=visibility]:checked")?.value||"public"}));$("saveState").textContent="✓ 自動保存済み";}catch(e){$("saveState").textContent="端末への保存ができません";}}
@@ -318,7 +341,7 @@ async function save(){
   $("saveState").textContent=wantsPoll?"記事と投票を公開しました":"公開しました";
   if(status==="published")setTimeout(()=>location.href="index.html",600);
 }
-(async()=>{const {data}=await sb.auth.getSession();if(!data.session){location.href="login.html";return;}uid=data.session.user.id;const fallback=[{id:"060ac597-ebc7-433c-ac01-404818cf7186",name:"勉強"},{id:"18cb10b2-e649-4852-ad90-b8f3b9fcfb80",name:"その他"},{id:"7a13ab2f-0985-4394-999c-dbae4016e031",name:"創作"},{id:"7c58b262-1ef0-4338-b0b7-c347d3b63b42",name:"ゲーム"},{id:"ccc5fab9-73d0-4a42-8a5a-73b2048967e6",name:"テクノロジー"},{id:"de0fefbf-a0fc-4a4c-b603-cf8e06e3d63a",name:"日常"}];const {data:c,error:ce}=await sb.from("categories").select("id,name").order("name");const categories=ce||!c?.length?fallback:c;$("category").innerHTML='<option value="">カテゴリを選択</option>'+categories.map(x=>'<option value="'+x.id+'">'+x.name+'</option>').join("");$("categoryStatus").textContent=categories.length+"カテゴリから選択できます";restoreLocal();updateStats();})();
+(async()=>{const {data}=await sb.auth.getSession();if(!data.session){location.href="login.html";return;}uid=data.session.user.id;loadMyArticlesForCollaboration();const fallback=[{id:"060ac597-ebc7-433c-ac01-404818cf7186",name:"勉強"},{id:"18cb10b2-e649-4852-ad90-b8f3b9fcfb80",name:"その他"},{id:"7a13ab2f-0985-4394-999c-dbae4016e031",name:"創作"},{id:"7c58b262-1ef0-4338-b0b7-c347d3b63b42",name:"ゲーム"},{id:"ccc5fab9-73d0-4a42-8a5a-73b2048967e6",name:"テクノロジー"},{id:"de0fefbf-a0fc-4a4c-b603-cf8e06e3d63a",name:"日常"}];const {data:c,error:ce}=await sb.from("categories").select("id,name").order("name");const categories=ce||!c?.length?fallback:c;$("category").innerHTML='<option value="">カテゴリを選択</option>'+categories.map(x=>'<option value="'+x.id+'">'+x.name+'</option>').join("");$("categoryStatus").textContent=categories.length+"カテゴリから選択できます";restoreLocal();updateStats();})();
 $("content").addEventListener("input",()=>{updateStats();clearTimeout(window.__saveTimer);window.__saveTimer=setTimeout(saveLocal,500);});
 ["title","excerpt","category"].forEach(id=>$(id).addEventListener("input",saveLocal));
 $("previewBtn").onclick=()=>{const active=$("preview").classList.toggle("active");$("content").classList.toggle("editor-hidden",active);$("editorWrap").classList.toggle("previewing",active);$("previewBtn").textContent=active?"編集に戻る":"プレビュー";$("writerGrid").classList.remove("split-mode");$("splitBtn").textContent="◫ 分割プレビュー";if(active)updatePreview();};
