@@ -145,7 +145,7 @@ async function loadCollaborators(){
  $("collabList").innerHTML=(data||[]).length?(data||[]).map(c=>{const p=profileMap[c.user_id]||{};return '<div class="collab-item"><div class="person"><strong>'+escapeHtml(p.display_name||p.username||"ユーザー")+'</strong><small>@'+escapeHtml(p.username||"不明")+'</small></div><button class="btn mini danger" type="button" data-remove-collab="'+escapeHtml(c.id)+'">解除</button></div>';}).join(""):'<div class="hint">まだ共同編集者はいません。</div>';
  $("collabList").querySelectorAll("[data-remove-collab]").forEach(b=>b.onclick=async()=>{if(!confirm("このユーザーの共同編集権限を解除しますか？"))return;const {error}=await sb.from("article_collaborators").delete().eq("id",b.dataset.removeCollab);if(error){showNotice("共同編集者を解除できませんでした。","error");return;}await loadCollaborators();showNotice("共同編集権限を解除しました。","success");});
 }
-async function loadUsers(){const {data,error}=await sb.from("profiles").select("id,username,display_name,account_status").order("username").limit(1000);if(error){$("userResults").textContent="ユーザー一覧を読み込めませんでした。";return;}users=(data||[]).filter(u=>u.id!==uid&&(!u.account_status||u.account_status==="active"));renderUsers();}
+async function loadUsers(){const {data,error}=await sb.from("profiles").select("id,username,display_name").eq("account_status","active").order("username").limit(1000);if(error){$("userResults").textContent="ユーザー一覧を読み込めませんでした。";return;}users=(data||[]).filter(u=>u.id!==uid);renderUsers();}
 function renderUsers(){const q=$("userSearch").value.trim().toLowerCase();const existing=new Set(Array.from($("collabList").querySelectorAll("[data-remove-collab]")).map(b=>b.closest(".collab-item")?.querySelector("small")?.textContent));const matches=users.filter(u=>(!q||String(u.username||"").toLowerCase().includes(q)||String(u.display_name||"").toLowerCase().includes(q))).slice(0,12);$("userResults").innerHTML=matches.length?matches.map(u=>'<div class="user-item"><div class="person"><strong>'+escapeHtml(u.display_name||u.username||"ユーザー")+'</strong><small>@'+escapeHtml(u.username||"")+'</small></div><button class="btn mini" type="button" data-invite-user="'+escapeHtml(u.id)+'">招待</button></div>').join(""):'<div class="hint">一致するユーザーがいません。</div>';
  $("userResults").querySelectorAll("[data-invite-user]").forEach(b=>b.onclick=async()=>{const target=b.dataset.inviteUser;b.disabled=true;const {data:existingRow}=await sb.from("article_collaborators").select("id").eq("article_id",articleId).eq("user_id",target).maybeSingle();if(existingRow){showNotice("このユーザーはすでに共同編集者です。");b.disabled=false;return;}const {error}=await sb.from("article_collaborators").insert({article_id:articleId,user_id:target,invited_by:uid});if(error){showNotice("招待に失敗しました。記事所有者の権限を確認してください。","error");b.disabled=false;return;}await loadCollaborators();showNotice("共同編集者を招待しました。","success");});
 }
@@ -153,6 +153,8 @@ async function publishArticle(){
  if(!isOwner||!article){showNotice("記事の所有者だけが公開できます。","error");return;}
  if(dirty){await saveDraft();if(dirty||conflict)return;}
  if(conflict){showNotice("編集競合を解決してから公開してください。","error");return;}
+ const latestDraft=await fetchDraft();
+ if(latestDraft&&draft&&latestDraft.updated_at!==draft.updated_at){if(dirty){conflict=true;showConflict(latestDraft);showNotice("他の編集者が更新しました。競合を解決してから公開してください。","error");return;}applyDraft(latestDraft);}
  if(!draft){showNotice("共有下書きがありません。","error");return;}
  const v=values();if(!v.title||!v.content.trim()){showNotice("タイトルと本文を入力してください。","error");return;}
  if(!confirm("共有下書きの内容で記事を更新します。公開しますか？"))return;
