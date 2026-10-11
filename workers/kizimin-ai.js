@@ -71,7 +71,7 @@ async function getUserContext(request, env) {
   const profiles = await profileResponse.json();
   const profile = Array.isArray(profiles) ? profiles[0] : null;
   if (!profile) return { error: "アカウント情報が見つかりません。", status: 403 };
-  if (["banned", "suspended", "disabled"].includes(String(profile.account_status || "").toLowerCase())) {
+  if (String(profile.account_status || "").toLowerCase() !== "active") {
     return { error: "このアカウントではAI連携を利用できません。", status: 403 };
   }
   return { token, user, profile, base, key };
