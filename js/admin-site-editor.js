@@ -178,9 +178,9 @@
   }
   function preview(v){
     const x={...DEFAULTS,...v};
-    $("preview-head").textContent=x.brandName; $("preview-title").innerHTML=markdownToHtml(x.heroTitle); $("preview-description").innerHTML=markdownToHtml(x.heroDescription);
+    $("preview-head").textContent=x.brandName; $("preview-title").textContent=x.heroTitle; $("preview-description").textContent=x.heroDescription;
     $("preview-announcements").replaceChildren(); const announcementLabel=document.createElement("strong"); announcementLabel.textContent="📢 "+x.announcementTitle; $("preview-announcements").appendChild(announcementLabel); const announcementBody=document.createElement("div"); announcementBody.innerHTML=markdownToHtml(x.announcementBody||"現在、お知らせはありません。"); $("preview-announcements").appendChild(announcementBody);
-    for(const [id,value] of [["preview-hero-title",x.heroTitle],["preview-hero-description",x.heroDescription],["preview-announcement-body",x.announcementBody],["preview-terms-content",x.termsContent],["preview-privacy-content",x.privacyContent]]) { const node=$(id); if(node) node.innerHTML=markdownToHtml(value||""); }
+    for(const [id,value] of [["preview-announcement-body",x.announcementBody],["preview-terms-content",x.termsContent],["preview-privacy-content",x.privacyContent]]) { const node=$(id); if(node) node.innerHTML=markdownToHtml(value||""); }
     $("preview-announcements").hidden=!x.showAnnouncements;
     const p=$("editor-preview");
     p.style.setProperty("--preview-accent",x.accentColor); p.style.setProperty("--preview-bg",x.backgroundColor);
@@ -220,7 +220,7 @@
     await loadHistory();
   });
   $("editor-preview-button").addEventListener("click",()=>{preview(readForm());status("プレビューを更新しました。保存はまだ行っていません。","ok");});
-  ["hero-title","hero-description","announcement-body","terms-content","privacy-content"].forEach(id=>$(id).addEventListener("input",()=>{preview(readForm());}));
+  ["announcement-body","terms-content","privacy-content"].forEach(id=>$(id).addEventListener("input",()=>{preview(readForm());}));
   $("editor-reset").addEventListener("click",()=>{fillForm(saved);status("最後に保存した設定へ戻しました。","ok");});
   (async()=>{if(await authorize()) await load();})();
 })();
