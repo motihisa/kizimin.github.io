@@ -56,6 +56,9 @@
     .comment .text-muted{margin-top:2px;color:#9aa1b1;font-size:11px!important}
     .comment-content{margin-top:10px;color:#424b5f;line-height:1.9;overflow-wrap:anywhere}
     .comment-like-row{display:flex;align-items:center;gap:9px;margin-top:12px}
+    .inline-follow-button{display:inline-flex;align-items:center;justify-content:center;min-height:28px;margin-left:8px;padding:0 11px;border:1px solid #dcd8ff;border-radius:999px;background:#f6f5ff;color:#5548dc;font:inherit;font-size:11px;font-weight:800;cursor:pointer;vertical-align:middle;transition:background .18s,border-color .18s,color .18s}
+    .inline-follow-button[aria-pressed="true"]{border-color:#e2e5ee;background:#f4f5f8;color:#566074}
+    .inline-follow-button:disabled{opacity:.55;cursor:wait}
     .comment-like-button{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 12px;border:1px solid #e5e7f0;border-radius:999px;background:#fff;color:#697187;font:inherit;font-size:12px;font-weight:800;cursor:pointer;transition:.18s}
     .comment-like-button:hover{border-color:#d4ceff;background:#f8f7ff;color:#5b4ee8}
     .comment-like-button[aria-pressed="true"]{border-color:#ddd7ff;background:#f1efff;color:#5b4ee8}
@@ -145,6 +148,48 @@ const id=new URLSearchParams(location.search).get("id");
 const article=document.getElementById("article");
 const commentsList=document.getElementById("comments-list");
 const badge=t=>t?'<span class="official-badge">'+escapeHtml(t)+'</span>':"";
+async function setupFollowButtons(root){
+  const buttons=[...(root||document).querySelectorAll("[data-follow-user]")];
+  if(!buttons.length)return;
+  const {data:{session}}=await sb.auth.getSession();
+  const me=session?.user?.id||null;
+  const targets=[...new Set(buttons.map(b=>b.dataset.followUser).filter(Boolean))];
+  buttons.forEach(button=>{
+    if(me&&button.dataset.followUser===me){button.hidden=true;return;}
+    button.hidden=false;button.textContent="フォロー";button.setAttribute("aria-pressed","false");
+    button.title=me?"このユーザーをフォロー":"フォローするにはログインしてください";
+  });
+  if(!me){
+    buttons.forEach(button=>button.addEventListener("click",()=>{location.href="login.html";},{once:true}));
+    return;
+  }
+  const {data:rows,error}=await sb.from("follows").select("following_id").eq("follower_id",me).in("following_id",targets);
+  if(error)console.warn("フォロー状態の取得に失敗しました:",error);
+  const following=new Set((rows||[]).map(row=>row.following_id));
+  buttons.forEach(button=>{
+    const target=button.dataset.followUser;
+    if(!target||target===me){button.hidden=true;return;}
+    let isFollowing=following.has(target);
+    const paint=()=>{button.textContent=isFollowing?"フォロー中":"フォロー";button.setAttribute("aria-pressed",String(isFollowing));button.title=isFollowing?"クリックしてフォロー解除":"このユーザーをフォロー";};
+    paint();
+    button.addEventListener("click",async()=>{
+      if(button.disabled)return;
+      button.disabled=true;
+      try{
+        if(isFollowing){
+          const {error:deleteError}=await sb.from("follows").delete().eq("follower_id",me).eq("following_id",target);
+          if(deleteError)throw deleteError;
+          isFollowing=false;
+        }else{
+          const {error:insertError}=await sb.from("follows").insert({follower_id:me,following_id:target});
+          if(insertError){if(insertError.code==="23505")isFollowing=true;else throw insertError;}else isFollowing=true;
+        }
+        paint();
+      }catch(error){console.error("フォロー処理に失敗しました:",error);alert("フォローを変更できませんでした。ログイン状態や通信を確認してください。");}
+      finally{button.disabled=false;}
+    });
+  });
+}
 
 async function secureContent(action, payload={}) {
   const {data:{session}} = await sb.auth.getSession();
@@ -242,8 +287,9 @@ async function loadComments(articleId){
       const date=c.created_at?new Intl.DateTimeFormat("ja-JP",{year:"numeric",month:"long",day:"numeric",hour:"2-digit",minute:"2-digit"}).format(new Date(c.created_at)):"";
       const commentLiked=!!c.liked_by_me;
       const commentLikeCount=Number(c.like_count)||0;
-      return '<div class="comment"><div style="font-weight:600"><a href="profile.html?id='+encodeURIComponent(c.author_id||"")+'">'+escapeHtml(name)+'</a>'+badge(titles.get(c.author_id))+'</div><div class="text-muted">'+escapeHtml(date)+'</div><div class="comment-content" style="white-space:pre-wrap">'+escapeHtml(c.content)+'</div><div class="comment-like-row"><button type="button" class="comment-like-button" data-comment-id="'+escapeHtml(c.id)+'" aria-pressed="'+String(commentLiked)+'">'+(commentLiked?'♥ いいね済み':'♡ いいね')+' <span>'+commentLikeCount+'</span></button></div></div>';
+      return '<div class="comment"><div style="font-weight:600"><a href="profile.html?id='+encodeURIComponent(c.author_id||"")+'">'+escapeHtml(name)+'</a>'+badge(titles.get(c.author_id))+(c.author_id?'<button type="button" class="inline-follow-button" data-follow-user="'+escapeHtml(c.author_id)+'">フォロー</button>':'')+'</div><div class="text-muted">'+escapeHtml(date)+'</div><div class="comment-content" style="white-space:pre-wrap">'+escapeHtml(c.content)+'</div><div class="comment-like-row"><button type="button" class="comment-like-button" data-comment-id="'+escapeHtml(c.id)+'" aria-pressed="'+String(commentLiked)+'">'+(commentLiked?'♥ いいね済み':'♡ いいね')+' <span>'+commentLikeCount+'</span></button></div></div>';
     }).join("");
+    await setupFollowButtons(commentsList);
     commentsList.querySelectorAll(".comment-like-button").forEach(button=>{
       button.addEventListener("click",async()=>{
         button.disabled=true;
@@ -299,8 +345,9 @@ document.getElementById("comment-form").addEventListener("submit",async event=>{
     }
     const publishedDate=escapeHtml(new Intl.DateTimeFormat("ja-JP",{year:"numeric",month:"long",day:"numeric"}).format(new Date(data.published_at||data.created_at)));
     const authorInitial=escapeHtml((author||"K").trim().slice(0,1).toUpperCase());
-    article.innerHTML='<div class="article-cover"><div class="article-kicker"><span class="article-dot"></span> KIZIMIN JOURNAL</div><div class="article-meta"><span class="article-category">'+escapeHtml(category)+'</span><span>'+publishedDate+'</span><span>·</span><span>読む時間のひととき</span></div><h1 class="article-title">'+escapeHtml(data.title)+'</h1><div class="article-author-row"><span class="author-avatar" aria-hidden="true">'+authorInitial+'</span><div class="article-author-details"><span class="author-label">この記事を書いた人</span><div><a class="author-name" href="profile.html?id='+encodeURIComponent(data.author_id||"")+'">'+escapeHtml(author)+'</a>'+badge(authorTitle)+'</div></div></div></div><div class="article-divider"></div><div class="article-body" style="white-space:pre-wrap">'+escapeHtml(data.content)+'</div><div class="article-endnote">最後まで読んでくれてありがとう</div>';
+    article.innerHTML='<div class="article-cover"><div class="article-kicker"><span class="article-dot"></span> KIZIMIN JOURNAL</div><div class="article-meta"><span class="article-category">'+escapeHtml(category)+'</span><span>'+publishedDate+'</span><span>·</span><span>読む時間のひととき</span></div><h1 class="article-title">'+escapeHtml(data.title)+'</h1><div class="article-author-row"><span class="author-avatar" aria-hidden="true">'+authorInitial+'</span><div class="article-author-details"><span class="author-label">この記事を書いた人</span><div><a class="author-name" href="profile.html?id='+encodeURIComponent(data.author_id||"")+'">'+escapeHtml(author)+'</a>'+badge(authorTitle)+(data.author_id?'<button type="button" class="inline-follow-button" data-follow-user="'+escapeHtml(data.author_id)+'">フォロー</button>':'')+'</div></div></div></div><div class="article-divider"></div><div class="article-body" style="white-space:pre-wrap">'+escapeHtml(data.content)+'</div><div class="article-endnote">最後まで読んでくれてありがとう</div>';
     document.title=data.title+" | Kizimin";
+    await setupFollowButtons(article);
     await initArticleActions(data.id);
     await loadComments(data.id);
   }catch(error){
