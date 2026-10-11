@@ -14,6 +14,8 @@ const SUPABASE_DEFAULT_URL = "https://bimddapbkdakspjaemsm.supabase.co";
 const MCP_PATH = "/mcp";
 const MCP_VERSION = "2025-06-18";
 const ALLOWED_ORIGINS = new Set([SITE_ORIGIN, "http://localhost:5500", "http://127.0.0.1:5500"]);
+// Best-effort per-isolate cap. Add a Cloudflare Rate Limiting binding for a hard edge limit.
+const CHAT_REQUESTS = new Map();
 
 function json(data, status = 200, headers = {}) {
   return new Response(JSON.stringify(data), {
@@ -311,6 +313,17 @@ async function handleChat(request, env) {
   const prompt = String(body?.prompt || "").trim();
   const context = String(body?.context || "").trim();
   if (!prompt) return json({ error: "質問を入力してください。" }, 400);
+  const now = Date.now();
+  const recent = (CHAT_REQUESTS.get(ctx.user.id) || []).filter(ts => now - ts < 60_000);
+  if (recent.length >= 8) return json({ error: "AIの利用が短時間に集中しています。1分ほど待ってからお試しください。" }, 429);
+  recent.push(now);
+  CHAT_REQUESTS.set(ctx.user.id, recent);
+  if (CHAT_REQUESTS.size > 5000) {
+    for (const [userId, stamps] of CHAT_REQUESTS) {
+      if (!stamps.some(ts => now - ts < 60_000)) CHAT_REQUESTS.delete(userId);
+      if (CHAT_REQUESTS.size <= 4000) break;
+    }
+  }
   if (prompt.length > 5000 || context.length > 12000) return json({ error: "質問は5,000文字以内、参照文章は12,000文字以内にしてください。" }, 413);
 
   const input = [
