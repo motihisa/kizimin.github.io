@@ -13,13 +13,24 @@
 
   function renderUsage(usage) {
     if (!usageLabel || !usage) return;
-    if (usage.reason === "daily_limit" || Number(usage.remaining_today) === 0) {
-      usageLabel.textContent = "本日の利用上限に達しました（" + (usage.daily_limit || 20) + "回/日）。";
+    const used = Number(usage.used_neurons ?? usage.global_used_neurons);
+    const remaining = Number(usage.remaining_neurons ?? usage.global_remaining_neurons);
+    const limit = Number(usage.daily_limit_neurons ?? usage.global_daily_limit_neurons);
+    if (usage.reason === "user_neuron_limit" || usage.reason === "global_neuron_limit" || usage.allowed === false) {
+      if (usage.reason === "global_neuron_limit") {
+        usageLabel.textContent = "Kizimin全体の本日のAI利用枠に達しました。日本時間の午前9時にリセットされます。";
+      } else if (usage.reason === "user_neuron_limit") {
+        usageLabel.textContent = "本日のAI計算量の上限に達しました。日本時間の午前9時にリセットされます。";
+      } else if (Number.isFinite(remaining)) {
+        usageLabel.textContent = "AI利用枠に達しました。残り " + remaining.toFixed(2) + " Neurons";
+      }
       return;
     }
-    const remaining = Number(usage.remaining_today);
-    if (Number.isFinite(remaining)) {
-      usageLabel.textContent = "本日 " + (usage.used_today ?? (usage.daily_limit - remaining)) + "/" + (usage.daily_limit || 20) + "回使用・残り " + remaining + "回（1分8回まで）";
+    if (Number.isFinite(used) && Number.isFinite(remaining) && Number.isFinite(limit)) {
+      usageLabel.textContent = "本日の使用量 " + used.toFixed(2) + " / " + limit.toFixed(0) +
+        " Neurons・残り " + remaining.toFixed(2) + " Neurons（全体上限も適用）";
+    } else if (Number.isFinite(used) && Number.isFinite(remaining)) {
+      usageLabel.textContent = "本日の使用量 " + used.toFixed(2) + " Neurons・残り " + remaining.toFixed(2) + " Neurons";
     }
   }
 
