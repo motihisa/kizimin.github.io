@@ -13,24 +13,26 @@
 
   function renderUsage(usage) {
     if (!usageLabel || !usage) return;
-    const used = Number(usage.used_neurons ?? usage.global_used_neurons);
-    const remaining = Number(usage.remaining_neurons ?? usage.global_remaining_neurons);
-    const limit = Number(usage.daily_limit_neurons ?? usage.global_daily_limit_neurons);
-    if (usage.reason === "user_neuron_limit" || usage.reason === "global_neuron_limit" || usage.allowed === false) {
-      if (usage.reason === "global_neuron_limit") {
-        usageLabel.textContent = "Kizimin全体の本日のAI利用枠に達しました。日本時間の午前9時にリセットされます。";
-      } else if (usage.reason === "user_neuron_limit") {
-        usageLabel.textContent = "本日のAI計算量の上限に達しました。日本時間の午前9時にリセットされます。";
-      } else if (Number.isFinite(remaining)) {
-        usageLabel.textContent = "AI利用枠に達しました。残り " + remaining.toFixed(2) + " Neurons";
-      }
+    const used = Number(usage.used_neurons);
+    const remaining = Number(usage.remaining_neurons);
+    const personalLimit = Number(usage.daily_limit_neurons || 1500);
+    const globalUsed = Number(usage.global_used_neurons);
+    const globalRemaining = Number(usage.global_remaining_neurons);
+    if (usage.reason === "global_neuron_limit") {
+      usageLabel.textContent = "Kizimin全体の本日のAI計算量上限に達しました。日本時間の午前9時にリセットされます。";
       return;
     }
-    if (Number.isFinite(used) && Number.isFinite(remaining) && Number.isFinite(limit)) {
-      usageLabel.textContent = "本日の使用量 " + used.toFixed(2) + " / " + limit.toFixed(0) +
-        " Neurons・残り " + remaining.toFixed(2) + " Neurons（全体上限も適用）";
-    } else if (Number.isFinite(used) && Number.isFinite(remaining)) {
-      usageLabel.textContent = "本日の使用量 " + used.toFixed(2) + " Neurons・残り " + remaining.toFixed(2) + " Neurons";
+    if (usage.reason === "user_neuron_limit") {
+      usageLabel.textContent = "本日のあなたのAI計算量上限に達しました。日本時間の午前9時にリセットされます。";
+      return;
+    }
+    if (Number.isFinite(used) && Number.isFinite(remaining)) {
+      let label = "あなたの本日の使用量 " + used.toFixed(2) + " / " + personalLimit.toFixed(0) +
+        " Neurons・残り " + remaining.toFixed(2) + " Neurons";
+      if (Number.isFinite(globalUsed) && Number.isFinite(globalRemaining)) {
+        label += "\nサイト全体 " + globalUsed.toFixed(2) + " / 8000 Neurons・残り " + globalRemaining.toFixed(2) + " Neurons";
+      }
+      usageLabel.textContent = label + "（日本時間の午前9時にリセット）";
     }
   }
 
