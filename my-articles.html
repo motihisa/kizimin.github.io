@@ -45,7 +45,7 @@
     <a class="mine-logo" href="index.html">Kizimin</a>
     <div class="mine-actions">
       <a class="mine-btn" href="index.html">サイトに戻る</a>
-      <a class="mine-btn primary" href="write.html">＋ 新しい記事を書く</a>
+      <a class="mine-btn primary" href="new-article.html">＋ 新しく作る</a>
     </div>
   </header>
   <main class="mine-main">
@@ -78,7 +78,7 @@
         return matches&&(filter==="all"||(filter==="published"?status==="published":status!=="published"));
       });
       $("mineCount").textContent=rows.length+"件";
-      if(!rows.length){$("mineList").innerHTML='<div class="mine-empty"><strong>'+(myArticles.length?"該当する記事がありません":"まだ記事がありません")+'</strong><p>'+(myArticles.length?"検索条件や絞り込みを変えてみてください。":"最初の記事を書いて、ここに自分の記事を集めましょう。")+'</p><a class="mine-btn primary" href="write.html">＋ 新しい記事を書く</a></div>';return;}
+      if(!rows.length){$("mineList").innerHTML='<div class="mine-empty"><strong>'+(myArticles.length?"該当する記事がありません":"まだ記事がありません")+'</strong><p>'+(myArticles.length?"検索条件や絞り込みを変えてみてください。":"「新しく作る」から通常の記事か共同編集の記事を選べます。")+'</p><a class="mine-btn primary" href="new-article.html">＋ 新しく作る</a></div>';return;}
       $("mineList").innerHTML=rows.map(a=>{
         const status=String(a.status||"").toLowerCase(),published=status==="published";
         const date=dateLabel(a.updated_at||a.published_at||a.created_at);
