@@ -53,7 +53,7 @@
     document.body.style.backgroundColor=x.backgroundColor; document.body.style.color=x.textColor;
     document.querySelectorAll(".logo").forEach(el=>el.textContent=x.brandName);
     const hero=document.querySelector(".hero");
-    if(hero){hero.hidden=!x.showHero;const h=hero.querySelector("h1"),p=hero.querySelector("p");if(h)h.innerHTML=markdownToHtml(x.heroTitle);if(p)p.innerHTML=markdownToHtml(x.heroDescription);}
+    if(hero){hero.hidden=!x.showHero;const h=hero.querySelector("h1"),p=hero.querySelector("p");if(h)h.textContent=x.heroTitle;if(p)p.textContent=x.heroDescription;}
     const announcements=document.getElementById("home-announcements");
     const announcementTitle=document.getElementById("announcements-heading");
     const announcementBody=document.getElementById("announcement-content");
