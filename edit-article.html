@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>記事の共同編集 | Kizimin</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
+<style>
+:root{color-scheme:light}body{margin:0;background:#f7f7fc;color:#282542;font-family:system-ui,-apple-system,sans-serif}.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px max(16px,calc((100vw - 1120px)/2));background:#ffffffed;backdrop-filter:blur(12px);border-bottom:1px solid #e8e6f5}.brand{font-weight:900;color:#594bd6;text-decoration:none}.top-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.btn{border:1px solid #e1def3;border-radius:11px;background:#fff;padding:10px 14px;color:#514c75;font-weight:750;cursor:pointer}.btn.primary{background:#6355df;color:white;border-color:#6355df}.btn.danger{color:#b42318}.btn:disabled{opacity:.45;cursor:not-allowed}.wrap{width:min(1120px,calc(100% - 32px));margin:28px auto 80px}.intro{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}.intro h1{margin:0 0 6px;font-size:clamp(24px,4vw,34px);letter-spacing:-.04em}.muted{color:#77748f;font-size:13px;line-height:1.6}.status{display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border-radius:999px;background:#efedff;color:#5b4ed0;font-size:12px;font-weight:800}.layout{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:18px;align-items:start}.panel{border:1px solid #e8e6f5;background:#fff;border-radius:19px;padding:20px;box-shadow:0 8px 25px #30275e08;margin-bottom:14px}.panel h2{font-size:14px;margin:0 0 13px}.field{display:block;width:100%;box-sizing:border-box;border:1px solid #e1dfef;border-radius:11px;padding:12px;margin:0 0 12px;font:inherit;color:#282542;background:#fff}.field:focus{outline:3px solid #6355df1c;border-color:#9c92f4}.title-field{font-size:25px;font-weight:850}.body-field{min-height:52vh;resize:vertical;line-height:1.85;font-size:16px}.row{display:flex;gap:8px;flex-wrap:wrap}.hint{font-size:12px;color:#77748f;line-height:1.7}.preview{display:none;border-top:1px solid #eeeaf9;margin-top:16px;padding-top:18px;line-height:1.85;overflow-wrap:anywhere}.preview.active{display:block}.preview h1,.preview h2,.preview h3{line-height:1.3}.preview blockquote{border-left:4px solid #8c7ff3;background:#f7f5ff;padding:10px 14px;margin:1em 0}.preview code{background:#f1effb;padding:2px 5px;border-radius:5px}.collab-list{display:grid;gap:8px}.collab-item,.user-item{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid #efedf7;border-radius:11px;padding:10px}.person{min-width:0}.person strong,.person small{display:block;overflow-wrap:anywhere}.person small{color:#8884a3;font-size:11px;margin-top:3px}.mini{font-size:11px;padding:6px 8px;border-radius:8px}.user-results{display:grid;gap:7px;margin-top:10px;max-height:240px;overflow:auto}.notice{display:none;margin:0 0 16px;border:1px solid #f3c77d;background:#fff8e8;color:#845400;border-radius:13px;padding:14px;font-size:13px;line-height:1.65}.notice.active{display:block}.notice .row{margin-top:9px}.notice.error{border-color:#f2b8b5;background:#fff3f2;color:#9d2420}.notice.success{border-color:#b9e5cd;background:#f0fff6;color:#17683b}.category{width:100%;padding:11px;border:1px solid #e1dfef;border-radius:10px;background:white;color:#282542}.small-label{display:block;font-size:12px;color:#77748f;margin-bottom:6px;font-weight:750}@media(max-width:850px){.layout{grid-template-columns:1fr}.intro{display:block}.intro .status{margin-top:8px}.top{padding:12px 16px}.body-field{min-height:42vh}}@media(max-width:500px){.wrap{width:calc(100% - 20px);margin-top:18px}.panel{padding:14px;border-radius:15px}.title-field{font-size:21px}.top{align-items:flex-start}.top-actions{justify-content:flex-end}.btn{padding:9px 10px;font-size:12px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div><a class="brand" href="index.html">Kizimin</a> <span class="muted"> / 共同編集</span></div>
+  <div class="top-actions">
+    <a class="btn" href="index.html">サイトへ戻る</a>
+    <button id="previewBtn" class="btn" type="button">プレビュー</button>
+    <button id="saveBtn" class="btn" type="button">下書きを保存</button>
+    <button id="publishBtn" class="btn primary" type="button">変更を公開</button>
+  </div>
+</header>
+<main class="wrap">
+  <div class="intro">
+    <div><h1>記事を共同編集</h1><div class="muted">招待した人と同じ下書きを編集できます。共同編集者の変更は、記事の所有者が公開するまで記事には反映されません。</div></div>
+    <span id="saveState" class="status">接続を確認中</span>
+  </div>
+  <div id="notice" class="notice" role="status"></div>
+  <div class="layout">
+    <section class="panel">
+      <label class="small-label" for="title">記事タイトル</label>
+      <input id="title" class="field title-field" maxlength="160" placeholder="記事タイトル">
+      <label class="small-label" for="excerpt">概要</label>
+      <input id="excerpt" class="field" maxlength="300" placeholder="記事の概要">
+      <label class="small-label" for="content">本文（Markdown対応）</label>
+      <textarea id="content" class="field body-field" maxlength="50000" placeholder="共同で記事を書き始めましょう。"></textarea>
+      <div class="row"><button id="reloadBtn" class="btn" type="button">最新の下書きを読み込む</button><span class="hint">自動保存・同期は数秒おきに行われます。</span></div>
+      <div id="preview" class="preview"></div>
+    </section>
+    <aside>
+      <section class="panel">
+        <h2>共同編集者</h2>
+        <div id="roleText" class="hint">権限を確認しています…</div>
+        <div id="collabList" class="collab-list" style="margin-top:12px"></div>
+        <div id="invitePanel" hidden style="margin-top:14px">
+          <label class="small-label" for="userSearch">ユーザーを招待</label>
+          <input id="userSearch" class="field" type="search" placeholder="ユーザー名・表示名">
+          <div id="userResults" class="user-results"></div>
+          <p class="hint">招待したユーザーはすぐに共同編集できるようになります。公開操作は記事の所有者のみ可能です。</p>
+        </div>
+      </section>
+      <section class="panel">
+        <h2>公開設定</h2>
+        <label class="small-label" for="category">カテゴリ</label>
+        <select id="category" class="category"><option value="">読み込み中…</option></select>
+        <label class="small-label" for="visibility" style="margin-top:12px">公開範囲</label>
+        <select id="visibility" class="category"><option value="public">公開</option><option value="restricted">許可されたユーザーのみ</option></select>
+        <p class="hint">公開範囲を「許可されたユーザーのみ」に変更する場合、既存の閲覧許可リストはそのまま維持されます。</p>
+        <div id="publishHint" class="hint"></div>
+      </section>
+    </aside>
+  </div>
+</main>
+<script>
+const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXMiLCJyZWYiOiJiaW1kZGFwYmtkYWtzcGphZW1zbSIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzkxMzE1NDE5LCJleHAiOjIxMDY4OTE0MTl9.qezG4VOkyYfaa4DxClk1PSV7bZEne7WEbxj52m1l7iM");
+const $=id=>document.getElementById(id);
+const articleId=new URLSearchParams(location.search).get("id");
+let uid=null, article=null, isOwner=false, isCollaborator=false, draft=null, dirty=false, saving=false, conflict=false, timer=null, pollTimer=null, users=[];
+const escapeHtml=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function showNotice(message,type=""){const n=$("notice");n.textContent=message;n.className="notice active"+(type?" "+type:"");}
+function clearNotice(){const n=$("notice");n.textContent="";n.className="notice";}
+function setState(s){$("saveState").textContent=s;}
+function renderPreview(){const raw=$("content").value;let html=window.marked?marked.parse(raw,{gfm:true,breaks:true}):escapeHtml(raw).replace(/\n/g,"<br>");html=window.DOMPurify?DOMPurify.sanitize(html,{USE_PROFILES:{html:true}}):escapeHtml(raw);$("preview").innerHTML=html;}
+function values(){return {title:$("title").value.trim(),excerpt:$("excerpt").value.trim(),content:$("content").value,category_id:$("category").value||null,visibility:$("visibility").value};}
+function applyDraft(d){draft=d;$("title").value=d.title||"";$("excerpt").value=d.excerpt||"";$("content").value=d.content||"";$("category").value=d.category_id||"";$("visibility").value=d.visibility||"public";dirty=false;conflict=false;clearNotice();setState("最新の下書き");renderPreview();}
+async function loadCategories(){const {data,error}=await sb.from("categories").select("id,name").order("name");if(error){$("category").innerHTML='<option value="">カテゴリを読み込めません</option>';return;}const selected=$("category").value;$("category").innerHTML='<option value="">カテゴリを選択</option>'+(data||[]).map(c=>'<option value="'+escapeHtml(c.id)+'">'+escapeHtml(c.name)+'</option>').join("");if(selected)$("category").value=selected;}
+async function fetchDraft(){const {data,error}=await sb.from("article_collaboration_drafts").select("*").eq("article_id",articleId).maybeSingle();if(error)throw error;return data;}
+async function initialize(){
+ if(!articleId){showNotice("記事IDがありません。記事ページから編集画面を開いてください。","error");setState("記事を指定してください");return;}
+ const {data:sessionData,error:sessionError}=await sb.auth.getSession();if(sessionError||!sessionData.session){location.href="login.html";return;}uid=sessionData.session.user.id;
+ let articleResult=await sb.from("articles").select("id,author_id,title,slug,excerpt,content,category_id,status,visibility,published_at,updated_at").eq("id",articleId).maybeSingle();
+ article=articleResult.data||null;
+ const {data:membership,error:membershipError}=await sb.from("article_collaborators").select("id,user_id,invited_by,created_at").eq("article_id",articleId).eq("user_id",uid).maybeSingle();
+ if(membershipError&&!article){showNotice("共同編集の権限を確認できませんでした。記事所有者に招待状態を確認してもらってください。","error");setState("権限を確認できません");return;}
+ isOwner=!!article&&article.author_id===uid;
+ isCollaborator=!!membership;
+ if(!isOwner&&!isCollaborator){showNotice("この記事の所有者、または招待された共同編集者だけが編集できます。","error");setState("アクセスできません");$("title").disabled=$("excerpt").disabled=$("content").disabled=true;return;}
+ if(!article&&!isCollaborator){showNotice("記事を読み込めませんでした。","error");return;}
+ $("roleText").textContent=isOwner?"記事の所有者です。共同編集者の招待と公開ができます。":"招待された共同編集者です。下書きの編集・保存ができます。公開操作は所有者が行います。";
+ $("invitePanel").hidden=!isOwner;$("publishBtn").hidden=!isOwner;$("publishHint").textContent=isOwner?"公開すると、共有下書きの内容が記事に反映されます。":"記事の公開内容を変更できるのは所有者だけです。";
+ if(!article&&isCollaborator){const {data:a}=await sb.from("articles").select("id,author_id,title,slug,excerpt,content,category_id,status,visibility,published_at,updated_at").eq("id",articleId).maybeSingle();article=a||null;}
+ await loadCategories();
+ let d=await fetchDraft();
+ if(!d&&isOwner&&article){
+   const {data:created,error}=await sb.from("article_collaboration_drafts").insert({article_id:articleId,title:article.title||"",excerpt:article.excerpt||"",content:article.content||"",category_id:article.category_id||null,visibility:article.visibility||"public",updated_by:uid}).select("*").single();
+   if(error)throw error;d=created;
+ }
+ if(!d){showNotice("共有下書きがまだありません。記事の所有者に編集画面を一度開いてもらってください。","error");setState("下書き未作成");return;}
+ applyDraft(d);
+ if(isOwner)await loadCollaborators();
+ if(isOwner)await loadUsers();
+ pollTimer=setInterval(pollDraft,2200);
+}
+async function saveDraft(force=false){
+ if(!draft||saving||(!dirty&&!force)||conflict)return;
+ const v=values();if(!v.title||!v.content.trim()){showNotice("タイトルと本文を入力してください。","error");return;}
+ saving=true;setState("保存中…");
+ const expected=draft.updated_at;
+ const payload={...v,updated_by:uid,updated_at:new Date().toISOString(),revision:Number(draft.revision||1)+1};
+ try{
+  const {data,error}=await sb.from("article_collaboration_drafts").update(payload).eq("article_id",articleId).eq("updated_at",expected).select("*").maybeSingle();
+  if(error)throw error;
+  if(!data){const remote=await fetchDraft();if(remote){draft=remote;conflict=true;showConflict(remote);}else showNotice("保存に失敗しました。最新の下書きを再読み込みしてください。","error");setState("競合を検出");return;}
+  draft=data;dirty=false;conflict=false;clearNotice();setState("保存済み · "+new Date(data.updated_at).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit",second:"2-digit"}));
+ }catch(e){console.error(e);showNotice("下書きを保存できませんでした。通信状態と編集権限を確認してください。","error");setState("保存エラー");}
+ finally{saving=false;}
+}
+function showConflict(remote){
+ const n=$("notice");n.className="notice active error";n.innerHTML="別の編集者が先に下書きを更新しました。手元の文章は消さずに保持しています。どちらを採用するか選んでください。<div class=\"row\"><button id=\"useRemoteBtn\" class=\"btn mini\" type=\"button\">最新の共同編集内容を読み込む</button><button id=\"keepLocalBtn\" class=\"btn mini\" type=\"button\">手元の内容で上書きする</button></div>";
+ $("useRemoteBtn").onclick=()=>{applyDraft(remote);setState("最新の下書きを読み込みました");};
+ $("keepLocalBtn").onclick=async()=>{draft=remote;conflict=false;dirty=true;clearNotice();await saveDraft(true);};
+}
+async function pollDraft(){
+ if(!draft||saving)return;
+ try{const remote=await fetchDraft();if(!remote||remote.updated_at===draft.updated_at)return;
+  if(dirty){if(!conflict){conflict=true;showConflict(remote);setState("他の編集者が更新しました");}return;}
+  applyDraft(remote);setState("共同編集者の変更を同期しました");
+ }catch(e){console.warn("共同編集の同期に失敗:",e);}
+}
+async function loadCollaborators(){
+ const {data,error}=await sb.from("article_collaborators").select("id,user_id,created_at").eq("article_id",articleId).order("created_at");
+ if(error){$("collabList").textContent="共同編集者一覧を読み込めませんでした。";return;}
+ const ids=(data||[]).map(c=>c.user_id);const profileMap={};
+ if(ids.length){const {data:ps}=await sb.from("profiles").select("id,username,display_name").in("id",ids);(ps||[]).forEach(p=>profileMap[p.id]=p);}
+ $("collabList").innerHTML=(data||[]).length?(data||[]).map(c=>{const p=profileMap[c.user_id]||{};return '<div class="collab-item"><div class="person"><strong>'+escapeHtml(p.display_name||p.username||"ユーザー")+'</strong><small>@'+escapeHtml(p.username||"不明")+'</small></div><button class="btn mini danger" type="button" data-remove-collab="'+escapeHtml(c.id)+'">解除</button></div>';}).join(""):'<div class="hint">まだ共同編集者はいません。</div>';
+ $("collabList").querySelectorAll("[data-remove-collab]").forEach(b=>b.onclick=async()=>{if(!confirm("このユーザーの共同編集権限を解除しますか？"))return;const {error}=await sb.from("article_collaborators").delete().eq("id",b.dataset.removeCollab);if(error){showNotice("共同編集者を解除できませんでした。","error");return;}await loadCollaborators();showNotice("共同編集権限を解除しました。","success");});
+}
+async function loadUsers(){const {data,error}=await sb.from("profiles").select("id,username,display_name").order("username").limit(1000);if(error){$("userResults").textContent="ユーザー一覧を読み込めませんでした。";return;}users=(data||[]).filter(u=>u.id!==uid);renderUsers();}
+function renderUsers(){const q=$("userSearch").value.trim().toLowerCase();const existing=new Set(Array.from($("collabList").querySelectorAll("[data-remove-collab]")).map(b=>b.closest(".collab-item")?.querySelector("small")?.textContent));const matches=users.filter(u=>(!q||String(u.username||"").toLowerCase().includes(q)||String(u.display_name||"").toLowerCase().includes(q))).slice(0,12);$("userResults").innerHTML=matches.length?matches.map(u=>'<div class="user-item"><div class="person"><strong>'+escapeHtml(u.display_name||u.username||"ユーザー")+'</strong><small>@'+escapeHtml(u.username||"")+'</small></div><button class="btn mini" type="button" data-invite-user="'+escapeHtml(u.id)+'">招待</button></div>').join(""):'<div class="hint">一致するユーザーがいません。</div>';
+ $("userResults").querySelectorAll("[data-invite-user]").forEach(b=>b.onclick=async()=>{const target=b.dataset.inviteUser;b.disabled=true;const {data:existingRow}=await sb.from("article_collaborators").select("id").eq("article_id",articleId).eq("user_id",target).maybeSingle();if(existingRow){showNotice("このユーザーはすでに共同編集者です。");b.disabled=false;return;}const {error}=await sb.from("article_collaborators").insert({article_id:articleId,user_id:target,invited_by:uid});if(error){showNotice("招待に失敗しました。記事所有者の権限を確認してください。","error");b.disabled=false;return;}await loadCollaborators();showNotice("共同編集者を招待しました。","success");});
+}
+async function publishArticle(){
+ if(!isOwner||!article){showNotice("記事の所有者だけが公開できます。","error");return;}
+ if(dirty){await saveDraft();if(dirty||conflict)return;}
+ if(conflict){showNotice("編集競合を解決してから公開してください。","error");return;}
+ if(!draft){showNotice("共有下書きがありません。","error");return;}
+ const v=values();if(!v.title||!v.content.trim()){showNotice("タイトルと本文を入力してください。","error");return;}
+ if(!confirm("共有下書きの内容で記事を更新します。公開しますか？"))return;
+ setState("記事を更新中…");
+ const {data,error}=await sb.from("articles").update({title:v.title,excerpt:v.excerpt||null,content:v.content,category_id:v.category_id,visibility:v.visibility,updated_at:new Date().toISOString()}).eq("id",articleId).eq("author_id",uid).select("id").maybeSingle();
+ if(error||!data){console.error(error);showNotice("記事を更新できませんでした。所有者の権限または通信状態を確認してください。","error");setState("公開エラー");return;}
+ const {data:refreshed}=await sb.from("articles").select("id,author_id,title,slug,excerpt,content,category_id,status,visibility,published_at,updated_at").eq("id",articleId).maybeSingle();if(refreshed)article=refreshed;
+ showNotice("記事を更新しました。","success");setState("記事を公開しました");
+}
+$("content").addEventListener("input",()=>{dirty=true;if(!conflict)setState("未保存の変更");clearTimeout(timer);timer=setTimeout(()=>saveDraft(),700);if($("preview").classList.contains("active"))renderPreview();});
+["title","excerpt","category","visibility"].forEach(id=>$(id).addEventListener("input",()=>{dirty=true;if(!conflict)setState("未保存の変更");clearTimeout(timer);timer=setTimeout(()=>saveDraft(),700);}));
+$("saveBtn").onclick=()=>saveDraft(true);
+$("publishBtn").onclick=publishArticle;
+$("reloadBtn").onclick=async()=>{const remote=await fetchDraft();if(remote)applyDraft(remote);};
+$("previewBtn").onclick=()=>{const p=$("preview");p.classList.toggle("active");$("previewBtn").textContent=p.classList.contains("active")?"プレビューを閉じる":"プレビュー";if(p.classList.contains("active"))renderPreview();};
+$("userSearch").addEventListener("input",renderUsers);
+initialize().catch(e=>{console.error(e);showNotice("共同編集画面を初期化できませんでした。テーブルの権限と通信状態を確認してください。","error");setState("初期化エラー");});
+</script>
+<script src="js/access.js?v=20261011-collaboration"></script>
+</body>
+</html>
