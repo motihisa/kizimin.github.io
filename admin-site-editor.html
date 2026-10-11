@@ -19,8 +19,8 @@
 <div class="admin-panel-head"><div><h2>サイト設定</h2><p class="admin-muted">変更は保存後、サイト全体に反映されます。</p></div></div>
 <form id="editor-form" class="editor-form">
 <label>サイト名<input id="brand-name" type="text" maxlength="60" required></label>
-<label>トップページの見出し<textarea id="hero-title" maxlength="180" required></textarea><div id="preview-hero-title" class="markdown-live-preview" aria-label="見出しのMarkdownプレビュー"></div></label>
-<label>見出しの説明文<textarea id="hero-description" maxlength="500"></textarea><div id="preview-hero-description" class="markdown-live-preview" aria-label="説明文のMarkdownプレビュー"></div></label>
+<label>トップページの見出し<textarea id="hero-title" maxlength="180" required></textarea><span class="editor-note">通常の文章として表示されます。Markdownは使えません。</span></label>
+<label>見出しの説明文<textarea id="hero-description" maxlength="500"></textarea><span class="editor-note">通常の文章として表示されます。Markdownは使えません。</span></label>
 <label>お知らせの見出し<input id="announcement-title" type="text" maxlength="80" required></label>
 <label>お知らせ本文<textarea id="announcement-body" maxlength="3000" rows="4" placeholder="サイト更新、メンテナンス、重要なお知らせなど"></textarea><div id="preview-announcement-body" class="markdown-live-preview" aria-label="お知らせのMarkdownプレビュー"></div></label>
 <div class="editor-options">
@@ -43,7 +43,7 @@
 <label class="editor-check"><input id="show-library" type="checkbox"> 情報ライブラリ</label>
 </div>
 <h3 style="margin:8px 0 0">公開ページの文章</h3>
-<p class="editor-note">空欄のページは現在の文章をそのまま表示します。編集する場合は、下の欄に文章を入力してください。Markdownに対応：# 見出し、**太字**、*斜体*、~~取り消し線~~、- 箇条書き、1. 番号付きリスト、> 引用、`コード`、```コードブロック```、--- 区切り線、[リンク](https://example.com)。入力欄の下にプレビューが表示されます。HTMLやJavaScriptは実行されません。</p>
+<p class="editor-note">空欄のページは現在の文章をそのまま表示します。編集する場合は、下の欄に文章を入力してください。Markdownが使えるのは、お知らせ本文・利用規約本文・プライバシーポリシー本文のみです。# 見出し、**太字**、*斜体*、~~取り消し線~~、- 箇条書き、1. 番号付きリスト、> 引用、`コード`、```コードブロック```、--- 区切り線、[リンク](https://example.com)に対応。対象の入力欄の下にプレビューが表示されます。HTMLやJavaScriptは実行されません。</p>
 <label>利用規約本文<textarea id="terms-content" class="legal-editor markdown-source" maxlength="30000" rows="12" placeholder="# Kizimin 利用規約&#10;&#10;## 1. 提供するサービス&#10;本文…"></textarea><div id="preview-terms-content" class="markdown-live-preview" aria-label="利用規約のMarkdownプレビュー"></div></label>
 <label>プライバシーポリシー本文<textarea id="privacy-content" class="legal-editor markdown-source" maxlength="30000" rows="12" placeholder="# Kizimin プライバシーポリシー&#10;&#10;## 1. 取り扱う情報&#10;本文…"></textarea><div id="preview-privacy-content" class="markdown-live-preview" aria-label="プライバシーポリシーのMarkdownプレビュー"></div></label>
 <div class="editor-actions"><button class="admin-btn primary" type="submit">設定を保存</button><button id="editor-preview-button" class="admin-btn" type="button">プレビューを更新</button><button id="editor-reset" class="admin-btn" type="button">保存済み設定に戻す</button></div>
