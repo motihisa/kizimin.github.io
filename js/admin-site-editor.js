@@ -6,6 +6,7 @@
   const $ = id => document.getElementById(id);
   const esc = value => String(value ?? "").replace(/[&<>"\']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;", "'":"&#039;"}[c]));
   const DEFAULTS = {
+    announcementTitle:"お知らせ", announcementBody:"現在、お知らせはありません。", showAnnouncements:true, termsContent:"", privacyContent:"",
     brandName:"Kizimin", heroTitle:"好きなことを、\n好きなように書こう。", heroDescription:"Kiziminは、記事を読んだり、書いたりできる場所。",
     accentColor:"#111827", backgroundColor:"#f5f7fb", textColor:"#111827", cardRadius:14,
     showHero:true, showDaily:true, showPopular:true, showCategories:true, showDiscovery:true,
@@ -32,6 +33,10 @@
       brandName:$("brand-name").value.trim().slice(0,60) || DEFAULTS.brandName,
       heroTitle:$("hero-title").value.slice(0,180),
       heroDescription:$("hero-description").value.slice(0,500),
+      announcementTitle:$("announcement-title").value.trim().slice(0,80)||"お知らせ",
+      announcementBody:$("announcement-body").value.slice(0,3000),
+      showAnnouncements:$("show-announcements").checked,
+      termsContent:$("terms-content").value.slice(0,30000), privacyContent:$("privacy-content").value.slice(0,30000),
       accentColor:$("accent-color").value, backgroundColor:$("background-color").value,
       textColor:$("text-color").value, cardRadius:Math.min(32,Math.max(0,Number($("card-radius").value)||0)),
       showHero:$("show-hero").checked, showDaily:$("show-daily").checked, showPopular:$("show-popular").checked,
@@ -43,6 +48,8 @@
   function fillForm(v){
     const x={...DEFAULTS,...(v||{})};
     $("brand-name").value=x.brandName; $("hero-title").value=x.heroTitle; $("hero-description").value=x.heroDescription;
+    $("announcement-title").value=x.announcementTitle; $("announcement-body").value=x.announcementBody;
+    $("show-announcements").checked=!!x.showAnnouncements; $("terms-content").value=x.termsContent||""; $("privacy-content").value=x.privacyContent||"";
     $("accent-color").value=x.accentColor; $("background-color").value=x.backgroundColor; $("text-color").value=x.textColor;
     $("card-radius").value=x.cardRadius;
     for(const [id,key] of [["show-hero","showHero"],["show-daily","showDaily"],["show-popular","showPopular"],["show-categories","showCategories"],["show-discovery","showDiscovery"],["show-polls","showPolls"],["show-challenges","showChallenges"],["show-qa","showQA"],["show-library","showLibrary"]]) $(id).checked=!!x[key];
