@@ -50,6 +50,19 @@ const confirmGroup = document.querySelector("#confirmGroup");
 const message = document.querySelector("#message");
 let signupMode = false;
 
+function getPostAuthDestination() {
+  const next = new URLSearchParams(location.search).get("next");
+  if (!next) return "index.html";
+  try {
+    const target = new URL(next, location.origin);
+    const siteBase = new URL(".", location.href).pathname;
+    if (target.origin !== location.origin || !target.pathname.startsWith(siteBase)) return "index.html";
+    return target.href;
+  } catch {
+    return "index.html";
+  }
+}
+
 function friendlyError(error) { const m=String(error?.message||""); if(/Invalid login credentials/i.test(m)) return "メールアドレスまたはパスワードが正しくありません。"; if(/User already registered/i.test(m)) return "このメールアドレスはすでに登録されています。"; if(/Email not confirmed/i.test(m)) return "メールアドレスの確認が完了していません。確認メールを確認してください。"; return "処理に失敗しました。しばらくしてからもう一度お試しください。"; }
 
 function setMessage(text) {
@@ -92,7 +105,7 @@ submit.addEventListener("click", async () => {
     if (!signupMode) {
       const { error } = await sb.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      location.href = "index.html";
+      location.href = getPostAuthDestination();
       return;
     }
 
@@ -106,7 +119,7 @@ submit.addEventListener("click", async () => {
 
     if (data.session) {
       setMessage("アカウントを作成しました。");
-      location.href = "index.html";
+      location.href = getPostAuthDestination();
     } else {
       setMessage("アカウントを作成しました。確認メールを確認してください。");
     }
@@ -120,7 +133,7 @@ submit.addEventListener("click", async () => {
 switchButton.addEventListener("click", () => setMode(!signupMode));
 
 sb.auth.getSession().then(({ data }) => {
-  if (data.session) location.href = "index.html";
+  if (data.session) location.href = getPostAuthDestination();
 });
 </script>
 <script src="js/access.js"></script>
