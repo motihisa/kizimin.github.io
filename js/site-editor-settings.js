@@ -18,7 +18,7 @@
     const announcementBody=document.getElementById("announcement-content");
     if(announcements){announcements.hidden=!x.showAnnouncements;}
     if(announcementTitle)announcementTitle.textContent="📢 "+(x.announcementTitle||"お知らせ");
-    if(announcementBody){const body=String(x.announcementBody||"").trim();announcementBody.replaceChildren();if(body){body.split(/\\n/).forEach(line=>{const p=document.createElement("p");p.textContent=line;announcementBody.appendChild(p);});}else{const p=document.createElement("p");p.textContent="現在、お知らせはありません。";announcementBody.appendChild(p);}}
+    if(announcementBody){const body=String(x.announcementBody||"").trim();announcementBody.replaceChildren();if(body){body.split(/\n/).forEach(line=>{const p=document.createElement("p");p.textContent=line;announcementBody.appendChild(p);});}else{const p=document.createElement("p");p.textContent="現在、お知らせはありません。";announcementBody.appendChild(p);}}
     const visibility=[
       ["#community-daily",x.showDaily],["#community-trending",x.showPopular],["#categories",x.showCategories],
       [".discovery-widget",x.showDiscovery],["#community-polls",x.showPolls],["#community-challenges",x.showChallenges],
