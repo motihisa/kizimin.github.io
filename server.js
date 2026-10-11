@@ -30,7 +30,8 @@ app.get("/healthz", (_req, res) => {
     ok: true,
     configured: Boolean(SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY && SUPABASE_DB_URL),
     mode: "manual-owner-only-export",
-    persistentStorage: false,\n    corsConfigured: Boolean(ALLOWED_ORIGIN)
+    persistentStorage: false,
+    corsConfigured: Boolean(ALLOWED_ORIGIN)
   });
 });
 
