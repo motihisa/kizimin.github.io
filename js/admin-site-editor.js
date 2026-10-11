@@ -4,6 +4,7 @@
   const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf";
   const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
   const $ = id => document.getElementById(id);
+  const esc = value => String(value ?? "").replace(/[&<>"\']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;", "'":"&#039;"}[c]));
   const DEFAULTS = {
     brandName:"Kizimin", heroTitle:"好きなことを、\n好きなように書こう。", heroDescription:"Kiziminは、記事を読んだり、書いたりできる場所。",
     accentColor:"#111827", backgroundColor:"#f5f7fb", textColor:"#111827", cardRadius:14,
@@ -57,6 +58,17 @@
     $("preview-community").hidden=!(x.showDaily||x.showPolls||x.showChallenges||x.showQA||x.showLibrary);
     $("preview-latest").style.borderRadius=x.cardRadius+"px";
   }
+  async function loadHistory(){
+    const body=$("editor-history-body"); if(!body)return;
+    const {data,error}=await db.from("site_editor_history").select("id,setting_key,action,changed_by,changed_at,old_value,new_value").order("changed_at",{ascending:false}).limit(20);
+    if(error){body.innerHTML='<tr><td colspan="4">履歴を読み込めませんでした。</td></tr>';return;}
+    if(!data?.length){body.innerHTML='<tr><td colspan="4">まだ変更履歴はありません。</td></tr>';return;}
+    body.innerHTML=data.map(row=>{
+      const before=JSON.stringify(row.old_value); const after=JSON.stringify(row.new_value);
+      const diff=(before?("前: "+before.slice(0,180)):"前: なし")+" / "+(after?("後: "+after.slice(0,180)):"後: なし");
+      return '<tr><td>'+esc(new Date(row.changed_at).toLocaleString("ja-JP",{timeZone:"Asia/Tokyo"}))+'</td><td>'+esc(({insert:"作成",update:"更新",delete:"削除"})[row.action]||row.action)+'</td><td>'+esc(row.changed_by||"不明")+'</td><td class="admin-log">'+esc(diff)+'</td></tr>';
+    }).join("");
+  }
   async function load(){
     status("設定を読み込んでいます…");
     const {data,error}=await db.from("site_editor_settings").select("setting_value,updated_at,updated_by").eq("setting_key","site_theme").maybeSingle();
@@ -64,6 +76,7 @@
     saved={...DEFAULTS,...(data?.setting_value||{})}; fillForm(saved);
     $("editor-updated").textContent=data ? "最終更新: "+new Date(data.updated_at).toLocaleString("ja-JP",{timeZone:"Asia/Tokyo"})+" / 更新者ID: "+(data.updated_by||"不明") : "まだ保存済みのカスタム設定はありません。";
     status("設定を読み込みました。変更してプレビューできます。","ok");
+    await loadHistory();
   }
   $("editor-form").addEventListener("submit",async e=>{
     e.preventDefault(); const value=readForm();
@@ -73,6 +86,7 @@
     saved={...value}; preview(value);
     $("editor-updated").textContent="最終更新: "+new Date().toLocaleString("ja-JP",{timeZone:"Asia/Tokyo"})+" / 更新者ID: "+userId;
     status("保存しました。サイト側の表示設定に反映されます。","ok");
+    await loadHistory();
   });
   $("editor-preview-button").addEventListener("click",()=>{preview(readForm());status("プレビューを更新しました。保存はまだ行っていません。","ok");});
   $("editor-reset").addEventListener("click",()=>{fillForm(saved);status("最後に保存した設定へ戻しました。","ok");});
