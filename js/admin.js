@@ -80,6 +80,7 @@
     }
 
     currentAdminRole = isOwner ? "owner" : profile.role;
+    document.querySelector('a[href="admin-site-editor.html"]')?.classList.toggle("hidden", !isOwner);
     $("admin-loading").classList.add("hidden");
     $("admin-app").classList.remove("hidden");
     const maintenancePanel = $("maintenance-panel");
@@ -567,6 +568,7 @@
               ${["draft","published","archived"].map(s => `<option value="${s}" ${s===a.status?"selected":""}>${statusLabel(s)}</option>`).join("")}
             </select>
             ${["admin","owner"].includes(currentAdminRole) ? `<button type="button" class="article-pin admin-btn" data-id="${esc(a.id)}" data-pinned="${a.is_pinned ? "true" : "false"}">${a.is_pinned ? "固定を解除" : "ホーム上部に固定"}</button>` : '<span class="admin-muted">固定操作は管理者のみ</span>'}
+            ${["admin","owner"].includes(currentAdminRole) ? `<button type="button" class="article-delete admin-btn danger" data-id="${esc(a.id)}" data-title="${esc(a.title)}">記事を削除</button>` : ""}
           </td>
         </tr>`;
       }).join("") : '<tr><td colspan="5">記事はありません。</td></tr>';
@@ -576,9 +578,25 @@
       document.querySelectorAll(".article-pin").forEach(b => {
         b.onclick = () => updateArticlePin(b.dataset.id, b.dataset.pinned === "true", b);
       });
+      document.querySelectorAll(".article-delete").forEach(b => { b.onclick = () => deleteArticle(b.dataset.id, b.dataset.title, b); });
     } catch (error) {
       console.error("記事一覧の読み込みに失敗しました:", error);
       body.innerHTML = '<tr><td colspan="5"><div class="admin-alert">記事を読み込めませんでした。権限または通信状態を確認してください。</div></td></tr>';
+    }
+  }
+
+
+  async function deleteArticle(id, title, button) {
+    if (!["admin","owner"].includes(currentAdminRole)) { alert("記事を削除できるのは管理者またはオーナーのみです。"); return; }
+    if (!confirm("記事「" + title + "」を完全に削除しますか？\n\n記事に紐づくコメント、通報、いいね、保存情報も削除されます。この操作は元に戻せません。")) return;
+    button.disabled = true; button.textContent = "削除中…";
+    try {
+      const result = await secureContent("article_delete", { article_id: id });
+      if (!result?.ok) throw new Error(result?.error || "記事を削除できませんでした。");
+      await loadArticles(); await loadDashboard(); alert("記事を削除しました。");
+    } catch (error) {
+      console.error("記事削除失敗", error); alert("記事を削除できませんでした: " + errorMessage(error));
+      button.disabled = false; button.textContent = "記事を削除";
     }
   }
 
@@ -627,8 +645,9 @@
     try {
       const data = await secureContent("admin_comments_list");
       const rows = data.comments || [];
-      $("comments-body").innerHTML = rows.length ? rows.map(c => '<tr><td class="admin-log">' + esc(c.content) + '</td><td>' + esc(c.profiles?.display_name || c.profiles?.username || "-") + '</td><td><span class="admin-badge">' + esc(statusLabel(c.status)) + '</span></td><td>' + esc(date(c.created_at)) + '</td><td><select class="comment-status" data-id="' + esc(c.id) + '">' + ["visible","hidden","deleted"].map(x => '<option value="' + x + '" ' + (x===c.status?"selected":"") + '>' + statusLabel(x) + '</option>').join("") + '</select></td></tr>').join("") : '<tr><td colspan="5">コメントはありません。</td></tr>';
+      $("comments-body").innerHTML = rows.length ? rows.map(c => '<tr><td class="admin-log">' + esc(c.content) + '</td><td>' + esc(c.profiles?.display_name || c.profiles?.username || "-") + '</td><td><span class="admin-badge">' + esc(statusLabel(c.status)) + '</span></td><td>' + esc(date(c.created_at)) + '</td><td><select class="comment-status" data-id="' + esc(c.id) + '">' + ["visible","hidden","deleted"].map(x => '<option value="' + x + '" ' + (x===c.status?"selected":"") + '>' + statusLabel(x) + '</option>').join("") + '</select> <button type="button" class="comment-delete admin-btn danger" data-id="' + esc(c.id) + '" data-content="' + esc(String(c.content || "").slice(0,80)) + '">完全削除</button></td></tr>').join("") : '<tr><td colspan="5">コメントはありません。</td></tr>';
       document.querySelectorAll(".comment-status").forEach(s => s.onchange = () => updateComment(s.dataset.id,s.value));
+      document.querySelectorAll(".comment-delete").forEach(b => b.onclick = () => deleteComment(b.dataset.id, b.dataset.content, b));
     } catch (e) {
       console.error("コメント一覧の読み込みに失敗しました:", e);
       const body = $("comments-body");
@@ -636,8 +655,25 @@
     }
   }
   async function updateComment(id,status) {
-    try { await secureContent("comment_status",{comment_id:id,status}); }
-    catch (error) { alert("コメント状態の変更に失敗しました: " + errorMessage(error)); await loadComments(); }
+    try {
+      const result = await secureContent("comment_status",{comment_id:id,status});
+      if (!result?.ok) throw new Error(result?.error || "状態を更新できませんでした。");
+      await loadComments();
+    } catch (error) { alert("コメント状態の変更に失敗しました: " + errorMessage(error)); await loadComments(); }
+  }
+
+  async function deleteComment(id, content, button) {
+    if (!["admin","moderator","owner"].includes(currentAdminRole)) { alert("コメントを削除する権限がありません。"); return; }
+    if (!confirm("このコメントを完全に削除しますか？\n\n" + (content || "(内容なし)") + "\n\n返信コメントや関連する通報も削除される場合があります。この操作は元に戻せません。")) return;
+    button.disabled = true; button.textContent = "削除中…";
+    try {
+      const result = await secureContent("comment_delete", { comment_id: id });
+      if (!result?.ok) throw new Error(result?.error || "コメントを削除できませんでした。");
+      await loadComments(); await loadDashboard();
+    } catch (error) {
+      console.error("コメント削除失敗", error); alert("コメントを削除できませんでした: " + errorMessage(error));
+      button.disabled = false; button.textContent = "完全削除";
+    }
   }
 
   async function loadInquiries() {
