@@ -20,9 +20,9 @@
     const lines = String(source ?? "").replace(/\r\n?/g, "\n").split("\n");
     const out = [];
     let paragraph = [], list = [], listType = "", quote = [], code = [], inCode = false;
-    const flushParagraph = () => { if (paragraph.length) { out.push("<p>"+paragraph.map(inline).join("<br>")+"</p>"); paragraph=[]; } };
+    const flushParagraph = () => { if (paragraph.length) { out.push("<p>"+paragraph.map(inline).join(" ")+"</p>"); paragraph=[]; } };
     const flushList = () => { if (list.length) { out.push("<"+listType+">"+list.map(item=>"<li>"+inline(item)+"</li>").join("")+"</"+listType+">"); list=[]; listType=""; } };
-    const flushQuote = () => { if (quote.length) { flushParagraph(); flushList(); out.push("<blockquote><p>"+quote.map(inline).join("<br>")+"</p></blockquote>"); quote=[]; } };
+    const flushQuote = () => { if (quote.length) { flushParagraph(); flushList(); out.push("<blockquote><p>"+quote.map(inline).join(" ")+"</p></blockquote>"); quote=[]; } };
     const flushCode = () => { if (code.length) { out.push("<pre><code>"+escHtml(code.join("\n"))+"</code></pre>"); code=[]; } };
     for (const raw of lines) {
       if (raw.trim().startsWith("```")) {
