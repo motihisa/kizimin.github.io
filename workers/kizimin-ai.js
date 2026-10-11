@@ -2,7 +2,7 @@
  * Kizimin AI + MCP gateway.
  *
  * Secrets are configured in Cloudflare Worker settings, never in this repository:
- *   OPENAI_API_KEY
+ *   AI (Cloudflare Workers AI binding)
  * Public configuration:
  *   SUPABASE_URL, SUPABASE_ANON_KEY
  *
@@ -307,12 +307,13 @@ async function handleMcp(request, env) {
 async function handleChat(request, env) {
   const ctx = await getUserContext(request, env);
   if (ctx.error) return json({ error: ctx.error }, ctx.status);
-  if (!env.OPENAI_API_KEY) return json({ error: "AI APIキーがまだ設定されていません。管理者がCloudflareのWorker SecretsにOPENAI_API_KEYを登録してください。" }, 503);
+  if (!env.AI || typeof env.AI.run !== "function") return json({ error: "Cloudflare Workers AIが未設定です。管理者がWorkerのAI bindingを確認してください。" }, 503);
   let body;
   try { body = await request.json(); } catch { return json({ error: "リクエスト形式が正しくありません。" }, 400); }
   const prompt = String(body?.prompt || "").trim();
   const context = String(body?.context || "").trim();
   if (!prompt) return json({ error: "質問を入力してください。" }, 400);
+  if (prompt.length > 5000 || context.length > 12000) return json({ error: "質問は5,000文字以内、参照文章は12,000文字以内にしてください。" }, 413);
   const now = Date.now();
   const recent = (CHAT_REQUESTS.get(ctx.user.id) || []).filter(ts => now - ts < 60_000);
   if (recent.length >= 8) return json({ error: "AIの利用が短時間に集中しています。1分ほど待ってからお試しください。" }, 429);
@@ -324,25 +325,23 @@ async function handleChat(request, env) {
       if (CHAT_REQUESTS.size <= 4000) break;
     }
   }
-  if (prompt.length > 5000 || context.length > 12000) return json({ error: "質問は5,000文字以内、参照文章は12,000文字以内にしてください。" }, 413);
 
-  const input = [
-    { role: "system", content: "あなたはKiziminの日本語記事作成アシスタントです。記事の要約、校正、タイトル案、構成案を支援します。断定できない情報は断定せず、ユーザーの文章を勝手に公開・保存したと主張しません。管理者権限、秘密情報、他人の非公開データを要求・開示しません。簡潔で実用的に回答します。" },
-    { role: "user", content: (context ? "参考文章（ユーザーが入力した内容）:\n" + context + "\n\n" : "") + prompt }
-  ];
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: { authorization: "Bearer " + env.OPENAI_API_KEY, "content-type": "application/json" },
-    body: JSON.stringify({ model: env.OPENAI_MODEL || "gpt-6-luna", input, max_output_tokens: 800, store: false })
-  });
-  if (!response.ok) {
-    const detail = await response.text();
-    console.error("OpenAI API error", response.status, detail.slice(0, 300));
-    return json({ error: response.status === 429 ? "AIの利用上限に達しました。しばらくしてからお試しください。" : "AIサービスに接続できませんでした。API設定を確認してください。" }, response.status === 429 ? 429 : 502);
+  const systemPrompt = "あなたはKiziminの日本語記事作成アシスタントです。記事の要約、校正、タイトル案、構成案を支援します。断定できない情報は断定せず、ユーザーの文章を勝手に公開・保存したと主張しません。管理者権限、秘密情報、他人の非公開データを要求・開示しません。簡潔で実用的に回答します。";
+  const userPrompt = (context ? "参考文章（ユーザーが入力した内容）:\\n" + context + "\\n\\n" : "") + prompt;
+  try {
+    const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      max_tokens: 800
+    });
+    const answer = result?.response || result?.generated_text || "";
+    return json({ text: String(answer).trim() || "回答を取得できませんでした。" });
+  } catch (error) {
+    console.error("Workers AI error", String(error?.message || error));
+    return json({ error: "AIの無料枠または利用制限に達した可能性があります。時間をおいて再試行してください。" }, 429);
   }
-  const result = await response.json();
-  const text = result.output_text || (result.output || []).flatMap(item => item.content || []).filter(part => part.type === "output_text").map(part => part.text).join("");
-  return json({ text: text || "回答を取得できませんでした。" });
 }
 
 export default {
