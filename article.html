@@ -66,6 +66,8 @@
     .article-action-button:hover{transform:translateY(-1px);border-color:#c9c4ff;color:#5b4ee8}
     .article-action-button.like-action[aria-pressed="true"]{border-color:#d8d2ff;background:#f1efff;color:#5b4ee8}
     .article-action-button:disabled{opacity:.55;cursor:wait;transform:none}
+    .article-report-form[hidden],.article-save-widget[hidden]{display:none!important}
+    .article-save-widget{margin-top:16px}
     .article-report-form{display:grid;gap:10px;margin-top:18px;padding:18px;border:1px solid #eceef5;border-radius:16px;background:#fafbfe}
     .article-report-form h2{margin:0;font-size:18px}.article-report-form p{margin:0;color:#788196;font-size:12px;line-height:1.7}
     .article-report-form label{font-size:12px;font-weight:800}
@@ -94,7 +96,8 @@
   <section class="article-actions-card" aria-label="記事へのリアクション">
     <div class="article-action-buttons">
       <button type="button" id="article-like-button" class="article-action-button like-action" aria-pressed="false">♡ いいね <span id="article-like-count">0</span></button>
-      <button type="button" id="article-report-toggle" class="article-action-button report-action">⚑ この記事を通報</button>
+      <button type="button" id="article-report-toggle" class="article-action-button report-action" aria-controls="article-report-form" aria-expanded="false">⚑ この記事を通報</button>
+      <button type="button" id="article-save-toggle" class="article-action-button save-action" aria-controls="article-save-widget" aria-expanded="false">🔖 記事を保存</button>
     </div>
     <form id="article-report-form" class="article-report-form" hidden>
       <h2>この記事を通報</h2>
@@ -114,7 +117,7 @@
     </form>
     <p id="article-action-message" role="status" aria-live="polite"></p>
   </section>
-  <section class="site-widget article-save-widget" aria-label="記事を保存">
+  <section id="article-save-widget" class="site-widget article-save-widget" aria-label="記事を保存" hidden>
     <h2>🔖 この記事を保存</h2><p class="site-widget-hint">あとで読み返せるようにコレクションに追加できます。</p>
     <form id="save-article" class="feature-form"><label>保存先<select id="collection-select"></select></label><select id="save-article-select" data-article-options data-current-article="true" hidden aria-hidden="true" tabindex="-1"></select><button class="feature-primary">この記事を保存する</button></form>
     <div id="saved-box" class="site-saved-compact"></div>
@@ -201,9 +204,10 @@ async function initArticleActions(articleId){
     const {data:{session}}=await sb.auth.getSession();
     if(!session?.user?.id){location.href="login.html";return;}
     reportForm.hidden=!reportForm.hidden;
+    reportToggle.setAttribute("aria-expanded",String(!reportForm.hidden));
     if(!reportForm.hidden)document.getElementById("article-report-reason")?.focus();
   });
-  reportCancel?.addEventListener("click",()=>{reportForm.reset();reportForm.hidden=true;});
+  reportCancel?.addEventListener("click",()=>{reportForm.reset();reportForm.hidden=true;reportToggle.setAttribute("aria-expanded","false");});
   reportForm.addEventListener("submit",async event=>{
     event.preventDefault();
     const {data:{session}}=await sb.auth.getSession();
@@ -317,4 +321,21 @@ document.getElementById("comment-form").addEventListener("submit",async event=>{
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/features-app.js?v=20261010-placement-fix2"></script>
 <script src="js/access.js?v=20261009-apikey-fix"></script>
+<script>
+(function(){
+  const toggle=document.getElementById("article-save-toggle");
+  const panel=document.getElementById("article-save-widget");
+  if(!toggle||!panel)return;
+  toggle.addEventListener("click",async()=>{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session?.user?.id){location.href="login.html";return;}
+    panel.hidden=!panel.hidden;
+    toggle.setAttribute("aria-expanded",String(!panel.hidden));
+    if(!panel.hidden){
+      panel.scrollIntoView({behavior:"smooth",block:"nearest"});
+      document.getElementById("collection-select")?.focus({preventScroll:true});
+    }
+  });
+})();
+</script>
 </body></html>
