@@ -1,0 +1,86 @@
+name: Kizimin 自動チェック
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-checks:
+    name: JavaScript・HTML・秘密情報チェック
+    runs-on: ubuntu-latest
+    steps:
+      - name: ソースコードを取得
+        uses: actions/checkout@v4
+
+      - name: Node.jsを準備
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: JavaScriptの構文を確認
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(find . -type f -name '*.js'             -not -path './.git/*'             -not -path './node_modules/*'             -not -path './.github/*' | sort)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "JavaScriptファイルが見つかりませんでした。"
+            exit 1
+          fi
+          for file in "${files[@]}"; do
+            echo "構文チェック: $file"
+            node --check "$file"
+          done
+
+      - name: HTML内のローカル参照を確認
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import path from 'node:path';
+
+          const root = process.cwd();
+          const ignoredDirs = new Set(['.git', 'node_modules', '.github']);
+          const htmlFiles = [];
+          function walk(dir) {
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              if (entry.isDirectory() && ignoredDirs.has(entry.name)) continue;
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) walk(full);
+              else if (/\.html?$/i.test(entry.name)) htmlFiles.push(full);
+            }
+          }
+          walk(root);
+          const errors = [];
+          for (const file of htmlFiles) {
+            const source = fs.readFileSync(file, 'utf8');
+            for (const match of source.matchAll(/\b(?:src|href)\s*=\s*["']([^"'\s]+)["']/gi)) {
+              const ref = match[1];
+              if (!ref || /^(?:[a-z][a-z0-9+.-]*:|\/\/|#|data:|mailto:|tel:|javascript:)/i.test(ref)) continue;
+              const pathname = decodeURIComponent(ref.split(/[?#]/, 1)[0]);
+              if (!pathname) continue;
+              const target = path.resolve(path.dirname(file), pathname);
+              if (!target.startsWith(root + path.sep) && target !== root) {
+                errors.push(`${path.relative(root, file)}: リポジトリ外を参照しています: ${ref}`);
+                continue;
+              }
+              if (!fs.existsSync(target)) errors.push(`${path.relative(root, file)}: 参照先がありません: ${ref}`);
+            }
+          }
+          if (errors.length) {
+            console.error(errors.join('\n'));
+            process.exit(1);
+          }
+          console.log(`HTML ${htmlFiles.length} ファイルのローカル参照を確認しました。`);
+          NODE
+
+      - name: 秘密情報の混入をスキャン
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
