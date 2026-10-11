@@ -25,13 +25,52 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get("/healthz", (_req, res) => {
-  res.json({
-    ok: true,
-    configured: Boolean(SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY && SUPABASE_DB_URL),
+app.get("/healthz", async (_req, res) => {
+  const env = {
+    supabaseUrl: Boolean(SUPABASE_URL),
+    supabasePublishableKey: Boolean(SUPABASE_PUBLISHABLE_KEY),
+    supabaseDbUrl: Boolean(SUPABASE_DB_URL),
+    allowedOrigin: Boolean(ALLOWED_ORIGIN)
+  };
+  let databaseConnection = false;
+  let ownerTableExists = false;
+  let databaseError = null;
+
+  if (env.supabaseDbUrl) {
+    const checkClient = new pg.Client({
+      connectionString: SUPABASE_DB_URL,
+      ssl: { rejectUnauthorized: false },
+      connectionTimeoutMillis: 5000,
+      statement_timeout: 5000
+    });
+    try {
+      await checkClient.connect();
+      databaseConnection = true;
+      const check = await checkClient.query(
+        "select to_regclass('public.site_owners') as owner_table"
+      );
+      ownerTableExists = Boolean(check.rows[0]?.owner_table);
+    } catch (error) {
+      // Never return connection strings or detailed driver errors from a public health endpoint.
+      databaseError = error.code || "connection_failed";
+    } finally {
+      await checkClient.end().catch(() => {});
+    }
+  }
+
+  const configured = env.supabaseUrl && env.supabasePublishableKey &&
+    env.supabaseDbUrl && env.allowedOrigin;
+  res.status(configured && databaseConnection && ownerTableExists ? 200 : 503).json({
+    ok: Boolean(configured && databaseConnection && ownerTableExists),
+    checks: {
+      ...env,
+      databaseConnection,
+      ownerTableExists,
+      configured: Boolean(configured)
+    },
+    databaseError,
     mode: "manual-owner-only-export",
-    persistentStorage: false,
-    corsConfigured: Boolean(ALLOWED_ORIGIN)
+    persistentStorage: false
   });
 });
 
