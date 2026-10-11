@@ -11,13 +11,26 @@ const PORT = Number(process.env.PORT || 10000);
 const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\/$/, "");
 const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || "";
 const SUPABASE_DB_URL = process.env.SUPABASE_DB_URL || "";
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "";
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin || "";
+  if (origin && ALLOWED_ORIGIN && origin === ALLOWED_ORIGIN) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+    res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  }
+  if (req.method === "OPTIONS") return res.sendStatus(origin && origin === ALLOWED_ORIGIN ? 204 : 403);
+  next();
+});
 
 app.get("/healthz", (_req, res) => {
   res.json({
     ok: true,
     configured: Boolean(SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY && SUPABASE_DB_URL),
     mode: "manual-owner-only-export",
-    persistentStorage: false
+    persistentStorage: false,\n    corsConfigured: Boolean(ALLOWED_ORIGIN)
   });
 });
 
