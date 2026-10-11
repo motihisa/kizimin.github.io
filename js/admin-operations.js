@@ -58,7 +58,11 @@ async function refreshData() {
   safe("サイト設定",()=>read("site_settings","id,maintenance_mode,updated_at,updated_by")),
   safe("権限変更履歴",()=>read("role_change_audit","id,target_user_id,changed_by,old_role,new_role,changed_at",q=>q.order("changed_at",{ascending:false}).limit(10))),
   safe("カテゴリ数",()=>count("categories")),
-  safe("コメント数",()=>count("comments"))
+  safe("コメント数",()=>count("comments")),
+  safe("投票数",()=>count("community_polls")),
+  safe("質問数",()=>count("qa_questions")),
+  safe("保存コレクション数",()=>count("saved_collections")),
+  safe("チャレンジ数",()=>count("community_challenges"))
  ]);
  const kpis=[
   ["ユーザー",users],["記事",articles],["アクセスログ",visits],["コメント",comments]
