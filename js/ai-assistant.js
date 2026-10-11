@@ -9,6 +9,31 @@
   const form = $("ai-form");
   const send = $("ai-send");
   let session = null;
+  const usageLabel = $("ai-usage");
+
+  function renderUsage(usage) {
+    if (!usageLabel || !usage) return;
+    if (usage.reason === "daily_limit" || Number(usage.remaining_today) === 0) {
+      usageLabel.textContent = "本日の利用上限に達しました（" + (usage.daily_limit || 20) + "回/日）。";
+      return;
+    }
+    const remaining = Number(usage.remaining_today);
+    if (Number.isFinite(remaining)) {
+      usageLabel.textContent = "本日 " + (usage.used_today ?? (usage.daily_limit - remaining)) + "/" + (usage.daily_limit || 20) + "回使用・残り " + remaining + "回（1分8回まで）";
+    }
+  }
+
+  async function refreshUsage() {
+    if (!session?.access_token || !usageLabel) return;
+    try {
+      const { data, error } = await sb.rpc("get_ai_usage_status");
+      if (error) throw error;
+      renderUsage(data);
+    } catch (error) {
+      usageLabel.textContent = "利用状況を取得できません。";
+      console.warn("AI usage status unavailable", error);
+    }
+  }
 
   function addMessage(text, kind) {
     const node = document.createElement("div");
@@ -52,10 +77,12 @@
       placeholder.remove();
       if (!response.ok) {
         addMessage(data.error || "AIへの接続に失敗しました。", "error");
+        renderUsage(data.usage);
         $("ai-status").textContent = "接続エラー (" + response.status + ")";
         return;
       }
       addMessage(data.text || "回答が空でした。", "");
+      renderUsage(data.usage);
       $("ai-status").textContent = "回答が完了しました。";
     } catch (error) {
       placeholder.remove();
