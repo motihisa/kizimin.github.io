@@ -28,6 +28,7 @@
 .editor-bar{display:flex;align-items:center;gap:7px;padding:10px 16px;border-top:1px solid #f0f0f0;border-bottom:1px solid #eee;overflow:auto}
 .tool{flex:0 0 auto;min-width:34px;height:34px;border:0;border-radius:9px;background:#f7f7f7;color:#333;font-weight:700}
 .tool:hover{background:#ededed}
+.color-tool{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;font-size:14px}.color-tool input{width:17px;height:17px;padding:0;border:0;border-radius:4px;background:transparent;cursor:pointer}.color-tool input::-webkit-color-swatch-wrapper{padding:0}.color-tool input::-webkit-color-swatch{border:1px solid #d5d5df;border-radius:4px}
 .editor-wrap{position:relative}
 .markdown-guide{margin:0 22px 0;padding:14px 16px;border:1px solid #e8e8e8;border-radius:12px;background:#fafafa;color:#555;font-size:12px;line-height:1.7}
 .markdown-guide-title{font-weight:800;color:#222;font-size:13px;margin-bottom:3px}
@@ -150,6 +151,7 @@
 <button class="tool" type="button" data-insert="> 引用">❯</button>
 <button class="tool" type="button" data-insert="\`コード\`">&lt;&gt;</button>
 <button class="tool" type="button" data-insert="---">―</button>
+<label class="tool color-tool" title="選択した文字の色を変更" for="textColorPicker">A <input id="textColorPicker" type="color" value="#e74c3c" aria-label="文字色を選択"></label>
 <button class="tool" type="button" id="clearBtn">消去</button>
 </div>
 
@@ -246,6 +248,7 @@ function restoreLocal(){try{const d=JSON.parse(localStorage.getItem(draftKey)||"
 function escapeHtml(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
 function renderMarkdown(v){
   let s=escapeHtml(v);
+  s=s.replace(/\{\{color:(#[0-9a-fA-F]{6})\|([\s\S]*?)\}\}/g,(_,color,text)=>'<span style="color:'+color+'">'+text+'</span>');
   const code=[];
   s=s.replace(/\`([^\`]+)\`/g,(_,x)=>{code.push(x);return "@@CODE"+(code.length-1)+"@@";});
   s=s.replace(/^### (.+)$/gm,"<h3>$1</h3>")
@@ -320,6 +323,7 @@ $("content").addEventListener("input",()=>{updateStats();clearTimeout(window.__s
 $("previewBtn").onclick=()=>{const active=$("preview").classList.toggle("active");$("content").classList.toggle("editor-hidden",active);$("editorWrap").classList.toggle("previewing",active);$("previewBtn").textContent=active?"編集に戻る":"プレビュー";$("writerGrid").classList.remove("split-mode");$("splitBtn").textContent="◫ 分割プレビュー";if(active)updatePreview();};
 $("clearBtn").onclick=()=>{if(confirm("本文を消去しますか？")){$("content").value="";updateStats();saveLocal();}};
 document.querySelectorAll(".tool[data-insert]").forEach(btn=>btn.addEventListener("click",()=>{const ta=$("content"),v=btn.dataset.insert,caret=ta.selectionStart;ta.focus();ta.setRangeText(v,caret,ta.selectionEnd,"end");if(btn.dataset.caret==="-1")ta.selectionStart=ta.selectionEnd=caret+1;updateStats();saveLocal();}));
+$("textColorPicker").addEventListener("change",()=>{const ta=$("content"),color=$("textColorPicker").value,start=ta.selectionStart,end=ta.selectionEnd,selected=ta.value.slice(start,end);const replacement=selected?"{{color:"+color+"|"+selected+"}}":"{{color:"+color+"|文字}}";ta.focus();ta.setRangeText(replacement,start,end,"end");if(!selected){const caret=start+("{{color:"+color+"|").length;ta.setSelectionRange(caret,caret+2);}updateStats();saveLocal();if($("preview").classList.contains("active")||$("writerGrid").classList.contains("split-mode"))updatePreview();});
 document.querySelectorAll('input[name="visibility"]').forEach(el=>el.addEventListener("change",()=>{toggleAllowedUsers();saveLocal();}));$("allowedSearch").addEventListener("input",renderAllowedUsers);$("allowedList").addEventListener("change",()=>{renderAllowedUsers();saveLocal();});
 $("create-poll").addEventListener("change",()=>{$("article-poll-fields").classList.toggle("active",$("create-poll").checked);});
 
