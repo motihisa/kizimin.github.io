@@ -70,7 +70,7 @@ async function refreshData() {
  perf();
  const alerts=[], errors=[];
  const safe = async (name,fn) => { try { const v=await fn(); lastStats[name]=v; return v; } catch(e) { errors.push(name+"："+e.message); return null; } };
- const [users, articles, visits, reports, inquiries, settings, roles, cats, comments, polls, questions, collections, challenges] = await Promise.all([
+ const [users, articles, visits, reports, inquiries, settings, roles, comments] = await Promise.all([
   safe("ユーザー数",()=>count("profiles")),
   safe("記事数",()=>count("articles")),
   safe("アクセスログ数",()=>count("access_logs")),
@@ -78,18 +78,12 @@ async function refreshData() {
   safe("未対応問い合わせ数",()=>count("inquiries",q=>q.not("status","in",'("resolved","dismissed")'))),
   safe("サイト設定",()=>read("site_settings","id,maintenance_mode,updated_at,updated_by")),
   safe("権限変更履歴",()=>read("role_change_audit","id,target_user_id,changed_by,old_role,new_role,changed_at",q=>q.order("changed_at",{ascending:false}).limit(10))),
-  safe("カテゴリ数",()=>count("categories")),
-  safe("コメント数",()=>count("comments")),
-  safe("投票数",()=>count("community_polls")),
-  safe("質問数",()=>count("qa_questions")),
-  safe("保存コレクション数",()=>count("saved_collections")),
-  safe("チャレンジ数",()=>count("community_challenges"))
+  safe("コメント数",()=>count("comments"))
  ]);
  const kpis=[
   ["ユーザー",users],["記事",articles],["アクセスログ",visits],["コメント",comments]
  ];
  $("ops-db-kpis") && ($("ops-db-kpis").innerHTML=kpis.map(([n,v])=>'<div class="ops-kpi"><strong>'+esc(v===null?"取得不可":v)+'</strong><span>'+esc(n)+'</span></div>').join(""));
- $("ops-community").textContent = "確認できた既存データ（総数）\n記事："+(articles??"取得不可")+"\nコメント："+(comments??"取得不可")+"\nカテゴリ："+(cats??"取得不可")+"\n投票："+(polls??"取得不可")+"\n質問："+(questions??"取得不可")+"\n保存コレクション："+(collections??"取得不可")+"\nチャレンジ："+(challenges??"取得不可");
  if(reports>0) alerts.push({title:"未解決の通報",detail:"対応が必要な通報が "+reports+" 件あります。管理画面の通報欄を確認してください。",level:"要確認"});
  if(inquiries>0) alerts.push({title:"未対応の問い合わせ",detail:"未対応の問い合わせが "+inquiries+" 件あります。",level:"要確認"});
  if(Array.isArray(settings)&&settings.length) {
@@ -124,7 +118,6 @@ $("ops-report-export").addEventListener("click",()=>{
  w.document.open();w.document.write(html);w.document.close();
  $("ops-report-status").textContent="レポートを開きました。印刷画面で「PDFに保存」を選んでください。";
 });
-$("ops-safety-check").addEventListener("click",()=>{$("ops-safety-result").textContent=["□ 変更対象と既存機能への影響範囲を確認","□ 変更前の値・復元手順を記録","□ 本番DBではなくテスト環境で検証","□ RLSとサーバー側権限を確認","□ 差分をレビューし、明示承認を得る","□ 適用後に関連機能を回帰テスト"].join("\n");});
 $("ops-save-snapshot").addEventListener("click",()=>{if(!lastSnapshot)return alert("保存できる設定値がありません。先に更新してください。");localStorage.setItem("kizimin_ops_settings_snapshot",JSON.stringify(lastSnapshot));$("ops-snapshot-status").textContent="現在の読み取り値をこのブラウザに保存しました。これはDB復元用バックアップではありません。";});
 $("ops-refresh").addEventListener("click",()=>refreshData().catch(e=>{console.error(e);renderAlerts([{title:"更新に失敗",detail:e.message,level:"エラー"}]);}));
 
@@ -152,13 +145,11 @@ $("ops-backup-check").addEventListener("click",()=>{$("ops-backup-result").textC
 "安全策：本番へ直接復元せず、可能なら別プロジェクトで復元検証してください。",
 "注意：現在の機能は準備チェックのみ。バックアップ作成・復元は実行していません。"
 ].join("\n")});
-$("ops-queue-refresh").addEventListener("click",async()=>{const out=$("ops-queue-result");out.textContent="読み取り中…";const results=await Promise.all([["未解決通報",()=>count("reports",q=>q.not("status","in",'("resolved","dismissed")'))],["未対応問い合わせ",()=>count("inquiries",q=>q.not("status","in",'("resolved","dismissed")'))]].map(async([name,fn])=>{try{return name+"："+await fn()+" 件"}catch(e){return name+"：取得失敗（"+classifyError(e.message)+"）"}}));out.textContent=results.join("\n")+"\n本文や個人情報は取得していません。"});
-$("ops-analytics-save").addEventListener("click",()=>{const current={at:new Date().toISOString(),stats:lastStats};let previous=null;try{previous=JSON.parse(localStorage.getItem("kizimin_ops_analytics_snapshot")||"null")}catch{}const lines=["現在の集計日時："+date(current.at)];for(const [k,v] of Object.entries(current.stats)){const old=previous?.stats?.[k];lines.push(k+"："+(v===null?"取得不可":v)+(old!==undefined&&old!==null&&v!==null?"（前回比 "+(typeof v==="number"&&typeof old==="number"?(v-old>=0?"+":"")+(v-old):"比較不可")+"）":"（比較用の前回値なし）"))}try{localStorage.setItem("kizimin_ops_analytics_snapshot",JSON.stringify(current));$("ops-analytics-result").textContent=lines.join("\n")+"\nこの比較はこのブラウザに保存された2回分のみです。"}catch{$("ops-analytics-result").textContent="ブラウザ内に保存できませんでした。"}});
 async function loadOpsRows(table,target,mapper){const el=$(target);el.textContent="読み込み中…";try{const {data,error}=await db.from(table).select("*").order("created_at",{ascending:false}).limit(50);if(error)throw error;el.textContent=data?.length?data.map(mapper).join("\n\n"):"記録はありません。";}catch(e){el.textContent="読み込み失敗："+classifyError(e.message)+"："+e.message;}}
 $("ops-server-incidents-refresh").addEventListener("click",()=>loadOpsRows("kizimin_ops_incidents","ops-server-incidents-result",x=>date(x.created_at)+" · "+x.severity+" · "+x.title+"\n"+(x.detail||"")));
 $("ops-approvals-refresh").addEventListener("click",()=>loadOpsRows("kizimin_ops_approvals","ops-approvals-result",x=>"#"+x.id+" · "+x.status+" · "+x.action_type+"\n"+x.title+"\n"+date(x.created_at)));
 $("ops-schedules-refresh").addEventListener("click",()=>loadOpsRows("kizimin_ops_schedules","ops-schedules-result",x=>"#"+x.id+" · "+(x.enabled?"有効":"停止中")+" · "+x.name+"\n"+x.task_type+" / "+x.schedule_cron+"\n自動実行にはスケジューラー接続が必要です。"));
 $("ops-approval-form").addEventListener("submit",async e=>{e.preventDefault();const out=$("ops-approvals-result");out.textContent="保存中…";const {data:{user}}=await db.auth.getUser();const row={requested_by:user.id,action_type:$("ops-approval-type").value,title:$("ops-approval-title").value.trim(),details:{summary:$("ops-approval-detail").value.trim()}};const {error}=await db.from("kizimin_ops_approvals").insert(row);if(error){out.textContent="保存失敗："+classifyError(error.message)+"："+error.message;return;}e.target.reset();out.textContent="承認依頼を保存しました。実際の変更・復元は未実行です。";});
 $("ops-schedule-form").addEventListener("submit",async e=>{e.preventDefault();const out=$("ops-schedules-result");out.textContent="保存中…";const {data:{user}}=await db.auth.getUser();const row={name:$("ops-schedule-name").value.trim(),task_type:$("ops-schedule-type").value,schedule_cron:$("ops-schedule-cron").value,enabled:false,created_by:user.id};const {error}=await db.from("kizimin_ops_schedules").insert(row);if(error){out.textContent="保存失敗："+classifyError(error.message)+"："+error.message;return;}e.target.reset();out.textContent="設定案を無効状態で保存しました。自動実行はまだ有効ではありません。";});
-guard().then(async()=>{renderTasks();perf();renderIncidents();await refreshData();$("ops-scheduler-status").textContent="実行中のEdge Functionsはデプロイ済み関数として別途管理されています。このブラウザから定期実行の作成・変更は行いません。";});
+guard().then(async()=>{renderTasks();perf();renderIncidents();await refreshData();});
 })();
