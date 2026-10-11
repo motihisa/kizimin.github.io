@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>お問い合わせ | Kizimin</title><link rel="icon" type="image/svg+xml" href="favicon.svg"><link rel="stylesheet" href="css/style.css"><link rel="stylesheet" href="css/features.css">
+  <style>
+    body{background:#f6f7fb;color:#20283a}.contact-wrap{max-width:760px;margin:48px auto;padding:0 18px 70px}.contact-card{padding:clamp(22px,5vw,42px);border:1px solid #e6eaf2;border-radius:24px;background:#fff;box-shadow:0 20px 60px #202a4a0c}.contact-card h1{margin-top:0;font-size:clamp(26px,4vw,36px)}.contact-card>p{color:#778197;line-height:1.8}.contact-form{display:grid;gap:16px;margin-top:24px}.contact-form label{display:grid;gap:7px;font-size:13px;font-weight:800}.contact-form input,.contact-form textarea{width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #dfe4ee;border-radius:12px;font:inherit;font-weight:400}.contact-form textarea{resize:vertical}.contact-form button{min-height:46px;border:0;border-radius:999px;background:linear-gradient(135deg,#7468ff,#5145df);color:#fff;font-weight:800;cursor:pointer}.contact-form button:disabled{opacity:.6}.form-status{min-height:1.5em;font-size:13px}.contact-nav{display:flex;gap:14px;flex-wrap:wrap;margin:22px 0;color:#6558f5;font-size:13px}
+  </style>
+</head>
+<body>
+<header class="header"><div class="header-inner"><a class="logo" href="index.html">Kizimin</a><nav class="nav"><a href="index.html">ホーム</a><a href="terms.html">利用規約</a><a href="privacy.html">プライバシー</a></nav></div></header>
+<main class="contact-wrap"><section class="contact-card">
+  <h1>お問い合わせ</h1><p>不具合の報告、ご意見、ご質問を送信できます。送信内容は管理画面の「問い合わせ」に届きます。通常、返信が必要な場合に備えてメールアドレスを入力してください。</p>
+  <form id="contact-form" class="contact-form">
+    <label>お名前（任意）<input id="contact-name" maxlength="120" autocomplete="name" placeholder="表示名など"></label>
+    <label>返信先メールアドレス（任意）<input id="contact-email" type="email" maxlength="320" autocomplete="email" placeholder="返信が必要な場合のみ"></label>
+    <label>件名<input id="contact-subject" required maxlength="200" placeholder="お問い合わせの件名"></label>
+    <label>お問い合わせ内容<textarea id="contact-message" required minlength="1" maxlength="10000" rows="8" placeholder="内容を入力してください"></textarea></label>
+    <button id="contact-submit" type="submit">問い合わせを送信</button><p id="contact-status" class="form-status" role="status" aria-live="polite"></p>
+  </form>
+  <nav class="contact-nav"><a href="index.html">← ホームへ戻る</a><a href="privacy.html">個人情報の取り扱い</a></nav>
+</section></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf");
+const form=document.getElementById("contact-form"),status=document.getElementById("contact-status"),submit=document.getElementById("contact-submit");
+form.addEventListener("submit",async e=>{
+  e.preventDefault();submit.disabled=true;submit.textContent="送信中…";status.textContent="";
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    const payload={name:document.getElementById("contact-name").value.trim()||null,email:document.getElementById("contact-email").value.trim()||null,subject:document.getElementById("contact-subject").value.trim(),message:document.getElementById("contact-message").value.trim()};
+    if(!payload.subject||!payload.message)throw new Error("件名と内容を入力してください。");
+    if(session?.user?.id)payload.user_id=session.user.id;
+    const {error}=await sb.from("inquiries").insert(payload);
+    if(error)throw error;
+    form.reset();status.textContent="送信しました。運営へのお問い合わせとして管理画面に登録されました。";
+  }catch(error){console.error("問い合わせ送信エラー:",error);status.textContent="送信できませんでした。時間をおいて再度お試しください。";}
+  finally{submit.disabled=false;submit.textContent="問い合わせを送信";}
+});
+</script>
+</body></html>
