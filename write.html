@@ -149,7 +149,7 @@
 <button class="tool" type="button" data-insert="- 項目">•</button>
 <button class="tool" type="button" data-insert="1. 項目">1.</button>
 <button class="tool" type="button" data-insert="> 引用">❯</button>
-<button class="tool" type="button" data-insert="\`コード\`">&lt;&gt;</button>
+<button class="tool" type="button" data-insert="`コード`">&lt;&gt;</button>
 <button class="tool" type="button" data-insert="---">―</button>
 <label class="tool color-tool" title="選択した文字の色を変更" for="textColorPicker">A <input id="textColorPicker" type="color" value="#e74c3c" aria-label="文字色を選択"></label>
 <button class="tool" type="button" id="clearBtn">消去</button>
@@ -233,8 +233,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/ban-screen.js"></script>
 <script src="js/maintenance-gate.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"><\/script>
-<script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"><\/script>
+<script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
 <script>
 const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpbWRkYXBia2Rha3NwamFlbXNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzMTU0MTksImV4cCI6MjEwNjg5MTQxOX0.qezG4VOkyYfaa4DxClk1PSV7bZEne7WEbxj52m1l7iM");
 const $=id=>document.getElementById(id);
