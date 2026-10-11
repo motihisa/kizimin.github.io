@@ -327,7 +327,7 @@ async function handleChat(request, env) {
   }
 
   const systemPrompt = "あなたはKiziminの日本語記事作成アシスタントです。記事の要約、校正、タイトル案、構成案を支援します。断定できない情報は断定せず、ユーザーの文章を勝手に公開・保存したと主張しません。管理者権限、秘密情報、他人の非公開データを要求・開示しません。簡潔で実用的に回答します。";
-  const userPrompt = (context ? "参考文章（ユーザーが入力した内容）:\\n" + context + "\\n\\n" : "") + prompt;
+  const userPrompt = (context ? "参考文章（ユーザーが入力した内容）:\n" + context + "\n\n" : "") + prompt;
   try {
     const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
       messages: [
