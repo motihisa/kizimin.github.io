@@ -83,7 +83,7 @@
         <p id="ai-usage" class="ai-usage" role="status">利用状況を確認しています…</p>
         <h2>使い方</h2>
         <p class="ai-hint">1. 参考文章を貼り付ける<br>2. 依頼内容を入力する<br>3. 回答を確認して、必要な部分だけ記事に反映する</p>
-        <div class="ai-warning">AIの利用は1分8回・1日20回までです。制限はサーバー側とSupabase側で確認します。Cloudflare側の全体利用枠も別に適用されます。</div>
+        <div class="ai-warning">AIの利用制限は回数ではなく計算量（Neurons）で管理します。アカウントごとに1日1,500 Neurons、サイト全体で1日8,000 Neuronsを目安に制限します。Cloudflareの無料枠も別に適用されます。</div>
         <p class="ai-hint">プライバシー：入力内容はAIへの回答生成のため送信されます。利用回数の管理ではアカウントIDと時刻を記録します。IPアドレスは記録しません。</p>
       </aside>
     </div>
@@ -91,6 +91,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/ban-screen.js"></script>
   <script src="js/maintenance-gate.js"></script>
-  <script src="js/ai-assistant.js?v=20261011-2"></script>
+  <script src="js/ai-assistant.js?v=20261011-3"></script>
 </body>
 </html>
