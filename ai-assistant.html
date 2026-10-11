@@ -36,7 +36,7 @@
     .ai-btn:disabled{opacity:.55;cursor:wait}
     .ai-hint{font-size:12px;line-height:1.8;color:#817d9e}
     .ai-warning{margin-top:14px;padding:12px 14px;border-radius:12px;background:#fff8e9;color:#765b26;font-size:12px;line-height:1.8}
-    .ai-status{min-height:20px;color:#7a7698;font-size:12px}
+    .ai-status{min-height:20px;color:#7a7698;font-size:12px}.ai-usage{margin:12px 0;padding:11px 13px;border-radius:12px;background:#f2f0ff;color:#5146b8;font-size:13px;font-weight:800;line-height:1.7}
     @media(max-width:760px){.ai-layout{grid-template-columns:1fr}.ai-hero{padding:22px}.ai-top{align-items:flex-start;flex-direction:column}}
   </style>
 </head>
@@ -79,16 +79,18 @@
         </form>
       </section>
       <aside class="ai-card">
+        <h2>AIの利用状況</h2>
+        <p id="ai-usage" class="ai-usage" role="status">利用状況を確認しています…</p>
         <h2>使い方</h2>
         <p class="ai-hint">1. 参考文章を貼り付ける<br>2. 依頼内容を入力する<br>3. 回答を確認して、必要な部分だけ記事に反映する</p>
-        <div class="ai-warning">利用にはサーバー側のOpenAI APIキー設定が必要です。ChatGPTの契約とは別にAPI利用料金が発生する場合があります。APIキーはこのページに入力しないでください。</div>
-        <p class="ai-hint">プライバシー：入力内容はAIへの回答生成のため送信されます。APIリクエストでは応答保存を無効にする設定を使用します。</p>
+        <div class="ai-warning">AIの利用は1分8回・1日20回までです。制限はサーバー側とSupabase側で確認します。Cloudflare側の全体利用枠も別に適用されます。</div>
+        <p class="ai-hint">プライバシー：入力内容はAIへの回答生成のため送信されます。利用回数の管理ではアカウントIDと時刻を記録します。IPアドレスは記録しません。</p>
       </aside>
     </div>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/ban-screen.js"></script>
   <script src="js/maintenance-gate.js"></script>
-  <script src="js/ai-assistant.js?v=20261011-1"></script>
+  <script src="js/ai-assistant.js?v=20261011-2"></script>
 </body>
 </html>
