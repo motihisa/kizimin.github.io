@@ -239,7 +239,7 @@
 <script>
 const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpbWRkYXBia2Rha3NwamFlbXNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzMTU0MTksImV4cCI6MjEwNjg5MTQxOX0.qezG4VOkyYfaa4DxClk1PSV7bZEne7WEbxj52m1l7iM");
 const $=id=>document.getElementById(id);
-let uid=null;
+let uid=null,saveInProgress=false;
 let allowedUsers=[];
 const draftKey="kizimin:writer:draft";
 const friendlyError=e=>{const m=String(e?.message||"");if(/duplicate key|unique/i.test(m))return "同じ記事の識別情報がすでに使用されています。";if(/permission denied|row-level security/i.test(m))return "記事を保存する権限がありません。";return "記事の保存に失敗しました。しばらくしてからもう一度お試しください。";};
@@ -278,6 +278,7 @@ function renderAllowedUsers(){
 async function loadAllowedUsers(){const {data,error}=await sb.from("profiles").select("id,username,display_name").order("username").limit(2000);if(error){$("allowedList").innerHTML='<div style="padding:12px;color:#888;font-size:12px">ユーザー一覧を読み込めませんでした。</div>';return;}allowedUsers=data||[];renderAllowedUsers();}
 function toggleAllowedUsers(){const restricted=document.querySelector('input[name="visibility"]:checked')?.value==="restricted";$("allowedUsers").classList.toggle("active",restricted);if(restricted&&!allowedUsers.length)loadAllowedUsers();if(restricted)renderAllowedUsers();}
 async function save(){
+  if(saveInProgress)return;
   const status="published";
   const visibility=document.querySelector('input[name="visibility"]:checked')?.value||"public";
   const title=$("title").value.trim(),content=$("content").value.trim();
@@ -292,8 +293,12 @@ async function save(){
     if(!pollTitle){$("saveState").textContent="投票の質問を入力してください";$("writer-poll-title").focus();return;}
     if(pollOptions.length<2||pollOptions.length>8){$("saveState").textContent="投票の選択肢は2〜8個にしてください";$("writer-poll-options").focus();return;}
   }
+  saveInProgress=true;
+  $("publish").disabled=true;
+  $("publish").textContent="作成中…";
+  $("saveState").textContent="記事を作成しています…";
   const {data:article,error}=await sb.from("articles").insert({author_id:uid,category_id:selectedCategory,title,slug:slugify(title),excerpt:$("excerpt").value.trim()||null,content,status,visibility,published_at:status==="published"?new Date().toISOString():null}).select("id").single();
-  if(error){$("saveState").textContent=friendlyError(error);return;}
+  if(error){saveInProgress=false;$("publish").disabled=false;$("publish").textContent="公開する";$("saveState").textContent=friendlyError(error);return;}
   if(visibility==="restricted"){
     const ids=Array.from(document.querySelectorAll("#allowedList input:checked")).map(x=>x.value).filter(id=>id!==uid);
     if(ids.length){const {error:ae}=await sb.from("article_allowed_users").insert(ids.map(user_id=>({article_id:article.id,user_id})));if(ae){$("saveState").textContent=friendlyError(ae);return;}}
