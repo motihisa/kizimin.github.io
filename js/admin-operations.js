@@ -13,15 +13,25 @@ const writeTasks = v => { try { localStorage.setItem("kizimin_admin_ops_tasks_v1
 function download(name, body, type="text/plain;charset=utf-8") { const u=URL.createObjectURL(new Blob([body],{type})); const a=document.createElement("a"); a.href=u; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(u),1000); }
 async function guard() {
  try {
-  const {data:{session},error}=await db.auth.getSession();
-  if(error||!session?.user?.id) return showDenied("ログインセッションを確認できません。管理画面からログインしてください。");
+  const {data:{session},error:sessionError}=await db.auth.getSession();
+  if(sessionError||!session?.user?.id) return showDenied("ログインセッションを確認できません。管理画面からログインしてください。");
   sessionUser=session.user;
+
+  // Owner 判定を先に行う。profiles の SELECT が RLS で失敗しても、
+  // site_owners に登録されたオーナーをそこで誤拒否しない。
+  const {data:ownerFlag,error:ownerError}=await db.rpc("is_site_owner");
+  const isOwner=!ownerError && ownerFlag===true;
+
   const {data:p,error:pe}=await db.from("profiles").select("role,account_status").eq("id",session.user.id).maybeSingle();
-  if(pe||!p) return showDenied("プロフィールの権限確認に失敗しました。");
-  const {data:o,error:oe}=await db.rpc("is_site_owner");
-  if(p.account_status && p.account_status!=="active") return showDenied("このアカウントは利用できません。");
-  if(!["admin","moderator"].includes(p.role) && !(o===true&&!oe)) return showDenied("管理者またはオーナーのみ利用できます。");
-  role=o===true&&!oe?"owner":p.role;
+  if(pe && !isOwner) {
+   console.error("運営ツール: profiles 権限確認失敗",pe);
+   return showDenied("プロフィールの権限確認に失敗しました。");
+  }
+  if(!p && !isOwner) return showDenied("プロフィールの権限確認に失敗しました。");
+  if(p?.account_status && p.account_status!=="active") return showDenied("このアカウントは利用できません。");
+  if(!isOwner && !["admin","moderator"].includes(p?.role)) return showDenied("管理者またはオーナーのみ利用できます。");
+
+  role=isOwner?"owner":p.role;
   $("ops-loading").classList.add("hidden"); $("ops-app").classList.remove("hidden"); $("ops-auth-state").textContent=role;
  } catch(e) { console.error(e); showDenied("管理者権限の確認に失敗しました。"); }
 }
