@@ -326,6 +326,37 @@ async function handleChat(request, env) {
     }
   }
 
+  let usageResponse;
+  try {
+    usageResponse = await fetch(ctx.base + "/rest/v1/rpc/consume_ai_request", {
+      method: "POST",
+      headers: {
+        apikey: ctx.key,
+        authorization: "Bearer " + ctx.token,
+        "content-type": "application/json"
+      },
+      body: "{}"
+    });
+  } catch (error) {
+    console.error("AI usage limiter request failed", String(error?.message || error));
+    return json({ error: "AI利用制限を確認できません。少し待ってから再試行してください。" }, 503);
+  }
+  if (!usageResponse.ok) {
+    console.error("AI usage limiter failed", usageResponse.status, (await usageResponse.text()).slice(0, 300));
+    return json({ error: "AI利用制限の確認に失敗しました。管理者が設定を確認してください。" }, 503);
+  }
+  let usage;
+  try { usage = await usageResponse.json(); } catch { usage = null; }
+  if (!usage?.allowed) {
+    if (usage?.reason === "daily_limit") {
+      return json({ error: "本日のAI利用上限（20回）に達しました。明日また利用できます。", usage }, 429);
+    }
+    if (usage?.reason === "minute_limit") {
+      return json({ error: "AIの利用が短時間に集中しています。1分ほど待ってからお試しください。", usage }, 429);
+    }
+    return json({ error: "AI利用制限を確認できません。再ログインしてお試しください。" }, 401);
+  }
+
   const systemPrompt = "あなたはKiziminの日本語記事作成アシスタントです。記事の要約、校正、タイトル案、構成案を支援します。断定できない情報は断定せず、ユーザーの文章を勝手に公開・保存したと主張しません。管理者権限、秘密情報、他人の非公開データを要求・開示しません。簡潔で実用的に回答します。";
   const userPrompt = (context ? "参考文章（ユーザーが入力した内容）:\n" + context + "\n\n" : "") + prompt;
   try {
@@ -337,7 +368,7 @@ async function handleChat(request, env) {
       max_tokens: 800
     });
     const answer = result?.response || result?.generated_text || "";
-    return json({ text: String(answer).trim() || "回答を取得できませんでした。" });
+    return json({ text: String(answer).trim() || "回答を取得できませんでした。", usage });
   } catch (error) {
     console.error("Workers AI error", String(error?.message || error));
     return json({ error: "AIの生成に失敗しました。モデルの利用状況またはCloudflareのログを確認してください。" }, 502);
