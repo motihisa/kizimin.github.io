@@ -24,7 +24,7 @@
   }
   function addStyle(){
     const s=document.createElement("style");
-    s.textContent="body{background-color:var(--kizimin-page-bg,#f5f7fb);color:var(--kizimin-text,#111827)} .side-card,.categories,.popular-panel,.site-widget{border-radius:var(--kizimin-card-radius,14px)} .write-button,.feature-primary{background-color:var(--kizimin-accent,#111827)}";
+    s.textContent="body{background-color:var(--kizimin-page-bg,#f5f7fb);color:var(--kizimin-text,#111827)} .hero h1{white-space:pre-line} .side-card,.categories,.popular-panel,.site-widget{border-radius:var(--kizimin-card-radius,14px)} .write-button,.feature-primary{background-color:var(--kizimin-accent,#111827)}";
     document.head.appendChild(s);
   }
   async function run(){
