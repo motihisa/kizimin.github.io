@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kizimin 運営ツール</title><link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/style.css"><link rel="stylesheet" href="css/admin.css"><link rel="stylesheet" href="css/admin-operations.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="admin-page">
+<div id="ops-loading" class="admin-loading admin-panel"><strong>管理者権限を確認しています…</strong><p class="admin-muted">データ変更は行いません。</p></div>
+<div id="ops-denied" class="admin-forbidden-wrap admin-panel hidden"><div class="admin-alert"><strong>運営ツールへのアクセスが拒否されました。</strong><p id="ops-denied-reason">管理者権限を確認できません。</p></div><a class="admin-btn" href="admin.html">管理画面へ戻る</a></div>
+<main id="ops-app" class="admin-main hidden">
+<header class="admin-topbar"><div><h1>運営ツール</h1><p>分析・チェック・引き継ぎ用の追加機能</p></div><div class="admin-top-actions"><a class="admin-btn" href="admin.html">← 管理画面へ戻る</a><button id="ops-refresh" class="admin-btn primary" type="button">状態を再確認</button></div></header>
+<section class="ops-intro"><h2>安全モードで起動中</h2><p>この追加ページは既存テーブルや権限設定を変更しません。データベース側の情報源が未確認の指標は推測せず「未接続」と表示します。ローカル保存のタスクはこのブラウザ内だけで共有されます。</p></section>
+<div class="ops-grid">
+<section class="ops-card"><span class="ops-status">1 · 運営状況</span><h2>運営状況ダッシュボード</h2><p>このブラウザで観測できる状態と、まだデータ連携していない指標を区別して表示します。</p><div class="ops-kpis"><div class="ops-kpi"><strong id="ops-auth-state">確認中</strong><span>管理者セッション</span></div><div class="ops-kpi"><strong id="ops-page-time">-</strong><span>ページ読込時間（ms）</span></div><div class="ops-kpi"><strong>未接続</strong><span>日次登録・投稿統計</span></div></div><p class="ops-note">登録数・投稿数は、実在を確認できていないテーブルを推測して読み込みません。</p></section>
+<section class="ops-card"><span class="ops-status">2 · アラート</span><h2>管理者向けアラートセンター</h2><p>この画面で検出できたエラーや、データ連携が必要な項目を表示します。</p><div id="ops-alerts" class="ops-list"></div></section>
+<section class="ops-card"><span class="ops-status">3 · 引き継ぎ</span><h2>管理タスク・引き継ぎ管理</h2><p>タスクを登録して、担当・期限・状態を整理します。保存先はこのブラウザのみです。</p><form id="ops-task-form" class="ops-form"><input id="ops-task-title" maxlength="160" placeholder="タスク内容" required><select id="ops-task-priority" aria-label="優先度"><option value="通常">通常</option><option value="高">高</option><option value="緊急">緊急</option></select><input id="ops-task-owner" maxlength="80" placeholder="担当者（任意）"><input id="ops-task-due" type="date" aria-label="期限"><button class="admin-btn primary" type="submit">追加</button></form><div id="ops-task-list" class="ops-list"></div><button id="ops-export-tasks" class="admin-btn" type="button">タスクをCSV出力</button></section>
+<section class="ops-card"><span class="ops-status">4 · コミュニティ分析</span><h2>コミュニティ分析</h2><p>投票・質問回答・保存・チャレンジなどの集計欄です。</p><div id="ops-community" class="ops-result">集計元のスキーマとアクセス権を確認できていないため未接続です。ここでは数字を捏造せず、既存データに問い合わせません。</div></section>
+<section class="ops-card"><span class="ops-status">5 · 設定差分</span><h2>設定変更の差分・復元管理</h2><p>復元機能は誤操作で本番設定を壊さないよう、現時点では読み取り専用の設計メモのみです。</p><ul><li>変更前後の値</li><li>変更理由・実行者・日時</li><li>復元前の差分プレビュー</li><li>明示的な承認</li></ul><p class="ops-note">既存設定の保存先が特定できていないため、設定の取得・変更・復元は実行しません。</p></section>
+<section class="ops-card"><span class="ops-status">6 · 整合性</span><h2>データ整合性チェック</h2><p>ページ内の安全な基本チェックを実行します。DBレコードの変更や修復は行いません。</p><button id="ops-integrity-run" class="admin-btn primary" type="button">基本チェックを実行</button><div id="ops-integrity-result" class="ops-result" role="status">未実行</div></section>
+<section class="ops-card"><span class="ops-status">7 · レポート</span><h2>運営レポート生成</h2><p>このページで観測できる内容をテキストレポートとして出力します。DB統計は含まれません。</p><button id="ops-report-export" class="admin-btn primary" type="button">レポートをダウンロード</button><p id="ops-report-status" class="ops-note"></p></section>
+<section class="ops-card"><span class="ops-status">8 · 定期処理</span><h2>定期処理・予約実行管理</h2><p>実行基盤が確認できていないため、この欄は状態表示のみです。</p><div class="ops-item"><div><strong>スケジュール実行</strong><small>実行基盤・履歴：未接続</small></div><span class="admin-badge">変更なし</span></div><p class="ops-note">ボタンだけで実行済みと偽装しないよう、実行操作は設けていません。</p></section>
+<section class="ops-card"><span class="ops-status">9 · パフォーマンス</span><h2>パフォーマンス分析</h2><p>ブラウザが提供するページ読込計測値を表示します。サーバーや他ユーザーの情報は収集しません。</p><div id="ops-performance" class="ops-result">計測中…</div></section>
+<section class="ops-card"><span class="ops-status">10 · 安全テスト</span><h2>安全な変更テスト環境</h2><p>この画面は本番データへの変更を行わない読み取り専用の基本チェックを提供します。実際のDB変更の影響まではシミュレーションできません。</p><button id="ops-safety-check" class="admin-btn primary" type="button">変更前チェックリストを表示</button><div id="ops-safety-result" class="ops-result" role="status"></div></section>
+</div>
+<p class="ops-note" style="margin-top:18px">安全上の制限：このページではSupabaseへの書き込み、既存オブジェクトの変更・削除、ユーザー個人データの一括取得は実行しません。</p>
+</main>
+<script src="js/admin-operations.js?v=1"></script>
+</body></html>
