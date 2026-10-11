@@ -22,8 +22,8 @@
     const {data:profile,error:profileError}=await db.from("profiles").select("role,account_status").eq("id",userId).maybeSingle();
     if(profileError){denied("管理者権限の確認に失敗しました。");return false;}
     const {data:owner,error:ownerError}=await db.rpc("is_site_owner");
-    const allowed=profile?.role==="admin" || (!ownerError && owner===true);
-    if(!allowed || (profile?.account_status && profile.account_status!=="active")){denied("この機能は管理者専用です。");return false;}
+    const allowed=!ownerError && owner===true;
+    if(!allowed || (profile?.account_status && profile.account_status!=="active")){denied("サイトエディターを利用できるのはオーナーのみです。");return false;}
     $("editor-loading").classList.add("hidden"); $("editor-app").classList.remove("hidden");
     return true;
   }
