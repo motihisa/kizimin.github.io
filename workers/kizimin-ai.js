@@ -111,12 +111,17 @@ const TOOLS = [
   { name: "admin_overview", description: "管理者専用。ユーザー・記事・通報・問い合わせの件数を取得する。", inputSchema: { type: "object", properties: {}, additionalProperties: false } },
   { name: "admin_list_users", description: "管理者専用。ユーザー管理用の限定されたプロフィール一覧を取得する。", inputSchema: { type: "object", properties: { limit: { type: "integer", minimum: 1, maximum: 100 } }, additionalProperties: false } },
   { name: "admin_list_reports", description: "管理者専用。通報一覧を取得する。", inputSchema: { type: "object", properties: { limit: { type: "integer", minimum: 1, maximum: 100 } }, additionalProperties: false } },
-  { name: "admin_update_report", description: "管理者専用。通報ステータスを更新する。実行には confirm='UPDATE_REPORT' が必須。", inputSchema: { type: "object", properties: { report_id: { type: "string" }, status: { type: "string", enum: ["open", "in_review", "resolved", "rejected"] }, admin_note: { type: "string", maxLength: 2000 }, confirm: { type: "string", enum: ["UPDATE_REPORT"] } }, required: ["report_id", "status", "confirm"], additionalProperties: false } },
+  { name: "admin_list_articles", description: "管理者専用。記事の管理一覧を取得する。", inputSchema: { type: "object", properties: { limit: { type: "integer", minimum: 1, maximum: 100 } }, additionalProperties: false } },
+  { name: "admin_update_article_status", description: "管理者専用。記事を下書き・公開・アーカイブに切り替える。実行には confirm='UPDATE_ARTICLE_STATUS' が必須。", inputSchema: { type: "object", properties: { article_id: { type: "string" }, status: { type: "string", enum: ["draft", "published", "archived"] }, confirm: { type: "string", enum: ["UPDATE_ARTICLE_STATUS"] } }, required: ["article_id", "status", "confirm"], additionalProperties: false } },
+  { name: "admin_list_inquiries", description: "管理者専用。問い合わせ一覧を取得する。", inputSchema: { type: "object", properties: { limit: { type: "integer", minimum: 1, maximum: 100 } }, additionalProperties: false } },
+  { name: "admin_update_inquiry", description: "管理者専用。問い合わせの状態や管理メモを更新する。実行には confirm='UPDATE_INQUIRY' が必須。", inputSchema: { type: "object", properties: { inquiry_id: { type: "string" }, status: { type: "string", enum: ["open", "reviewing", "resolved", "closed"] }, admin_note: { type: "string", maxLength: 2000 }, confirm: { type: "string", enum: ["UPDATE_INQUIRY"] } }, required: ["inquiry_id", "status", "confirm"], additionalProperties: false } },
+  { name: "admin_set_maintenance_mode", description: "管理者専用。メンテナンスモードを切り替える。一般ユーザーがサイトを使えなくなるため、confirm='ENABLE_MAINTENANCE' または 'DISABLE_MAINTENANCE' が必須。", inputSchema: { type: "object", properties: { enabled: { type: "boolean" }, confirm: { type: "string", enum: ["ENABLE_MAINTENANCE", "DISABLE_MAINTENANCE"] } }, required: ["enabled", "confirm"], additionalProperties: false } },
+  { name: "admin_update_report", description: "管理者専用。通報ステータスを更新する。実行には confirm='UPDATE_REPORT' が必須。", inputSchema: { type: "object", properties: { report_id: { type: "string" }, status: { type: "string", enum: ["open", "resolved", "dismissed"] }, admin_note: { type: "string", maxLength: 2000 }, confirm: { type: "string", enum: ["UPDATE_REPORT"] } }, required: ["report_id", "status", "confirm"], additionalProperties: false } },
   { name: "admin_set_account_status", description: "管理者専用。別ユーザーのアカウント状態を active/banned/suspended に変更する。実行には confirm='CHANGE_ACCOUNT_STATUS' が必須。IP BANには対応しない。", inputSchema: { type: "object", properties: { user_id: { type: "string" }, account_status: { type: "string", enum: ["active", "banned", "suspended"] }, ban_reason: { type: "string", maxLength: 1000 }, confirm: { type: "string", enum: ["CHANGE_ACCOUNT_STATUS"] } }, required: ["user_id", "account_status", "confirm"], additionalProperties: false } }
 ];
 
 async function callTool(name, args, ctx) {
-  const adminTools = new Set(["admin_overview", "admin_list_users", "admin_list_reports", "admin_update_report", "admin_set_account_status"]);
+  const adminTools = new Set(["admin_overview", "admin_list_users", "admin_list_reports", "admin_update_report", "admin_set_account_status", "admin_list_articles", "admin_update_article_status", "admin_list_inquiries", "admin_update_inquiry", "admin_set_maintenance_mode"]);
   if (adminTools.has(name) && !(await requireAdmin(ctx))) throw new Error("この操作は管理者専用です。");
   if (name === "search_public_articles") {
     const q = String(args.query || "").trim().toLocaleLowerCase("ja-JP");
@@ -192,11 +197,44 @@ async function callTool(name, args, ctx) {
     if (!r.ok) throw new Error("通報一覧を取得できませんでした。");
     return await r.json();
   }
+  if (name === "admin_list_articles") {
+    const limit = Math.min(100, Math.max(1, Number(args.limit) || 50));
+    const r = await dbRequest(ctx, "articles?select=id,title,status,visibility,author_id,created_at,is_pinned&order=created_at.desc&limit=" + limit);
+    if (!r.ok) throw new Error("記事一覧を取得できませんでした。");
+    return await r.json();
+  }
+  if (name === "admin_update_article_status") {
+    if (args.confirm !== "UPDATE_ARTICLE_STATUS") throw new Error("確認文字列が一致しません。変更を中止しました。");
+    const r = await dbRequest(ctx, "articles?id=eq." + encodeURIComponent(String(args.article_id)) + "&select=id,title,status", { method: "PATCH", headers: { prefer: "return=representation" }, body: JSON.stringify({ status: args.status }) });
+    if (!r.ok) throw new Error("記事状態を更新できませんでした。");
+    return await r.json();
+  }
+  if (name === "admin_list_inquiries") {
+    const limit = Math.min(100, Math.max(1, Number(args.limit) || 50));
+    const r = await dbRequest(ctx, "inquiries?select=id,subject,message,status,admin_note,created_at,resolved_at&order=created_at.desc&limit=" + limit);
+    if (!r.ok) throw new Error("問い合わせ一覧を取得できませんでした。");
+    return await r.json();
+  }
+  if (name === "admin_update_inquiry") {
+    if (args.confirm !== "UPDATE_INQUIRY") throw new Error("確認文字列が一致しません。変更を中止しました。");
+    const patch = { status: args.status, admin_note: String(args.admin_note || "").slice(0, 2000) };
+    patch.resolved_at = ["resolved", "closed"].includes(args.status) ? new Date().toISOString() : null;
+    const r = await dbRequest(ctx, "inquiries?id=eq." + encodeURIComponent(String(args.inquiry_id)) + "&select=id,subject,status,admin_note,resolved_at", { method: "PATCH", headers: { prefer: "return=representation" }, body: JSON.stringify(patch) });
+    if (!r.ok) throw new Error("問い合わせを更新できませんでした。");
+    return await r.json();
+  }
+  if (name === "admin_set_maintenance_mode") {
+    const expected = args.enabled ? "ENABLE_MAINTENANCE" : "DISABLE_MAINTENANCE";
+    if (args.confirm !== expected) throw new Error("確認文字列が一致しません。変更を中止しました。");
+    const r = await dbRequest(ctx, "rpc/admin_set_maintenance_mode", { method: "POST", body: JSON.stringify({ p_enabled: !!args.enabled }) });
+    if (!r.ok) throw new Error("メンテナンス設定を更新できませんでした。既存の管理者チェックが拒否した可能性があります。");
+    return await r.json();
+  }
   if (name === "admin_update_report") {
     if (args.confirm !== "UPDATE_REPORT") throw new Error("確認文字列が一致しません。変更を中止しました。");
     const patch = { status: args.status };
     if (args.admin_note !== undefined) patch.admin_note = String(args.admin_note).slice(0, 2000);
-    if (args.status === "resolved" || args.status === "rejected") patch.resolved_at = new Date().toISOString();
+    if (args.status === "resolved" || args.status === "dismissed") patch.resolved_at = new Date().toISOString();
     const r = await dbRequest(ctx, "reports?id=eq." + encodeURIComponent(String(args.report_id)) + "&select=id,status,admin_note,resolved_at", { method: "PATCH", headers: { prefer: "return=representation" }, body: JSON.stringify(patch) });
     if (!r.ok) throw new Error("通報を更新できませんでした。");
     return await r.json();
