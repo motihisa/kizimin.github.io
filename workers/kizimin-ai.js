@@ -326,39 +326,84 @@ async function handleChat(request, env) {
     }
   }
 
-  let usageResponse;
+  const systemPrompt = "あなたはKiziminの日本語記事作成アシスタントです。記事の要約、校正、タイトル案、構成案を支援します。断定できない情報は断定せず、ユーザーの文章を勝手に公開・保存したと主張しません。管理者権限、秘密情報、他人の非公開データを要求・開示しません。簡潔で実用的に回答します。";
+  const userPrompt = (context ? "参考文章（ユーザーが入力した内容）:\n" + context + "\n\n" : "") + prompt;
+  // Reserve a conservative estimate before invoking the model. The final charge uses
+  // the Neurons value returned by Workers AI when available.
+  const estimatedTokens = Math.ceil((systemPrompt.length + userPrompt.length) * 0.8) + 800;
+  const estimatedNeurons = Math.max(0.1, Math.ceil(estimatedTokens * 0.02 * 100) / 100);
+
+  let reserveResponse;
   try {
-    usageResponse = await fetch(ctx.base + "/rest/v1/rpc/consume_ai_request", {
+    reserveResponse = await fetch(ctx.base + "/rest/v1/rpc/reserve_ai_budget", {
       method: "POST",
       headers: {
         apikey: ctx.key,
         authorization: "Bearer " + ctx.token,
         "content-type": "application/json"
       },
-      body: "{}"
+      body: JSON.stringify({ p_estimated_neurons: estimatedNeurons })
     });
   } catch (error) {
-    console.error("AI usage limiter request failed", String(error?.message || error));
-    return json({ error: "AI利用制限を確認できません。少し待ってから再試行してください。" }, 503);
+    console.error("AI budget reservation failed", String(error?.message || error));
+    return json({ error: "AI利用量を確認できません。少し待ってから再試行してください。" }, 503);
   }
-  if (!usageResponse.ok) {
-    console.error("AI usage limiter failed", usageResponse.status, (await usageResponse.text()).slice(0, 300));
-    return json({ error: "AI利用制限の確認に失敗しました。管理者が設定を確認してください。" }, 503);
-  }
-  let usage;
-  try { usage = await usageResponse.json(); } catch { usage = null; }
-  if (!usage?.allowed) {
-    if (usage?.reason === "daily_limit") {
-      return json({ error: "本日のAI利用上限（20回）に達しました。明日また利用できます。", usage }, 429);
-    }
-    if (usage?.reason === "minute_limit") {
-      return json({ error: "AIの利用が短時間に集中しています。1分ほど待ってからお試しください。", usage }, 429);
-    }
-    return json({ error: "AI利用制限を確認できません。再ログインしてお試しください。" }, 401);
+  if (!reserveResponse.ok) {
+    console.error("AI budget reservation failed", reserveResponse.status, (await reserveResponse.text()).slice(0, 300));
+    return json({ error: "AI利用量の確認に失敗しました。管理者が設定を確認してください。" }, 503);
   }
 
-  const systemPrompt = "あなたはKiziminの日本語記事作成アシスタントです。記事の要約、校正、タイトル案、構成案を支援します。断定できない情報は断定せず、ユーザーの文章を勝手に公開・保存したと主張しません。管理者権限、秘密情報、他人の非公開データを要求・開示しません。簡潔で実用的に回答します。";
-  const userPrompt = (context ? "参考文章（ユーザーが入力した内容）:\n" + context + "\n\n" : "") + prompt;
+  let usage;
+  try { usage = await reserveResponse.json(); } catch { usage = null; }
+  if (!usage?.allowed) {
+    if (usage?.reason === "user_neuron_limit") {
+      return json({ error: "本日のAI計算量の上限に達しました。日本時間の午前9時以降に再度お試しください。", usage }, 429);
+    }
+    if (usage?.reason === "global_neuron_limit") {
+      return json({ error: "Kizimin全体の本日のAI利用枠に達しました。日本時間の午前9時以降に再度お試しください。", usage }, 429);
+    }
+    return json({ error: "AI利用量を確認できません。再ログインしてお試しください。" }, 401);
+  }
+
+  async function finishBudget(actualNeurons, succeeded) {
+    try {
+      const finishResponse = await fetch(ctx.base + "/rest/v1/rpc/finish_ai_budget", {
+        method: "POST",
+        headers: {
+          apikey: ctx.key,
+          authorization: "Bearer " + ctx.token,
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          p_event_id: usage.event_id,
+          p_actual_neurons: actualNeurons,
+          p_succeeded: succeeded
+        })
+      });
+      if (!finishResponse.ok) {
+        console.error("AI budget finalization failed", finishResponse.status, (await finishResponse.text()).slice(0, 300));
+        return usage;
+      }
+      const { data: statusData, error: statusError } = await (async () => {
+        const statusResponse = await fetch(ctx.base + "/rest/v1/rpc/get_ai_usage_status", {
+          method: "POST",
+          headers: {
+            apikey: ctx.key,
+            authorization: "Bearer " + ctx.token,
+            "content-type": "application/json"
+          },
+          body: "{}"
+        });
+        if (!statusResponse.ok) return { data: null, error: true };
+        return { data: await statusResponse.json(), error: false };
+      })();
+      return statusError || !statusData ? usage : statusData;
+    } catch (error) {
+      console.error("AI budget finalization error", String(error?.message || error));
+      return usage;
+    }
+  }
+
   try {
     const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct-fast", {
       messages: [
@@ -368,10 +413,16 @@ async function handleChat(request, env) {
       max_tokens: 800
     });
     const answer = result?.response || result?.generated_text || "";
-    return json({ text: String(answer).trim() || "回答を取得できませんでした。", usage });
+    const actualNeurons = Number(result?.usage?.neurons);
+    usage = await finishBudget(Number.isFinite(actualNeurons) && actualNeurons >= 0 ? actualNeurons : estimatedNeurons, true);
+    return json({
+      text: String(answer).trim() || "回答を取得できませんでした。",
+      usage
+    });
   } catch (error) {
     console.error("Workers AI error", String(error?.message || error));
-    return json({ error: "AIの生成に失敗しました。モデルの利用状況またはCloudflareのログを確認してください。" }, 502);
+    usage = await finishBudget(estimatedNeurons, false);
+    return json({ error: "AIの生成に失敗しました。Cloudflareの利用状況とログを確認してください。", usage }, 502);
   }
 }
 
