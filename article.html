@@ -55,6 +55,20 @@
     .comment a{font-weight:800}
     .comment .text-muted{margin-top:2px;color:#9aa1b1;font-size:11px!important}
     .comment-content{margin-top:10px;color:#424b5f;line-height:1.9;overflow-wrap:anywhere}
+    .article-actions-card{margin:18px 0 26px;padding:22px 24px;border:1px solid #e8ebf3;border-radius:22px;background:#fff;box-shadow:0 12px 38px rgba(32,42,74,.04)}
+    .article-action-buttons{display:flex;flex-wrap:wrap;gap:10px}
+    .article-action-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border:1px solid #e2e5ef;border-radius:999px;background:#fff;color:#353d52;font:inherit;font-size:13px;font-weight:800;cursor:pointer;transition:.2s}
+    .article-action-button:hover{transform:translateY(-1px);border-color:#c9c4ff;color:#5b4ee8}
+    .article-action-button.like-action[aria-pressed="true"]{border-color:#d8d2ff;background:#f1efff;color:#5b4ee8}
+    .article-action-button:disabled{opacity:.55;cursor:wait;transform:none}
+    .article-report-form{display:grid;gap:10px;margin-top:18px;padding:18px;border:1px solid #eceef5;border-radius:16px;background:#fafbfe}
+    .article-report-form h2{margin:0;font-size:18px}.article-report-form p{margin:0;color:#788196;font-size:12px;line-height:1.7}
+    .article-report-form label{font-size:12px;font-weight:800}
+    .article-report-form select,.article-report-form textarea{width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #e1e5ef;border-radius:10px;background:#fff;font:inherit;font-size:14px}
+    .article-report-actions{display:flex;gap:9px;flex-wrap:wrap}
+    .article-report-actions button{min-height:40px;padding:0 16px;border:0;border-radius:999px;background:#6558f5;color:#fff;font-weight:800;cursor:pointer}
+    .article-report-actions button.secondary{border:1px solid #e1e5ef;background:#fff;color:#4c5568}
+    #article-action-message{min-height:1.2em;margin:10px 0 0;color:#5b4ee8;font-size:12px}
     .reader-progress{position:fixed;top:0;left:0;z-index:100;width:0;height:3px;background:linear-gradient(90deg,#8b7fff,#4d42dc);box-shadow:0 0 12px #6558f54d}
     .reader-footer{text-align:center;padding:0 20px 32px;color:#a0a6b4;font-size:11px;letter-spacing:.08em}
     @media(max-width:600px){.reader-topbar{padding:13px 16px}.reader-top-label{display:none}.reader-brand{font-size:20px}.reader-brand-mark{width:31px;height:31px}.article-page{padding:25px 13px 64px!important}.article-shell{border-radius:21px!important}.article-cover{padding:28px 23px 30px}.article-kicker{margin-bottom:23px}.article-title{font-size:32px!important}.article-body{padding:28px 23px;font-size:16px;line-height:1.95}.article-endnote{margin:0 23px 26px}.comments-shell{border-radius:20px!important}.comment-composer{padding:13px}}
@@ -72,6 +86,29 @@
   <article id="article" class="card article-shell">
     <div class="loading">記事を読み込んでいます…</div>
   </article>
+  <section class="article-actions-card" aria-label="記事へのリアクション">
+    <div class="article-action-buttons">
+      <button type="button" id="article-like-button" class="article-action-button like-action" aria-pressed="false">♡ いいね <span id="article-like-count">0</span></button>
+      <button type="button" id="article-report-toggle" class="article-action-button report-action">⚑ この記事を通報</button>
+    </div>
+    <form id="article-report-form" class="article-report-form" hidden>
+      <h2>この記事を通報</h2>
+      <p>運営が内容を確認します。虚偽や嫌がらせ目的の通報は控えてください。</p>
+      <label for="article-report-reason">通報理由</label>
+      <select id="article-report-reason" required>
+        <option value="">理由を選択してください</option>
+        <option value="スパム・宣伝">スパム・宣伝</option>
+        <option value="嫌がらせ・差別">嫌がらせ・差別</option>
+        <option value="権利侵害">著作権などの権利侵害</option>
+        <option value="危険・違法な内容">危険・違法な内容</option>
+        <option value="その他">その他</option>
+      </select>
+      <label for="article-report-detail">補足（任意）</label>
+      <textarea id="article-report-detail" rows="3" maxlength="800" placeholder="問題のある箇所などを入力"></textarea>
+      <div class="article-report-actions"><button type="submit" id="article-report-submit">通報を送信</button><button type="button" id="article-report-cancel" class="secondary">キャンセル</button></div>
+    </form>
+    <p id="article-action-message" role="status" aria-live="polite"></p>
+  </section>
   <section class="site-widget article-save-widget" aria-label="記事を保存">
     <h2>🔖 この記事を保存</h2><p class="site-widget-hint">あとで読み返せるようにコレクションに追加できます。</p>
     <form id="save-article" class="feature-form"><label>保存先<select id="collection-select"></select></label><select id="save-article-select" data-article-options data-current-article="true" hidden aria-hidden="true" tabindex="-1"></select><button class="feature-primary">この記事を保存する</button></form>
@@ -112,6 +149,75 @@ async function secureContent(action, payload={}) {
   const result=await response.json().catch(()=>({}));
   if(!response.ok) throw new Error(result.error||"コメント処理に失敗しました。");
   return result;
+}
+async function initArticleActions(articleId){
+  const likeButton=document.getElementById("article-like-button");
+  const likeCount=document.getElementById("article-like-count");
+  const reportToggle=document.getElementById("article-report-toggle");
+  const reportForm=document.getElementById("article-report-form");
+  const reportCancel=document.getElementById("article-report-cancel");
+  const actionMessage=document.getElementById("article-action-message");
+  if(!likeButton||!likeCount||!reportToggle||!reportForm)return;
+  let liked=false;
+  const refreshLikeState=async()=>{
+    const [{count,error:countError},{data:{session}}]=await Promise.all([
+      sb.from("article_likes").select("user_id",{count:"exact",head:true}).eq("article_id",articleId),
+      sb.auth.getSession()
+    ]);
+    if(countError) throw countError;
+    likeCount.textContent=String(count||0);
+    if(session?.user?.id){
+      const {data,error}=await sb.from("article_likes").select("article_id").eq("article_id",articleId).eq("user_id",session.user.id).maybeSingle();
+      if(error)throw error;
+      liked=!!data;
+    }else liked=false;
+    likeButton.setAttribute("aria-pressed",String(liked));
+    likeButton.innerHTML=(liked?"♥ いいね済み ":"♡ いいね ")+ '<span id="article-like-count">'+String(count||0)+'</span>';
+  };
+  try{await refreshLikeState();}catch(error){console.warn("いいね状態を取得できませんでした:",error);}
+  likeButton.addEventListener("click",async()=>{
+    likeButton.disabled=true;
+    try{
+      const {data:{session}}=await sb.auth.getSession();
+      if(!session?.user?.id){location.href="login.html";return;}
+      const result=liked
+        ? await sb.from("article_likes").delete().eq("article_id",articleId).eq("user_id",session.user.id)
+        : await sb.from("article_likes").insert({article_id:articleId,user_id:session.user.id});
+      if(result.error)throw result.error;
+      liked=!liked;
+      await refreshLikeState();
+      actionMessage.textContent=liked?"いいねしました。":"いいねを取り消しました。";
+    }catch(error){
+      console.error("いいね処理に失敗しました:",error);
+      actionMessage.textContent="いいねを反映できませんでした。ログイン状態や通信を確認してください。";
+    }finally{likeButton.disabled=false;}
+  });
+  reportToggle.addEventListener("click",async()=>{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session?.user?.id){location.href="login.html";return;}
+    reportForm.hidden=!reportForm.hidden;
+    if(!reportForm.hidden)document.getElementById("article-report-reason")?.focus();
+  });
+  reportCancel?.addEventListener("click",()=>{reportForm.reset();reportForm.hidden=true;});
+  reportForm.addEventListener("submit",async event=>{
+    event.preventDefault();
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session?.user?.id){actionMessage.textContent="通報にはログインが必要です。";return;}
+    const reason=document.getElementById("article-report-reason").value;
+    const detail=document.getElementById("article-report-detail").value.trim();
+    const combined=[reason,detail].filter(Boolean).join("：").slice(0,1000);
+    const submit=document.getElementById("article-report-submit");
+    submit.disabled=true;submit.textContent="送信中…";
+    try{
+      const {error}=await sb.from("reports").insert({reporter_id:session.user.id,article_id:articleId,reason:combined,status:"open"});
+      if(error)throw error;
+      reportForm.reset();reportForm.hidden=true;
+      actionMessage.textContent="通報を送信しました。運営が確認します。";
+    }catch(error){
+      console.error("通報送信に失敗しました:",error);
+      actionMessage.textContent="通報を送信できませんでした。ログイン状態や通信を確認してください。";
+    }finally{submit.disabled=false;submit.textContent="通報を送信";}
+  });
 }
 async function loadComments(articleId){
   if(!commentsList) return;
@@ -171,6 +277,7 @@ document.getElementById("comment-form").addEventListener("submit",async event=>{
     const authorInitial=escapeHtml((author||"K").trim().slice(0,1).toUpperCase());
     article.innerHTML='<div class="article-cover"><div class="article-kicker"><span class="article-dot"></span> KIZIMIN JOURNAL</div><div class="article-meta"><span class="article-category">'+escapeHtml(category)+'</span><span>'+publishedDate+'</span><span>·</span><span>読む時間のひととき</span></div><h1 class="article-title">'+escapeHtml(data.title)+'</h1><div class="article-author-row"><span class="author-avatar" aria-hidden="true">'+authorInitial+'</span><div class="article-author-details"><span class="author-label">この記事を書いた人</span><div><a class="author-name" href="profile.html?id='+encodeURIComponent(data.author_id||"")+'">'+escapeHtml(author)+'</a>'+badge(authorTitle)+'</div></div></div></div><div class="article-divider"></div><div class="article-body" style="white-space:pre-wrap">'+escapeHtml(data.content)+'</div><div class="article-endnote">最後まで読んでくれてありがとう</div>';
     document.title=data.title+" | Kizimin";
+    await initArticleActions(data.id);
     await loadComments(data.id);
   }catch(error){
     console.error("記事の読み込みに失敗しました:",error);
