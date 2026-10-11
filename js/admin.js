@@ -103,6 +103,123 @@
     return true;
   }
 
+
+  // ネイティブselectの値・changeイベントは維持し、表示だけ管理画面独自のメニューにする。
+  function enhanceAdminSelect(select) {
+    if (!(select instanceof HTMLSelectElement) || select.dataset.customized === "true") return;
+    if (!select.options.length || select.closest(".custom-select")) return;
+    select.dataset.customized = "true";
+    const wrap = document.createElement("div");
+    wrap.className = "custom-select";
+    const trigger = document.createElement("button");
+    trigger.type = "button";
+    trigger.className = "custom-select-trigger";
+    trigger.setAttribute("aria-haspopup", "listbox");
+    trigger.setAttribute("aria-expanded", "false");
+    const valueText = document.createElement("span");
+    valueText.className = "custom-select-value";
+    const arrow = document.createElement("span");
+    arrow.className = "custom-select-arrow";
+    arrow.setAttribute("aria-hidden", "true");
+    arrow.textContent = "⌄";
+    trigger.append(valueText, arrow);
+    const menu = document.createElement("div");
+    menu.className = "custom-select-menu";
+    menu.setAttribute("role", "listbox");
+    const sync = () => {
+      const option = select.options[select.selectedIndex];
+      valueText.textContent = option ? option.textContent.trim() : "選択してください";
+      trigger.disabled = select.disabled;
+      trigger.classList.toggle("is-disabled", select.disabled);
+      menu.querySelectorAll("[role=option]").forEach(button => {
+        const selected = button.dataset.value === select.value;
+        button.classList.toggle("selected", selected);
+        button.setAttribute("aria-selected", selected ? "true" : "false");
+      });
+    };
+    Array.from(select.options).forEach(option => {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "custom-select-option";
+      item.setAttribute("role", "option");
+      item.dataset.value = option.value;
+      item.textContent = option.textContent.trim();
+      item.disabled = option.disabled;
+      item.addEventListener("click", () => {
+        if (select.disabled || option.disabled) return;
+        const changed = select.value !== option.value;
+        select.value = option.value;
+        close();
+        sync();
+        if (changed) select.dispatchEvent(new Event("change", { bubbles: true }));
+        trigger.focus();
+      });
+      menu.appendChild(item);
+    });
+    function close() {
+      wrap.classList.remove("open");
+      trigger.setAttribute("aria-expanded", "false");
+    }
+    trigger.addEventListener("click", () => {
+      if (select.disabled) return;
+      const opening = !wrap.classList.contains("open");
+      document.querySelectorAll(".custom-select.open").forEach(el => {
+        el.classList.remove("open");
+        el.querySelector(".custom-select-trigger")?.setAttribute("aria-expanded", "false");
+      });
+      if (opening) {
+        wrap.classList.add("open");
+        trigger.setAttribute("aria-expanded", "true");
+        menu.querySelector('[aria-selected="true"]')?.focus();
+      }
+    });
+    trigger.addEventListener("keydown", event => {
+      if (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        wrap.classList.add("open");
+        trigger.setAttribute("aria-expanded", "true");
+        menu.querySelector('[aria-selected="true"]')?.focus();
+      } else if (event.key === "Escape") close();
+    });
+    menu.addEventListener("keydown", event => {
+      const items = Array.from(menu.querySelectorAll(".custom-select-option:not(:disabled)"));
+      const index = items.indexOf(document.activeElement);
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        const next = event.key === "ArrowDown" ? (index + 1) % items.length : (index - 1 + items.length) % items.length;
+        items[next]?.focus();
+      } else if (event.key === "Escape") {
+        close(); trigger.focus();
+      } else if (event.key === "Tab") close();
+    });
+    select.addEventListener("change", sync);
+    select.addEventListener("blur", () => setTimeout(sync, 0));
+    select.classList.add("custom-select-native");
+    select.parentNode.insertBefore(wrap, select);
+    wrap.append(trigger, menu, select);
+    sync();
+  }
+  function enhanceAdminSelects(root = document) {
+    root.querySelectorAll("select").forEach(enhanceAdminSelect);
+  }
+  document.addEventListener("click", event => {
+    if (!event.target.closest(".custom-select")) {
+      document.querySelectorAll(".custom-select.open").forEach(el => {
+        el.classList.remove("open");
+        el.querySelector(".custom-select-trigger")?.setAttribute("aria-expanded", "false");
+      });
+    }
+  });
+  const adminSelectObserver = new MutationObserver(records => {
+    records.forEach(record => record.addedNodes.forEach(node => {
+      if (node.nodeType !== 1) return;
+      if (node.matches?.("select")) enhanceAdminSelect(node);
+      enhanceAdminSelects(node);
+    }));
+  });
+  adminSelectObserver.observe(document.body, { childList: true, subtree: true });
+  enhanceAdminSelects();
+
   function renderDashboard(stats) {
     const totals = stats?.totals || {};
     $("dashboard-stats").innerHTML = [
