@@ -681,7 +681,7 @@
       .select("id,name,email,subject,message,status,admin_note,created_at,resolved_at")
       .order("created_at",{ascending:false});
     if(error) throw error;
-    $("inquiries-body").innerHTML=data.length?data.map(i=>'<tr><td>'+esc(i.subject)+'</td><td>'+esc(i.name||"-")+'<br>'+esc(i.email||"-")+'</td><td class="inquiry-message">'+esc(i.message)+'</td><td><select class="inquiry-status" data-id="'+esc(i.id)+'">'+["open","reviewing","resolved","closed"].map(s=>'<option value="'+s+'" '+(s===i.status?"selected":"")+'>'+statusLabel(s)+'</option>').join("")+'</select><br><textarea class="inquiry-note" data-id="'+esc(i.id)+'" placeholder="管理者メモ">'+esc(i.admin_note||"")+'</textarea><br><button type="button" class="inquiry-save" data-id="'+esc(i.id)+'">保存</button></td><td>'+esc(date(i.created_at))+'</td></tr>').join(""):'<tr><td colspan="6">問い合わせはありません。</td></tr>';
+    $("inquiries-body").innerHTML=data.length?data.map(i=>'<tr><td>'+esc(i.subject)+'</td><td>'+esc(i.name||"-")+'<br>'+esc(i.email||"-")+'</td><td class="inquiry-message">'+esc(i.message)+'</td><td><select class="inquiry-status" data-id="'+esc(i.id)+'">'+["open","reviewing","resolved","closed"].map(s=>'<option value="'+s+'" '+(s===i.status?"selected":"")+'>'+statusLabel(s)+'</option>').join("")+'</select><br><textarea class="inquiry-note" data-id="'+esc(i.id)+'" placeholder="管理者メモ">'+esc(i.admin_note||"")+'</textarea><br><button type="button" class="inquiry-save" data-id="'+esc(i.id)+'">保存</button></td><td>'+esc(date(i.created_at))+'</td></tr>').join(""):'<tr><td colspan="5">問い合わせはありません。</td></tr>';
     document.querySelectorAll(".inquiry-save").forEach(b=>b.onclick=()=>saveInquiry(b.dataset.id));
   }
   async function saveInquiry(id){
@@ -694,11 +694,18 @@
 
   async function loadReports() {
     const { data, error } = await supabase.from("reports")
-      .select("id,article_id,comment_id,reason,status,admin_note,created_at").order("created_at",{ascending:false});
+      .select("id,article_id,comment_id,reporter_id,reason,status,admin_note,created_at").order("created_at",{ascending:false});
     if (error) throw error;
+    const articleIds=[...new Set((data||[]).map(r=>r.article_id).filter(Boolean))];
+    const articleNames=new Map();
+    if(articleIds.length){
+      const {data:articleRows,error:articleError}=await supabase.from("articles").select("id,title").in("id",articleIds);
+      if(articleError)console.warn("通報対象の記事名を取得できませんでした:",articleError);
+      for(const row of articleRows||[])articleNames.set(row.id,row.title);
+    }
     $("reports-body").innerHTML = data.length ? data.map(r => `
-      <tr><td>${esc(r.article_id ? "記事: " + r.article_id : "コメント: " + r.comment_id)}</td><td class="admin-log">${esc(r.reason)}</td><td><span class="admin-badge">${esc(statusLabel(r.status))}</span></td><td>${esc(date(r.created_at))}</td>
-      <td><select class="report-status" data-id="${esc(r.id)}">${["open","reviewing","resolved","dismissed"].map(s => `<option value="${s}" ${s===r.status?"selected":""}>${s}</option>`).join("")}</select><br>
+      <tr><td>${esc(r.article_id ? "記事: " + (articleNames.get(r.article_id)||"削除済みの記事") : "コメント: " + r.comment_id)}</td><td class="admin-log">${esc(r.reason)}</td><td><span class="admin-badge">${esc(statusLabel(r.status))}</span></td><td>${esc(date(r.created_at))}</td>
+      <td><select class="report-status" data-id="${esc(r.id)}">${["open","reviewing","resolved","dismissed"].map(s => `<option value="${s}" ${s===r.status?"selected":""}>${statusLabel(s)}</option>`).join("")}</select><br>
       <textarea class="report-note" data-id="${esc(r.id)}" placeholder="管理者メモ">${esc(r.admin_note || "")}</textarea><br><button type="button" class="report-save" data-id="${esc(r.id)}">保存</button></td></tr>`).join("") : '<tr><td colspan="5">通報はありません。</td></tr>';
     document.querySelectorAll(".report-save").forEach(b => b.onclick = () => saveReport(b.dataset.id));
   }
