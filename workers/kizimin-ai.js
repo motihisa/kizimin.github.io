@@ -329,7 +329,7 @@ async function handleChat(request, env) {
   const systemPrompt = "あなたはKiziminの日本語記事作成アシスタントです。記事の要約、校正、タイトル案、構成案を支援します。断定できない情報は断定せず、ユーザーの文章を勝手に公開・保存したと主張しません。管理者権限、秘密情報、他人の非公開データを要求・開示しません。簡潔で実用的に回答します。";
   const userPrompt = (context ? "参考文章（ユーザーが入力した内容）:\n" + context + "\n\n" : "") + prompt;
   try {
-    const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+    const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct-fast", {
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }
@@ -340,7 +340,7 @@ async function handleChat(request, env) {
     return json({ text: String(answer).trim() || "回答を取得できませんでした。" });
   } catch (error) {
     console.error("Workers AI error", String(error?.message || error));
-    return json({ error: "AIの無料枠または利用制限に達した可能性があります。時間をおいて再試行してください。" }, 429);
+    return json({ error: "AIの生成に失敗しました。モデルの利用状況またはCloudflareのログを確認してください。" }, 502);
   }
 }
 
