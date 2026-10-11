@@ -2,7 +2,7 @@
   "use strict";
   const SUPABASE_URL="https://bimddapbkdakspjaemsm.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY="sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf";
-  const DEFAULTS={brandName:"Kizimin",heroTitle:"好きなことを、\n好きなように書こう。",heroDescription:"Kiziminは、記事を読んだり、書いたりできる場所。",accentColor:"#111827",backgroundColor:"#f5f7fb",textColor:"#111827",cardRadius:14,showHero:true,showDaily:true,showPopular:true,showCategories:true,showDiscovery:true,showPolls:true,showChallenges:true,showQA:true,showLibrary:true};
+  const DEFAULTS={announcementTitle:"お知らせ",announcementBody:"現在、お知らせはありません。",showAnnouncements:true,termsContent:"",privacyContent:"",brandName:"Kizimin",heroTitle:"好きなことを、\n好きなように書こう。",heroDescription:"Kiziminは、記事を読んだり、書いたりできる場所。",accentColor:"#111827",backgroundColor:"#f5f7fb",textColor:"#111827",cardRadius:14,showHero:true,showDaily:true,showPopular:true,showCategories:true,showDiscovery:true,showPolls:true,showChallenges:true,showQA:true,showLibrary:true};
   function apply(value){
     const x={...DEFAULTS,...(value||{})}, root=document.documentElement;
     root.style.setProperty("--kizimin-accent",x.accentColor);
@@ -13,6 +13,12 @@
     document.querySelectorAll(".logo").forEach(el=>el.textContent=x.brandName);
     const hero=document.querySelector(".hero");
     if(hero){hero.hidden=!x.showHero;const h=hero.querySelector("h1"),p=hero.querySelector("p");if(h)h.textContent=x.heroTitle;if(p)p.textContent=x.heroDescription;}
+    const announcements=document.getElementById("home-announcements");
+    const announcementTitle=document.getElementById("announcements-heading");
+    const announcementBody=document.getElementById("announcement-content");
+    if(announcements){announcements.hidden=!x.showAnnouncements;}
+    if(announcementTitle)announcementTitle.textContent="📢 "+(x.announcementTitle||"お知らせ");
+    if(announcementBody){const body=String(x.announcementBody||"").trim();announcementBody.replaceChildren();if(body){body.split(/\\n/).forEach(line=>{const p=document.createElement("p");p.textContent=line;announcementBody.appendChild(p);});}else{const p=document.createElement("p");p.textContent="現在、お知らせはありません。";announcementBody.appendChild(p);}}
     const visibility=[
       ["#community-daily",x.showDaily],["#community-trending",x.showPopular],["#categories",x.showCategories],
       [".discovery-widget",x.showDiscovery],["#community-polls",x.showPolls],["#community-challenges",x.showChallenges],
