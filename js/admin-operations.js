@@ -127,5 +127,32 @@ $("ops-report-export").addEventListener("click",()=>{
 $("ops-safety-check").addEventListener("click",()=>{$("ops-safety-result").textContent=["□ 変更対象と既存機能への影響範囲を確認","□ 変更前の値・復元手順を記録","□ 本番DBではなくテスト環境で検証","□ RLSとサーバー側権限を確認","□ 差分をレビューし、明示承認を得る","□ 適用後に関連機能を回帰テスト"].join("\n");});
 $("ops-save-snapshot").addEventListener("click",()=>{if(!lastSnapshot)return alert("保存できる設定値がありません。先に更新してください。");localStorage.setItem("kizimin_ops_settings_snapshot",JSON.stringify(lastSnapshot));$("ops-snapshot-status").textContent="現在の読み取り値をこのブラウザに保存しました。これはDB復元用バックアップではありません。";});
 $("ops-refresh").addEventListener("click",()=>refreshData().catch(e=>{console.error(e);renderAlerts([{title:"更新に失敗",detail:e.message,level:"エラー"}]);}));
-guard().then(async()=>{renderTasks();perf();await refreshData();$("ops-scheduler-status").textContent="実行中のEdge Functionsはデプロイ済み関数として別途管理されています。このブラウザから定期実行の作成・変更は行いません。";});
+
+const incidentKey="kizimin_ops_incidents_v1";
+function getIncidents(){try{const x=JSON.parse(localStorage.getItem(incidentKey)||"[]");return Array.isArray(x)?x:[]}catch{return[]}}
+function saveIncident(title,detail,level="注意"){const a=getIncidents();a.unshift({at:new Date().toISOString(),title,detail,level});try{localStorage.setItem(incidentKey,JSON.stringify(a.slice(0,100)))}catch{}renderIncidents()}
+function renderIncidents(){const a=getIncidents();$("ops-incidents-result").textContent=a.length?a.slice(0,20).map(x=>date(x.at)+" · "+x.level+" · "+x.title+"\n"+x.detail).join("\n\n"):"ローカル記録はありません。"}
+function classifyError(message){const m=String(message||"").toLowerCase();if(/401|invalid api key|jwt|unauthorized/.test(m))return"認証/APIキー";if(/403|permission|row.level security|rls|not allowed/.test(m))return"権限/RLS";if(/404|does not exist|schema cache|could not find/.test(m))return"テーブル・関数・スキーマ";if(/failed to fetch|network|timeout|fetch/.test(m))return"通信";return"その他"}
+$("ops-health-run").addEventListener("click",async()=>{
+ const target=$("ops-health-result");target.textContent="読み取り専用の検査中…";
+ const checks=[["プロフィール","profiles","id"],["記事","articles","id"],["コメント","comments","id"],["通報","reports","id"],["問い合わせ","inquiries","id"],["サイト設定","site_settings","id"]];
+ const results=await Promise.all(checks.map(async([label,table,column])=>{try{const {error}=await db.from(table).select(column,{head:true}).limit(1);if(error)throw error;return{label,ok:true,detail:"読み取り成功"}}catch(e){return{label,ok:false,detail:classifyError(e.message)+"： "+e.message}}}));
+ const failed=results.filter(x=>!x.ok);
+ target.textContent=results.map(x=>(x.ok?"✓ 正常":"✕ 異常")+"　"+x.label+"： "+x.detail).join("\n")+
+ "\n\n結果："+(failed.length?failed.length+"項目で失敗。APIキー・認証・RLS・テーブル名・通信を分類して確認してください。":"検査対象はすべて読み取り可能。これはサイト全体の完全検査ではありません。");
+ failed.forEach(x=>saveIncident("健康診断: "+x.label,x.detail,"エラー"));
+ if(!failed.length)saveIncident("健康診断","検査対象6項目の読み取り成功","正常");
+});
+$("ops-incidents-export").addEventListener("click",()=>{const a=getIncidents();const rows=[["日時","項目","詳細","レベル"],...a.map(x=>[x.at,x.title,x.detail,x.level])];download("kizimin-incidents.csv","\ufeff"+rows.map(r=>r.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(",")).join("\r\n"),"text/csv;charset=utf-8")});
+$("ops-incidents-clear").addEventListener("click",()=>{if(!confirm("このブラウザ内に保存された診断記録だけを消去します。続行しますか？"))return;localStorage.removeItem(incidentKey);renderIncidents()});
+$("ops-backup-check").addEventListener("click",()=>{$("ops-backup-result").textContent=[
+"状態：このページからSupabaseのバックアップ状態を直接確認できません。",
+"確認先：Supabase Dashboard → Database / Backups（プラン・プロジェクト設定により表示が異なります）。",
+"実行前：バックアップ日時・保持期間・復元対象・復元先を確認してください。",
+"安全策：本番へ直接復元せず、可能なら別プロジェクトで復元検証してください。",
+"注意：現在の機能は準備チェックのみ。バックアップ作成・復元は実行していません。"
+].join("\n")});
+$("ops-queue-refresh").addEventListener("click",async()=>{const out=$("ops-queue-result");out.textContent="読み取り中…";const results=await Promise.all([["未解決通報",()=>count("reports",q=>q.not("status","in",'("resolved","dismissed")'))],["未対応問い合わせ",()=>count("inquiries",q=>q.not("status","in",'("resolved","dismissed")'))]].map(async([name,fn])=>{try{return name+"："+await fn()+" 件"}catch(e){return name+"：取得失敗（"+classifyError(e.message)+"）"}}));out.textContent=results.join("\n")+"\n本文や個人情報は取得していません。"});
+$("ops-analytics-save").addEventListener("click",()=>{const current={at:new Date().toISOString(),stats:lastStats};let previous=null;try{previous=JSON.parse(localStorage.getItem("kizimin_ops_analytics_snapshot")||"null")}catch{}const lines=["現在の集計日時："+date(current.at)];for(const [k,v] of Object.entries(current.stats)){const old=previous?.stats?.[k];lines.push(k+"："+(v===null?"取得不可":v)+(old!==undefined&&old!==null&&v!==null?"（前回比 "+(typeof v==="number"&&typeof old==="number"?(v-old>=0?"+":"")+(v-old):"比較不可")+"）":"（比較用の前回値なし）"))}try{localStorage.setItem("kizimin_ops_analytics_snapshot",JSON.stringify(current));$("ops-analytics-result").textContent=lines.join("\n")+"\nこの比較はこのブラウザに保存された2回分のみです。"}catch{$("ops-analytics-result").textContent="ブラウザ内に保存できませんでした。"}});
+guard().then(async()=>{renderTasks();perf();renderIncidents();await refreshData();$("ops-scheduler-status").textContent="実行中のEdge Functionsはデプロイ済み関数として別途管理されています。このブラウザから定期実行の作成・変更は行いません。";});
 })();
