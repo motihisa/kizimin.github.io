@@ -2,7 +2,7 @@
 "use strict";
 const $ = id => document.getElementById(id);
 const SUPABASE_URL = "https://bimddapbkdakspjaemsm.supabase.co";
-const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6ImJpbWRkYXBia2Rha3NwamFlbXNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzMTU0MTksImV4cCI6MjEwNjg5MTQxOX0.qezG4VOkyYfaa4DxClk1PSV7bZEne7WEbxj52m1l7iM";
+const KEY = "sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf";
 const db = window.supabase.createClient(SUPABASE_URL, KEY);
 let sessionUser = null, role = "user", lastSnapshot = null, lastStats = {};
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
