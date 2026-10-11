@@ -37,7 +37,7 @@
       <input id="excerpt" class="field" maxlength="300" placeholder="記事の概要">
       <label class="small-label" for="content">本文（Markdown対応）</label>
       <textarea id="content" class="field body-field" maxlength="50000" placeholder="共同で記事を書き始めましょう。"></textarea>
-      <div class="row"><button id="reloadBtn" class="btn" type="button">最新の下書きを読み込む</button><span class="hint">自動保存・同期は数秒おきに行われます。</span></div>
+      <div class="row"><button id="reloadBtn" class="btn" type="button">最新の下書きを読み込む</button><span class="hint">自動保存に対応。相手の変更はRealtimeで即時同期します。</span></div>
       <div id="preview" class="preview"></div>
     </section>
     <aside>
@@ -68,7 +68,7 @@
 const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpbWRkYXBia2Rha3NwamFlbXNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzMTU0MTksImV4cCI6MjEwNjg5MTQxOX0.qezG4VOkyYfaa4DxClk1PSV7bZEne7WEbxj52m1l7iM");
 const $=id=>document.getElementById(id);
 const articleId=new URLSearchParams(location.search).get("id");
-let uid=null, article=null, isOwner=false, isCollaborator=false, draft=null, dirty=false, saving=false, conflict=false, timer=null, pollTimer=null, users=[];
+let uid=null, article=null, isOwner=false, isCollaborator=false, draft=null, dirty=false, saving=false, conflict=false, timer=null, realtimeChannel=null, pollFallbackTimer=null, users=[];
 const escapeHtml=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function showNotice(message,type=""){const n=$("notice");n.textContent=message;n.className="notice active"+(type?" "+type:"");}
 function clearNotice(){const n=$("notice");n.textContent="";n.className="notice";}
@@ -109,7 +109,7 @@ async function initialize(){
  applyDraft(d);
  if(isOwner)await loadCollaborators();
  if(isOwner)await loadUsers();
- pollTimer=setInterval(pollDraft,2200);
+ await subscribeDraftChanges();
 }
 async function saveDraft(force=false){
  if(!draft||saving||(!dirty&&!force)||conflict)return;
@@ -130,12 +130,25 @@ function showConflict(remote){
  $("useRemoteBtn").onclick=()=>{applyDraft(remote);setState("最新の下書きを読み込みました");};
  $("keepLocalBtn").onclick=async()=>{draft=remote;conflict=false;dirty=true;clearNotice();await saveDraft(true);};
 }
-async function pollDraft(){
- if(!draft||saving)return;
- try{const remote=await fetchDraft();if(!remote||remote.updated_at===draft.updated_at)return;
-  if(dirty){if(!conflict){conflict=true;showConflict(remote);setState("他の編集者が更新しました");}return;}
-  applyDraft(remote);setState("共同編集者の変更を同期しました");
- }catch(e){console.warn("共同編集の同期に失敗:",e);}
+function handleRemoteDraft(remote){
+  if(!remote||!draft||remote.article_id!==articleId||remote.updated_at===draft.updated_at)return;
+  if(saving&&remote.updated_by===uid)return;
+  if(dirty||saving){if(!conflict){conflict=true;showConflict(remote);setState("他の編集者が更新しました");}return;}
+  applyDraft(remote);setState("共同編集者の変更を即時同期しました");
+}
+async function subscribeDraftChanges(){
+  realtimeChannel=sb.channel("article-collab-"+articleId)
+    .on("postgres_changes",{event:"*",schema:"public",table:"article_collaboration_drafts",filter:"article_id=eq."+articleId},payload=>handleRemoteDraft(payload.new))
+    .subscribe(async status=>{
+      if(status==="SUBSCRIBED"){
+        if(pollFallbackTimer){clearInterval(pollFallbackTimer);pollFallbackTimer=null;}
+        setState("Realtime接続済み · 即時同期");
+        try{handleRemoteDraft(await fetchDraft());}catch(e){console.warn("Realtime接続後の確認に失敗:",e);}
+      }else if(["CHANNEL_ERROR","TIMED_OUT","CLOSED"].includes(status)){
+        setState("Realtime接続失敗 · 代替同期中");
+        if(!pollFallbackTimer)pollFallbackTimer=setInterval(async()=>{if(!draft||saving)return;try{handleRemoteDraft(await fetchDraft());}catch(e){console.warn("代替同期に失敗:",e);}},5000);
+      }
+    });
 }
 async function loadCollaborators(){
  const {data,error}=await sb.from("article_collaborators").select("id,user_id,created_at").eq("article_id",articleId).order("created_at");
