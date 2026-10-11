@@ -55,6 +55,11 @@
     .comment a{font-weight:800}
     .comment .text-muted{margin-top:2px;color:#9aa1b1;font-size:11px!important}
     .comment-content{margin-top:10px;color:#424b5f;line-height:1.9;overflow-wrap:anywhere}
+    .comment-like-row{display:flex;align-items:center;gap:9px;margin-top:12px}
+    .comment-like-button{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 12px;border:1px solid #e5e7f0;border-radius:999px;background:#fff;color:#697187;font:inherit;font-size:12px;font-weight:800;cursor:pointer;transition:.18s}
+    .comment-like-button:hover{border-color:#d4ceff;background:#f8f7ff;color:#5b4ee8}
+    .comment-like-button[aria-pressed="true"]{border-color:#ddd7ff;background:#f1efff;color:#5b4ee8}
+    .comment-like-button:disabled{opacity:.55;cursor:wait}
     .article-actions-card{margin:18px 0 26px;padding:22px 24px;border:1px solid #e8ebf3;border-radius:22px;background:#fff;box-shadow:0 12px 38px rgba(32,42,74,.04)}
     .article-action-buttons{display:flex;flex-wrap:wrap;gap:10px}
     .article-action-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border:1px solid #e2e5ef;border-radius:999px;background:#fff;color:#353d52;font:inherit;font-size:13px;font-weight:800;cursor:pointer;transition:.2s}
@@ -231,8 +236,23 @@ async function loadComments(articleId){
       const p=c.profiles||{};
       const name=p.display_name||p.username||"ユーザー";
       const date=c.created_at?new Intl.DateTimeFormat("ja-JP",{year:"numeric",month:"long",day:"numeric",hour:"2-digit",minute:"2-digit"}).format(new Date(c.created_at)):"";
-      return '<div class="comment"><div style="font-weight:600"><a href="profile.html?id='+encodeURIComponent(c.author_id||"")+'">'+escapeHtml(name)+'</a>'+badge(titles.get(c.author_id))+'</div><div class="text-muted">'+escapeHtml(date)+'</div><div class="comment-content" style="white-space:pre-wrap">'+escapeHtml(c.content)+'</div></div>';
+      const commentLiked=!!c.liked_by_me;
+      const commentLikeCount=Number(c.like_count)||0;
+      return '<div class="comment"><div style="font-weight:600"><a href="profile.html?id='+encodeURIComponent(c.author_id||"")+'">'+escapeHtml(name)+'</a>'+badge(titles.get(c.author_id))+'</div><div class="text-muted">'+escapeHtml(date)+'</div><div class="comment-content" style="white-space:pre-wrap">'+escapeHtml(c.content)+'</div><div class="comment-like-row"><button type="button" class="comment-like-button" data-comment-id="'+escapeHtml(c.id)+'" aria-pressed="'+String(commentLiked)+'">'+(commentLiked?'♥ いいね済み':'♡ いいね')+' <span>'+commentLikeCount+'</span></button></div></div>';
     }).join("");
+    commentsList.querySelectorAll(".comment-like-button").forEach(button=>{
+      button.addEventListener("click",async()=>{
+        button.disabled=true;
+        try{
+          await secureContent("comment_like_toggle",{comment_id:button.dataset.commentId});
+          await loadComments(articleId);
+        }catch(error){
+          if(error.message==="ログインが必要です。"){location.href="login.html";return;}
+          const message=document.getElementById("comment-message");
+          if(message)message.textContent="いいねを反映できませんでした。"+(error.message||"通信状態を確認してください。");
+        }finally{button.disabled=false;}
+      });
+    });
   }catch(error){
     console.error("コメントの読み込みに失敗しました:",error);
     commentsList.innerHTML='<div class="empty-state">'+escapeHtml(error.message||"コメントを読み込めませんでした。")+'</div>';
