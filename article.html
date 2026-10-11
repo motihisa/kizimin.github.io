@@ -382,6 +382,20 @@ document.getElementById("comment-form").addEventListener("submit",async event=>{
     const authorInitial=escapeHtml((author||"K").trim().slice(0,1).toUpperCase());
     const authorAvatar=authorAvatarUrl?'<img src="'+escapeHtml(authorAvatarUrl)+'" alt="" loading="lazy">':authorInitial;
     article.innerHTML='<div class="article-cover"><div class="article-kicker"><span class="article-dot"></span> KIZIMIN JOURNAL</div><div class="article-meta"><span class="article-category">'+escapeHtml(category)+'</span><span>'+publishedDate+'</span><span>·</span><span>読む時間のひととき</span></div><h1 class="article-title">'+escapeHtml(data.title)+'</h1><div class="article-author-row"><span class="author-avatar" aria-hidden="true">'+authorAvatar+'</span><div class="article-author-details"><span class="author-label">この記事を書いた人</span><div><a class="author-name" href="profile.html?id='+encodeURIComponent(data.author_id||"")+'">'+escapeHtml(author)+'</a>'+badge(authorTitle)+(data.author_id?'<button type="button" class="inline-follow-button" data-follow-user="'+escapeHtml(data.author_id)+'">フォロー</button>':'')+'</div></div></div></div><div class="article-divider"></div><div class="article-body markdown-rendered">'+renderArticleContent(data.content)+'</div><div class="article-endnote">最後まで読んでくれてありがとう</div>';
+    const {data:{session:editSession}}=await sb.auth.getSession();
+    if(editSession?.user?.id){
+      let canEdit=data.author_id===editSession.user.id;
+      if(!canEdit){
+        const {data:collabMembership}=await sb.from("article_collaborators").select("id").eq("article_id",data.id).eq("user_id",editSession.user.id).maybeSingle();
+        canEdit=!!collabMembership;
+      }
+      if(canEdit){
+        const editWrap=document.createElement("div");
+        editWrap.style.cssText="display:flex;justify-content:flex-end;margin:0 0 18px";
+        editWrap.innerHTML='<a href="edit-article.html?id='+encodeURIComponent(data.id)+'" style="display:inline-flex;align-items:center;gap:8px;padding:10px 15px;border:1px solid #dcd7ff;border-radius:12px;background:#f5f3ff;color:#594bd6;text-decoration:none;font-size:13px;font-weight:800">✎ 記事を編集・共同編集</a>';
+        article.prepend(editWrap);
+      }
+    }
     const articleAvatarImage=article.querySelector(".author-avatar img");
     if(articleAvatarImage)articleAvatarImage.addEventListener("error",()=>{articleAvatarImage.replaceWith(document.createTextNode(authorInitial));},{once:true});
     document.title=data.title+" | Kizimin";
