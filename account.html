@@ -92,9 +92,47 @@ $("remove-avatar").onclick=async()=>{if(!uid)return;if(!confirm("プロフィー
     msg.textContent="ログイン情報の取得に失敗しました。";
   }
 })();
-$("save").onclick=async()=>{const b=$("save"),file=$("avatar-file").files?.[0];b.disabled=true;msg.textContent="保存しています…";if(!validateProfileNames()){msg.textContent="この表示名・ユーザー名は使用できません。管理者や公式アカウントになりすます名前、不適切な性的・暴力的な内容は使用できません。";b.disabled=false;return}let nextAvatarUrl=avatarUrl;
-if(file){if(file.size>MAX_AVATAR_SIZE){msg.textContent="画像は2MB以下にしてください。";b.disabled=false;return}const ext=({"image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/gif":"gif"})[file.type];const path=uid+"/avatar."+ext;const {error:upErr}=await sb.storage.from("avatars").upload(path,file,{upsert:true,contentType:file.type,cacheControl:"3600"});if(upErr){msg.textContent="プロフィール画像のアップロードに失敗しました。";b.disabled=false;return}nextAvatarUrl=sb.storage.from("avatars").getPublicUrl(path).data.publicUrl+"?v="+Date.now()}
-const {error}=await sb.from("profiles").update({display_name:$("display").value.trim(),username:$("username").value.trim()||null,bio:$("bio").value.trim()||null,avatar_url:nextAvatarUrl}).eq("id",uid);b.disabled=false;msg.textContent=error?friendlyError(error):"保存しました。";if(!error){avatarUrl=nextAvatarUrl;if(previewObjectUrl){URL.revokeObjectURL(previewObjectUrl);previewObjectUrl=null}$("avatar-file").value="";updatePreview();try{localStorage.setItem(PROFILE_CACHE_PREFIX+uid,JSON.stringify({data:{display_name:$("display").value.trim(),username:$("username").value.trim()||null,bio:$("bio").value.trim()||null,avatar_url:nextAvatarUrl},updatedAt:Date.now()}))}catch{}}};
+$("save").onclick=async()=>{
+ const b=$("save"),file=$("avatar-file").files?.[0];
+ b.disabled=true;msg.textContent="保存しています…";
+ try{
+  if(!uid)throw new Error("ログイン状態を確認できません。再読み込みしてください。");
+  if(!validateProfileNames()){
+   msg.textContent="この表示名・ユーザー名は使用できません。管理者や公式アカウントになりすます名前、不適切な性的・暴力的な内容は使用できません。";
+   return;
+  }
+  let nextAvatarUrl=avatarUrl;
+  if(file){
+   if(file.size>MAX_AVATAR_SIZE)throw new Error("画像は2MB以下にしてください。");
+   const ext=({"image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/gif":"gif"})[file.type];
+   if(!ext)throw new Error("JPG・PNG・WebP・GIFのみアップロードできます。");
+   const path=uid+"/avatar."+ext;
+   const {error:upErr}=await sb.storage.from("avatars").upload(path,file,{upsert:true,contentType:file.type,cacheControl:"0"});
+   if(upErr)throw new Error("プロフィール画像のアップロードに失敗しました。"+(upErr.message||""));
+   nextAvatarUrl=sb.storage.from("avatars").getPublicUrl(path).data.publicUrl+"?v="+Date.now();
+  }
+  const profileUpdate={
+   display_name:$("display").value.trim(),
+   username:$("username").value.trim()||null,
+   bio:$("bio").value.trim()||null,
+   avatar_url:nextAvatarUrl
+  };
+  const {data:savedProfile,error}=await sb.from("profiles").update(profileUpdate).eq("id",uid).select("id,display_name,username,bio,avatar_url").maybeSingle();
+  if(error)throw error;
+  if(!savedProfile)throw new Error("プロフィールが保存されませんでした。ログイン状態と更新権限を確認してください。");
+  applyProfile(savedProfile);
+  if(previewObjectUrl){URL.revokeObjectURL(previewObjectUrl);previewObjectUrl=null}
+  $("avatar-file").value="";
+  try{localStorage.setItem(PROFILE_CACHE_PREFIX+uid,JSON.stringify({data:savedProfile,updatedAt:Date.now()}))}catch{}
+  msg.textContent="プロフィールを保存しました。画像は次回の読み込み後も表示されます。";
+ }catch(e){
+  console.error("プロフィール保存エラー:",e);
+  msg.textContent=friendlyError(e);
+  if(e?.message&&!/permission denied|row-level security|duplicate key|already exists|PROFILE_NAME_NOT_ALLOWED/i.test(e.message))msg.textContent=e.message;
+ }finally{
+  b.disabled=false;
+ }
+};
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/features-app.js?v=20261010-placement-fix2"></script>
