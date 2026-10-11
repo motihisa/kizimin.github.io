@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="自分が書いた記事の一覧を確認できます。">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="css/style.css">
+  <title>記事一覧 | Kizimin</title>
+  <style>
+    body{margin:0;background:#f7f7fc;color:#292642}
+    .mine-top{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px max(16px,calc((100vw - 1040px)/2));background:#ffffffed;border-bottom:1px solid #e8e6f5;backdrop-filter:blur(12px)}
+    .mine-logo{font-size:21px;font-weight:900;letter-spacing:-.05em;color:#292642;text-decoration:none}
+    .mine-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .mine-btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 15px;border:1px solid #e1def5;border-radius:12px;background:#fff;color:#5b5680;text-decoration:none;font-size:13px;font-weight:800;cursor:pointer}
+    .mine-btn.primary{border-color:#6558e8;background:linear-gradient(135deg,#8175fa,#594add);color:#fff;box-shadow:0 6px 16px #6558e826}
+    .mine-main{width:min(100% - 32px,1000px);margin:36px auto 80px}
+    .mine-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px}
+    .mine-kicker{font-size:10px;font-weight:900;letter-spacing:.16em;color:#8179b2}
+    h1{margin:7px 0;font-size:clamp(28px,5vw,38px);letter-spacing:-.05em}
+    .mine-sub{margin:0;color:#77748f;font-size:14px;line-height:1.7}
+    .mine-count{padding:7px 11px;border-radius:999px;background:#efedff;color:#6154d7;font-size:12px;font-weight:800;white-space:nowrap}
+    .mine-toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+    .mine-search{flex:1;min-width:190px;height:42px;padding:0 13px;border:1px solid #e5e2f3;border-radius:12px;background:white;outline:0}
+    .mine-search:focus{border-color:#aaa0ff;box-shadow:0 0 0 4px #6558e814}
+    .mine-filter{height:42px;padding:0 12px;border:1px solid #e5e2f3;border-radius:12px;background:white;color:#514d70}
+    .mine-list{display:grid;gap:12px}
+    .mine-card{padding:20px;border:1px solid #e8e6f5;border-radius:18px;background:white;box-shadow:0 8px 24px #30265c08}
+    .mine-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+    .mine-title{margin:0;color:#2d294a;font-size:18px;font-weight:850;line-height:1.45;overflow-wrap:anywhere}
+    .mine-title a{color:inherit;text-decoration:none}.mine-title a:hover{color:#5b4ed7}
+    .mine-excerpt{margin:8px 0 14px;color:#77748f;font-size:13px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere}
+    .mine-meta{display:flex;gap:7px;align-items:center;flex-wrap:wrap;color:#8985a2;font-size:11px}
+    .mine-tag{padding:4px 8px;border-radius:999px;background:#f2f0ff;color:#6155c9;font-weight:800}
+    .mine-card-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}
+    .mine-card-actions .mine-btn{min-height:34px;padding:0 11px;font-size:12px}
+    .mine-empty{padding:44px 20px;text-align:center;border:1px dashed #dcd8f1;border-radius:18px;background:#fff}
+    .mine-empty strong{display:block;margin-bottom:7px;font-size:18px}.mine-empty p{color:#77748f;font-size:13px;line-height:1.8}
+    .mine-status{margin:10px 0;color:#77748f;font-size:13px}
+    @media(max-width:600px){.mine-top{padding:12px}.mine-main{margin-top:24px}.mine-heading{align-items:flex-start}.mine-card{padding:16px}.mine-card-head{display:block}.mine-count{display:inline-block;margin-top:8px}}
+  </style>
+</head>
+<body>
+  <header class="mine-top">
+    <a class="mine-logo" href="index.html">Kizimin</a>
+    <div class="mine-actions">
+      <a class="mine-btn" href="index.html">サイトに戻る</a>
+      <a class="mine-btn primary" href="write.html">＋ 新しい記事を書く</a>
+    </div>
+  </header>
+  <main class="mine-main">
+    <div class="mine-heading">
+      <div><div class="mine-kicker">YOUR WRITING LIBRARY</div><h1>記事一覧</h1><p class="mine-sub">これまでに自分が書いた記事をまとめて確認できます。</p></div>
+      <span class="mine-count" id="mineCount">読み込み中…</span>
+    </div>
+    <div class="mine-toolbar">
+      <input id="mineSearch" class="mine-search" type="search" placeholder="タイトル・概要で検索" aria-label="記事を検索">
+      <select id="mineFilter" class="mine-filter" aria-label="記事の状態">
+        <option value="all">すべての記事</option><option value="published">公開済み</option><option value="other">公開中以外</option>
+      </select>
+    </div>
+    <p id="mineStatus" class="mine-status" aria-live="polite">記事を読み込んでいます…</p>
+    <section id="mineList" class="mine-list" aria-live="polite"></section>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/ban-screen.js"></script>
+  <script src="js/maintenance-gate.js"></script>
+  <script>
+    const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6ImFub24iLCJpYXQiOjE3OTEzMTU0MTksImV4cCI6MjEwNjg5MTQxOX0.qezG4VOkyYfaa4DxClk1PSV7bZEne7WEbxj52m1l7iM");
+    const $=id=>document.getElementById(id);let myArticles=[];
+    const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+    const dateLabel=v=>{if(!v)return "日付不明";const d=new Date(v);return Number.isNaN(d.getTime())?"日付不明":new Intl.DateTimeFormat("ja-JP",{year:"numeric",month:"short",day:"numeric"}).format(d)};
+    function render(){
+      const q=$("mineSearch").value.trim().toLowerCase(),filter=$("mineFilter").value;
+      const rows=myArticles.filter(a=>{
+        const matches=!(q)&&true||[a.title,a.excerpt].some(v=>String(v||"").toLowerCase().includes(q));
+        const status=String(a.status||"").toLowerCase();
+        return matches&&(filter==="all"||(filter==="published"?status==="published":status!=="published"));
+      });
+      $("mineCount").textContent=rows.length+"件";
+      if(!rows.length){$("mineList").innerHTML='<div class="mine-empty"><strong>'+(myArticles.length?"該当する記事がありません":"まだ記事がありません")+'</strong><p>'+(myArticles.length?"検索条件や絞り込みを変えてみてください。":"最初の記事を書いて、ここに自分の記事を集めましょう。")+'</p><a class="mine-btn primary" href="write.html">＋ 新しい記事を書く</a></div>';return;}
+      $("mineList").innerHTML=rows.map(a=>{
+        const status=String(a.status||"").toLowerCase(),published=status==="published";
+        const date=dateLabel(a.updated_at||a.published_at||a.created_at);
+        return '<article class="mine-card"><div class="mine-card-head"><h2 class="mine-title">'+(published?'<a href="article.html?id='+encodeURIComponent(a.id)+'">':'')+esc(a.title||"無題の記事")+(published?"</a>":"")+'</h2><span class="mine-tag">'+(published?"公開済み":esc(a.status||"未公開"))+'</span></div>'+(a.excerpt?'<p class="mine-excerpt">'+esc(a.excerpt)+'</p>':'')+'<div class="mine-meta"><span>最終更新：'+date+'</span><span>·</span><span>'+(a.visibility==="restricted"?"許可されたユーザーのみ":"公開設定")+'</span></div><div class="mine-card-actions">'+(published?'<a class="mine-btn" href="article.html?id='+encodeURIComponent(a.id)+'">記事を見る</a>':'')+'<a class="mine-btn" href="edit-article.html?id='+encodeURIComponent(a.id)+'">編集・共同編集</a></div></article>';
+      }).join("");
+    }
+    async function init(){
+      const {data:{session},error:authError}=await sb.auth.getSession();
+      if(authError||!session){location.href="login.html?next="+encodeURIComponent("my-articles.html");return;}
+      const {data,error}=await sb.from("articles").select("id,title,excerpt,status,visibility,created_at,published_at,updated_at").eq("author_id",session.user.id).order("updated_at",{ascending:false}).limit(500);
+      if(error){$("mineCount").textContent="読み込み失敗";$("mineStatus").textContent="記事一覧を読み込めませんでした。ログイン状態や通信状態を確認してください。";$("mineList").innerHTML='<div class="mine-empty"><strong>記事を読み込めませんでした</strong><p>時間をおいて再読み込みしてください。</p><button class="mine-btn" id="mineRetry" type="button">再読み込み</button></div>';return;}
+      myArticles=data||[];$("mineStatus").textContent=myArticles.length?"自分の記事を新しい順に表示しています。":"自分が書いた記事はまだありません。";render();
+    }
+    $("mineSearch").addEventListener("input",render);$("mineFilter").addEventListener("change",render);
+    document.addEventListener("click",e=>{if(e.target?.id==="mineRetry")init()});
+    init();
+  </script>
+  <script src="js/access.js"></script>
+</body>
+</html>
