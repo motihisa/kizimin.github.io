@@ -16,8 +16,9 @@ body{background:#fafaf8;color:#171717}.account-shell{max-width:1100px;margin:aut
 <main class="account-shell">
 <header class="account-top"><a class="logo" href="index.html">Kizimin</a><div style="display:flex;gap:8px;align-items:center"><a class="back-link" href="notifications.html">通知</a><a class="back-link" href="dm.html">DM</a><a class="back-link" href="index.html">← ホームへ戻る</a><a class="back-link" href="#account-community-features">活動・保存記事</a></div></header>
 <div class="account-layout">
-<nav class="account-nav" aria-label="アカウント設定"><button class="active" type="button">プロフィール</button><button type="button" disabled>アカウント</button><button type="button" disabled>セキュリティ</button></nav>
+<nav class="account-nav" aria-label="アカウント設定"><button class="active" type="button" data-settings-tab="profile" aria-selected="true">プロフィール</button><button type="button" data-settings-tab="security" aria-selected="false">セキュリティ</button></nav>
 <section class="settings-card">
+<div id="profile-panel" data-settings-panel="profile">
 <div class="settings-head"><div><h1>プロフィール設定</h1><p>あなたのKiziminプロフィールを整えます。</p></div><span class="status-dot">アカウント正常</span></div>
 <div class="profile-preview"><div id="avatar" class="avatar">K</div><div><div id="preview-name" class="preview-name">読み込み中…</div><div id="preview-user" class="preview-user">@username</div></div></div><div class="form-section"><h2>プロフィール画像</h2><p class="section-note">JPG・PNG・WebP・GIF、最大2MBまで。アップロードした画像はプロフィールに表示されます。</p><div class="avatar-upload"><input id="avatar-file" type="file" accept="image/jpeg,image/png,image/webp,image/gif"><button id="remove-avatar" class="remove-avatar" type="button">現在の画像を削除</button><span class="avatar-note">画像は2MB以下で選択してください。</span></div></div>
 <div class="form-section"><h2>基本情報</h2><p class="section-note">記事やコメントで表示されるプロフィール情報です。</p>
@@ -28,6 +29,19 @@ body{background:#fafaf8;color:#171717}.account-shell{max-width:1100px;margin:aut
 <div class="form-section"><h2>ログイン情報</h2><p class="section-note">メールアドレスはプロフィール情報とは別に管理されています。</p><div id="email" class="email-box">読み込み中…</div></div>
 <div class="save-row"><p id="message" aria-live="polite"></p><button id="save" class="save-button" type="button">変更を保存</button></div>
 <div class="hint-card">プロフィールを保存しても、パスワードやログイン用メールアドレスは変更されません。</div>
+</div>
+<div id="security-panel" data-settings-panel="security" hidden>
+  <div class="settings-head"><div><h1>セキュリティ</h1><p>ログイン用パスワードを安全に変更します。</p></div><span class="status-dot">本人確認あり</span></div>
+  <div class="form-section"><h2>パスワードの変更</h2><p class="section-note">現在のパスワードを確認してから、新しいパスワードに更新します。パスワードはこのページに保存されません。</p>
+    <form id="password-form" autocomplete="off">
+      <div class="field"><label for="current-password">現在のパスワード</label><input id="current-password" type="password" autocomplete="current-password" required maxlength="128"></div>
+      <div class="field"><label for="new-password">新しいパスワード</label><input id="new-password" type="password" autocomplete="new-password" required minlength="8" maxlength="128"><small>8文字以上を設定してください。ほかのサイトと同じパスワードは避けてください。</small></div>
+      <div class="field"><label for="confirm-password">新しいパスワード（確認）</label><input id="confirm-password" type="password" autocomplete="new-password" required minlength="8" maxlength="128"></div>
+      <div class="save-row"><p id="password-message" aria-live="polite"></p><button id="password-save" class="save-button" type="submit">パスワードを変更</button></div>
+    </form>
+  </div>
+  <div class="hint-card">パスワードを忘れた場合は、ログイン画面のパスワード再設定機能を利用してください。変更後も念のため、ログイン状態と登録メールアドレスを確認してください。</div>
+</div>
 </section></div>  <section id="account-community-features" class="site-account-features" aria-label="アカウントのコミュニティ機能"><div class="account-features-heading"><h1>活動・保存した記事</h1><p>コレクションの作成・保存記事の管理はこちら。</p></div>
     <section class="site-widget"><h2>🌱 貢献プロフィール</h2><div id="contribution-box"><p>活動を読み込んでいます…</p></div></section>
     <section class="site-widget"><h2>📈 マイ活動レポート</h2><div id="report-box"><p>レポートを読み込んでいます…</p></div></section>
@@ -39,11 +53,39 @@ body{background:#fafaf8;color:#171717}.account-shell{max-width:1100px;margin:aut
   </section>
 </main>
 <script src="js/ban-screen.js"></script>
-<script src="js/maintenance-gate.js"></script>
+<script src="js/maintenance-gate.js">
+$("password-form").addEventListener("submit",async event=>{
+ event.preventDefault();
+ const button=$("password-save"),notice=$("password-message");
+ const current=$("current-password").value,newPassword=$("new-password").value,confirmation=$("confirm-password").value;
+ notice.textContent="";
+ if(!uid){notice.textContent="ログイン状態を確認できません。再読み込みしてください。";return}
+ if(newPassword.length<8){notice.textContent="新しいパスワードは8文字以上にしてください。";return}
+ if(newPassword!==confirmation){notice.textContent="新しいパスワードが一致しません。";return}
+ if(current===newPassword){notice.textContent="現在とは異なるパスワードを設定してください。";return}
+ const email=emailBox.textContent.trim();
+ if(!email||email==="メールアドレスを取得できませんでした。"){notice.textContent="登録メールアドレスを確認できないため変更できません。";return}
+ button.disabled=true;notice.textContent="本人確認中…";
+ try{
+  const {error:verifyError}=await sb.auth.signInWithPassword({email,password:current});
+  if(verifyError){notice.textContent="現在のパスワードを確認できませんでした。入力内容を確認してください。";return}
+  notice.textContent="パスワードを更新しています…";
+  const {error:updateError}=await sb.auth.updateUser({password:newPassword});
+  if(updateError)throw updateError;
+  $("current-password").value="";$("new-password").value="";$("confirm-password").value="";
+  notice.textContent="パスワードを変更しました。";
+ }catch(error){
+  console.error("パスワード変更エラー:",error);
+  notice.textContent="パスワードを変更できませんでした。通信状態やパスワード要件を確認してください。";
+ }finally{button.disabled=false}
+});
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpbWRkYXBia2Rha3NwamFlbXNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzMTU0MTksImV4cCI6MjEwNjg5MTQxOX0.qezG4VOkyYfaa4DxClk1PSV7bZEne7WEbxj52m1l7iM");let uid=null,avatarUrl=null;const PROFILE_CACHE_PREFIX="kizimin:profile:";
 const $=id=>document.getElementById(id),msg=$("message"),MAX_AVATAR_SIZE=2*1024*1024;let previewObjectUrl=null;
+const settingsTabs=[...document.querySelectorAll("[data-settings-tab]")],settingsPanels=[...document.querySelectorAll("[data-settings-panel]")];
+settingsTabs.forEach(tab=>tab.addEventListener("click",()=>{const key=tab.dataset.settingsTab;settingsTabs.forEach(x=>{const active=x===tab;x.classList.toggle("active",active);x.setAttribute("aria-selected",String(active))});settingsPanels.forEach(panel=>panel.hidden=panel.dataset.settingsPanel!==key)}));
 const RESERVED_NAME_RE=/(admin|administrator|管理者|運営|運営者|公式|official|staff|moderator|support|サポート|security|セキュリティ|webmaster|root|system|システム)/i;
 const SEXUAL_NAME_RE=/(porn|porno|xxx|hentai|sex|nude|naked|rape|pedophile|pedophilia|エロ|えろ|ポルノ|ぽるの|アダルト|性的|せいてき|裸|はだか|強姦|レイプ|れいぷ|わいせつ|卑猥|ひわい)/i;
 const VIOLENT_NAME_RE=/(murder|killer|kill|gore|violence|violent|暴力|殺人|殺す|殺せ|死ね|しね|流血|グロテスク|グロ|ぐろ)/i;
