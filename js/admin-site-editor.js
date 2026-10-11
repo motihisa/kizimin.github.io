@@ -58,6 +58,8 @@
   function preview(v){
     const x={...DEFAULTS,...v};
     $("preview-head").textContent=x.brandName; $("preview-title").textContent=x.heroTitle; $("preview-description").textContent=x.heroDescription;
+    $("preview-announcements").textContent="📢 "+x.announcementTitle+"　"+(x.announcementBody||"現在、お知らせはありません。");
+    $("preview-announcements").hidden=!x.showAnnouncements;
     const p=$("editor-preview");
     p.style.setProperty("--preview-accent",x.accentColor); p.style.setProperty("--preview-bg",x.backgroundColor);
     p.style.setProperty("--preview-text",x.textColor); p.style.setProperty("--preview-radius",x.cardRadius+"px");
