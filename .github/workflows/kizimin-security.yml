@@ -1,0 +1,23 @@
+name: Kizimin 脆弱性チェック
+
+on:
+  schedule:
+    - cron: '23 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  zap-baseline:
+    name: OWASP ZAP パッシブ診断
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: 公開サイトをチェック
+        uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: 'https://motihisa.github.io/kizimin.github.io/'
+          allow_issue_writing: false
+          fail_action: false
+          cmd_options: '-a'
