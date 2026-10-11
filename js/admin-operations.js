@@ -138,6 +138,33 @@ $("ops-health-run").addEventListener("click",async()=>{
 });
 $("ops-incidents-export").addEventListener("click",()=>{const a=getIncidents();const rows=[["日時","項目","詳細","レベル"],...a.map(x=>[x.at,x.title,x.detail,x.level])];download("kizimin-incidents.csv","\ufeff"+rows.map(r=>r.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(",")).join("\r\n"),"text/csv;charset=utf-8")});
 $("ops-incidents-clear").addEventListener("click",()=>{if(!confirm("このブラウザ内に保存された診断記録だけを消去します。続行しますか？"))return;localStorage.removeItem(incidentKey);renderIncidents()});
+$("ops-backup-run").addEventListener("click",async()=>{
+ const out=$("ops-backup-result");
+ if(!confirm("Supabaseのpublicスキーマのデータを圧縮ファイルとしてダウンロードします。個人情報を含む可能性があります。安全な端末で実行してください。続行しますか？"))return;
+ out.textContent="バックアップサービスへ接続中…";
+ try{
+  const {data:{session},error}=await db.auth.getSession();
+  if(error||!session?.access_token)throw new Error("ログインセッションを確認できません。再ログインしてください。");
+  const response=await fetch("https://kizimin-backup-service.onrender.com/api/backup",{
+   method:"POST",
+   headers:{"Authorization":"Bearer "+session.access_token,"Content-Type":"application/json"},
+   body:"{}"
+  });
+  if(!response.ok){
+   let detail="HTTP "+response.status;
+   try{const payload=await response.json();if(payload.error)detail=payload.error;}catch{}
+   throw new Error(detail);
+  }
+  const blob=await response.blob();
+  if(!blob.size)throw new Error("出力ファイルが空です。");
+  const url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download="kizimin-backup-"+new Date().toISOString().replace(/[:.]/g,"-")+".json.gz";
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000);
+  out.textContent="バックアップファイルをダウンロードしました。サイズ："+Math.round(blob.size/1024)+" KB。別の安全な場所へ保存してください。自動保管・復元はまだありません。";
+ }catch(e){
+  out.textContent="バックアップ失敗："+(e.message||"原因不明")+". Renderのデプロイ状態と環境変数（SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY / SUPABASE_DB_URL / ALLOWED_ORIGIN）を確認してください。";
+ }
+});
 $("ops-backup-check").addEventListener("click",()=>{$("ops-backup-result").textContent=[
 "状態：このページからSupabaseのバックアップ状態を直接確認できません。",
 "確認先：Supabase Dashboard → Database / Backups（プラン・プロジェクト設定により表示が異なります）。",
