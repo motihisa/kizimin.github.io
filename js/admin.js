@@ -714,12 +714,27 @@
   async function saveInquiry(id) {
     const status = document.querySelector('.inquiry-status[data-id="' + CSS.escape(id) + '"]').value;
     const note = document.querySelector('.inquiry-note[data-id="' + CSS.escape(id) + '"]').value;
-    const { error } = await supabase.from("inquiries").update({
-      status, admin_note: note,
-      resolved_at: ["resolved","closed","dismissed"].includes(status) ? new Date().toISOString() : null
-    }).eq("id", id);
-    if (error) { alert("問い合わせの更新に失敗しました: " + errorMessage(error)); return; }
-    await loadInquiries(); await loadDashboard();
+    const button = document.querySelector('.inquiry-save[data-id="' + CSS.escape(id) + '"]');
+    if (button) { button.disabled = true; button.textContent = "保存中..."; }
+    try {
+      const { data, error } = await supabase.rpc("admin_update_inquiry", {
+        p_inquiry_id: id, p_status: status, p_admin_note: note
+      });
+      if (error) throw error;
+      if (data && data.ok === false) throw new Error(data.error || "保存できませんでした。");
+      if (button) button.textContent = "保存しました";
+      await loadInquiries(); await loadDashboard();
+    } catch (error) {
+      console.error("問い合わせの状態・メモ保存に失敗:", error);
+      const raw = String(error?.message || error || "");
+      const message = /AUTHENTICATION_REQUIRED|ACTIVE_ACCOUNT_REQUIRED|STAFF_REQUIRED|INQUIRY_PERMISSION_REQUIRED|permission denied|row-level security/i.test(raw)
+        ? "管理権限を確認できませんでした。再ログインして権限を確認してください。"
+        : /INQUIRY_NOT_FOUND/i.test(raw) ? "対象の問い合わせが見つかりません。"
+        : /INVALID_INQUIRY_UPDATE|NOTE_TOO_LONG/i.test(raw) ? "状態またはメモの内容を確認してください。"
+        : "保存処理に失敗しました。時間をおいて再試行してください。";
+      alert("問い合わせの更新に失敗しました: " + message);
+      if (button) { button.disabled = false; button.textContent = "状態・メモを保存"; }
+    }
   }
 
   async function sendCaseReply(kind, id) {
