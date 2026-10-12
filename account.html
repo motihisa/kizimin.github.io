@@ -82,7 +82,7 @@ $("password-form").addEventListener("submit",async event=>{
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpbWRkYXBia2Rha3NwamFlbXNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzMTU0MTksImV4cCI6MjEwNjg5MTQxOX0.qezG4VOkyYfaa4DxClk1PSV7bZEne7WEbxj52m1l7iM");let uid=null,avatarUrl=null;const PROFILE_CACHE_PREFIX="kizimin:profile:";
+const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf");let uid=null,avatarUrl=null;const PROFILE_CACHE_PREFIX="kizimin:profile:";
 const $=id=>document.getElementById(id),msg=$("message"),MAX_AVATAR_SIZE=2*1024*1024;let previewObjectUrl=null;
 const settingsTabs=[...document.querySelectorAll("[data-settings-tab]")],settingsPanels=[...document.querySelectorAll("[data-settings-panel]")];
 settingsTabs.forEach(tab=>tab.addEventListener("click",()=>{const key=tab.dataset.settingsTab;settingsTabs.forEach(x=>{const active=x===tab;x.classList.toggle("active",active);x.setAttribute("aria-selected",String(active))});settingsPanels.forEach(panel=>panel.hidden=panel.dataset.settingsPanel!==key)}));
