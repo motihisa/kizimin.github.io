@@ -1,7 +1,7 @@
 (() => {
 "use strict";
 const $=id=>document.getElementById(id);
-const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;',"'":"&#039;"}[c]));
+const esc = value => String(value ?? "").replace(/[&<>"']/g, character => { switch (character) { case "&": return "&amp;"; case "<": return "&lt;"; case ">": return "&gt;"; case '"': return "&quot;"; case "'": return "&#039;"; default: return character; } });
 const labels={user:"一般ユーザー",moderator:"モデレーター",admin:"管理者",owner:"オーナー",active:"有効",banned:"BAN",suspended:"一時停止"};
 const fmt=v=>v?new Date(v).toLocaleString("ja-JP",{timeZone:"Asia/Tokyo",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}):"なし";
 const reasons=["利用規約に反する投稿が確認されたため","他のユーザーへの迷惑行為が確認されたため","通報内容を確認し、運営による対応が必要と判断したため","確認のため一時的に利用を制限しています"];
