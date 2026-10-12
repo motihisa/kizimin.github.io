@@ -4,6 +4,7 @@
   const SUPABASE_URL = "https://bimddapbkdakspjaemsm.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf";
 
+  if (!window.supabase?.createClient) { console.error("Supabaseライブラリを読み込めませんでした。記事データを読み込めません。"); return; }
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
   const state = { session: null, articles: [], categories: [], searchQuery: "" };
   const $ = (selector) => document.querySelector(selector);
@@ -14,7 +15,7 @@
       el = document.createElement("div");
       el.className = "kizimin-notice";
       Object.assign(el.style, {position:"fixed",left:"50%",bottom:"24px",zIndex:"1000",padding:"11px 18px",border:"1px solid #e5e5e5",borderRadius:"999px",background:"#fff",color:"#222",boxShadow:"0 8px 30px rgba(0,0,0,.12)",transform:"translate(-50%,20px)",opacity:"0",transition:"opacity .2s ease, transform .2s ease",pointerEvents:"none"});
-      document.body.appendChild(el);
+      (document.body || document.documentElement).appendChild(el);
     }
     el.textContent = message;
     el.style.opacity = "1";
@@ -28,7 +29,7 @@
   }
 
   function formatDate(value) {
-    if (!value) return "";
+    if (!value || Number.isNaN(new Date(value).getTime())) return "";
     return new Intl.DateTimeFormat("ja-JP", {year:"numeric",month:"long",day:"numeric"}).format(new Date(value));
   }
 
