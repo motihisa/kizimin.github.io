@@ -33,5 +33,4 @@ $("send").onclick=async()=>{const box=$("message"),content=box.value.trim();if(!
 $("message").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("send").click()}});
 init().catch(()=>{$("messages").innerHTML='<div class="empty-chat">DMを読み込めませんでした。</div>'});
 </script>
-</script>
 </body></html>
