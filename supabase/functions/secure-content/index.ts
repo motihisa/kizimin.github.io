@@ -65,6 +65,19 @@ async function main(req: Request) {
   const { data: profile } = await admin.from("profiles").select("role,account_status").eq("id", userId).maybeSingle();
   const isStaff = ["admin","moderator"].includes(profile?.role) && (profile?.account_status || "active") === "active";
 
+  const hasPermission = async (permissionKey: string) => {
+    if (!profile || (profile.account_status || "active") !== "active") return false;
+    const { data: ownerRow, error: ownerError } = await admin.from("site_owners")
+      .select("user_id").eq("user_id", userId).maybeSingle();
+    if (!ownerError && ownerRow) return true;
+    const { data, error } = await admin.from("role_permissions")
+      .select("allowed")
+      .eq("role", profile.role)
+      .eq("permission_key", permissionKey)
+      .maybeSingle();
+    return !error && data?.allowed === true;
+  };
+
   const body = await req.json().catch(() => ({}));
   const action = String(body.action || "");
   const key = await getCryptoKey(secretKey);
@@ -180,43 +193,8 @@ async function main(req: Request) {
     return json({ message });
   }
 
-  if (action === "dm_admin_conversations") {
-    if (!isStaff) return json({ error: "ADMIN_REQUIRED" }, 403);
-    const { data, error } = await admin.from("conversations").select("id,created_by,created_at,updated_at").order("updated_at",{ascending:false}).limit(500);
-    if (error) return json({ error: error.message }, 500);
-    const result = [];
-    for (const conv of data || []) {
-      const { data: members } = await admin.from("conversation_members").select("user_id,profiles:profiles!conversation_members_user_id_fkey(id,username,display_name)").eq("conversation_id",conv.id);
-      result.push({...conv,members:members||[]});
-    }
-    return json({ conversations: result });
-  }
-
-  if (action === "dm_admin_messages") {
-    if (!isStaff) return json({ error: "ADMIN_REQUIRED" }, 403);
-    const conversationId = String(body.conversation_id || "");
-    const { data, error } = await admin.from("messages").select("id,sender_id,content_encrypted,content_iv,created_at").eq("conversation_id",conversationId).order("created_at",{ascending:true}).limit(500);
-    if (error) return json({ error: error.message }, 500);
-    const messages = [];
-    for (const m of data || []) {
-      let content = "";
-      try { content = await decryptText(key,m.content_encrypted,m.content_iv); } catch { content = "メッセージを復号できませんでした。"; }
-      messages.push({id:m.id,sender_id:m.sender_id,content,created_at:m.created_at});
-    }
-    return json({ messages });
-  }
-
-  if (action === "dm_admin_delete_message") {
-    if (!isStaff) return json({ error: "ADMIN_REQUIRED" }, 403);
-    const messageId = String(body.message_id || "");
-    if (!messageId) return json({ error: "INVALID_MESSAGE" },400);
-    const { error } = await admin.from("messages").delete().eq("id",messageId);
-    if (error) return json({ error:error.message },500);
-    return json({ok:true});
-  }
-
   if (action === "admin_comments_list") {
-    if (!isStaff) return json({ error: "ADMIN_REQUIRED" }, 403);
+    if (!(await hasPermission("moderate_comments"))) return json({ error: "PERMISSION_DENIED" }, 403);
     const { data, error } = await admin.from("comments").select("id,article_id,author_id,content,content_encrypted,content_iv,parent_id,status,created_at,profiles:profiles!comments_author_id_fkey(id,username,display_name)").order("created_at",{ascending:false}).limit(500);
     if (error) return json({ error:error.message },500);
     const comments = [];
@@ -239,13 +217,33 @@ async function main(req: Request) {
       try { content = c.content_encrypted && c.content_iv ? await decryptText(key,c.content_encrypted,c.content_iv) : ""; } catch { content = "コメントを復号できませんでした。"; }
       if (c.status === "visible" || isStaff || c.author_id === userId) comments.push({...c,content});
     }
-    return json({comments});
+    const commentIds = comments.map(c => c.id);
+    const likesByComment = new Map<string, { count: number; liked: boolean }>();
+    for (const commentId of commentIds) likesByComment.set(commentId, { count: 0, liked: false });
+    if (commentIds.length) {
+      const { data: likeRows, error: likesError } = await admin.from("comment_likes")
+        .select("comment_id,user_id").in("comment_id", commentIds).limit(10000);
+      if (likesError) return json({ error: "COMMENT_LIKES_LOAD_FAILED" }, 500);
+      for (const like of likeRows || []) {
+        const item = likesByComment.get(like.comment_id);
+        if (item) {
+          item.count += 1;
+          if (like.user_id === userId) item.liked = true;
+        }
+      }
+    }
+    return json({ comments: comments.map(c => ({
+      ...c,
+      like_count: likesByComment.get(c.id)?.count || 0,
+      liked_by_me: likesByComment.get(c.id)?.liked || false
+    })) });
   }
 
   if (action === "comment_add") {
     const articleId = String(body.article_id || "");
     const content = String(body.content || "").trim();
     const parentId = body.parent_id ? String(body.parent_id) : null;
+    if (!(await hasPermission("write_content"))) return json({error:"PERMISSION_DENIED"},403);
     if (!articleId || !(await canViewArticle(articleId))) return json({error:"FORBIDDEN"},403);
     if (!content || content.length > 5000) return json({error:"INVALID_CONTENT"},400);
     const encrypted = await encryptText(key,content);
@@ -257,8 +255,35 @@ async function main(req: Request) {
     return json({comment:data});
   }
 
+  if (action === "comment_like_toggle") {
+    const commentId = String(body.comment_id || "");
+    if (!commentId) return json({ error: "INVALID_COMMENT_ID" }, 400);
+    if (!profile || (profile.account_status || "active") !== "active") return json({ error: "ACCOUNT_INACTIVE" }, 403);
+    const { data: comment, error: commentError } = await admin.from("comments")
+      .select("id,article_id,status").eq("id", commentId).maybeSingle();
+    if (commentError) return json({ error: "COMMENT_LOOKUP_FAILED" }, 500);
+    if (!comment || comment.status !== "visible") return json({ error: "COMMENT_NOT_AVAILABLE" }, 404);
+    if (!(await canViewArticle(comment.article_id))) return json({ error: "FORBIDDEN" }, 403);
+    const { data: existing, error: existingError } = await admin.from("comment_likes")
+      .select("id").eq("comment_id", commentId).eq("user_id", userId).maybeSingle();
+    if (existingError) return json({ error: "COMMENT_LIKE_LOOKUP_FAILED" }, 500);
+    let liked = false;
+    if (existing) {
+      const { error } = await admin.from("comment_likes").delete().eq("id", existing.id).eq("user_id", userId);
+      if (error) return json({ error: "COMMENT_UNLIKE_FAILED" }, 500);
+    } else {
+      const { error } = await admin.from("comment_likes").insert({ comment_id: commentId, user_id: userId });
+      if (error) return json({ error: "COMMENT_LIKE_FAILED" }, 500);
+      liked = true;
+    }
+    const { count, error: countError } = await admin.from("comment_likes")
+      .select("id", { count: "exact", head: true }).eq("comment_id", commentId);
+    if (countError) return json({ error: "COMMENT_LIKE_COUNT_FAILED" }, 500);
+    return json({ ok: true, liked, count: count || 0 });
+  }
+
   if (action === "comment_status") {
-    if (!isStaff) return json({error:"ADMIN_REQUIRED"},403);
+    if (!(await hasPermission("moderate_comments"))) return json({error:"PERMISSION_DENIED"},403);
     const commentId = String(body.comment_id || "");
     const status = String(body.status || "");
     if (!["visible","hidden","deleted"].includes(status)) return json({error:"INVALID_STATUS"},400);
@@ -269,16 +294,37 @@ async function main(req: Request) {
 
   if (action === "comment_delete") {
     const commentId = String(body.comment_id || "");
-    const {data:comment}=await admin.from("comments").select("author_id").eq("id",commentId).maybeSingle();
-    if (!comment || (!isStaff && comment.author_id !== userId)) return json({error:"FORBIDDEN"},403);
-    const {error}=await admin.from("comments").delete().eq("id",commentId);
-    if (error) return json({error:error.message},500);
+    if (!commentId) return json({error:"INVALID_COMMENT_ID"},400);
+    if (!(await hasPermission("moderate_comments"))) return json({error:"PERMISSION_DENIED"},403);
+    const {data:comment,error:findError}=await admin.from("comments").select("id").eq("id",commentId).maybeSingle();
+    if (findError) return json({error:"COMMENT_LOOKUP_FAILED"},500);
+    if (!comment) return json({error:"COMMENT_NOT_FOUND"},404);
+    const {data:deleted,error}=await admin.from("comments").delete().eq("id",commentId).select("id").maybeSingle();
+    if (error) return json({error:"COMMENT_DELETE_FAILED",detail:error.message},500);
+    if (!deleted) return json({error:"COMMENT_NOT_DELETED"},500);
+    return json({ok:true});
+  }
+
+  if (action === "article_delete") {
+    const articleId = String(body.article_id || "");
+    if (!articleId) return json({error:"INVALID_ARTICLE_ID"},400);
+    if ((profile?.account_status || "active") !== "active") return json({error:"ACCOUNT_INACTIVE"},403);
+    const {data:ownerRow,error:ownerError}=await admin.from("site_owners").select("user_id").eq("user_id",userId).maybeSingle();
+    const isOwner=!ownerError && !!ownerRow;
+    if (!isOwner && profile?.role !== "admin") return json({error:"PERMISSION_DENIED"},403);
+    const {data:article,error:findError}=await admin.from("articles").select("id,title").eq("id",articleId).maybeSingle();
+    if (findError) return json({error:"ARTICLE_LOOKUP_FAILED"},500);
+    if (!article) return json({error:"ARTICLE_NOT_FOUND"},404);
+    const {data:deleted,error}=await admin.from("articles").delete().eq("id",articleId).select("id").maybeSingle();
+    if (error) return json({error:"ARTICLE_DELETE_FAILED",detail:error.message},500);
+    if (!deleted) return json({error:"ARTICLE_NOT_DELETED"},500);
     return json({ok:true});
   }
 
 
   if (action === "admin_case_reply") {
-    if (!isStaff) return json({ error: "ADMIN_REQUIRED" }, 403);
+    const { data: ownerRow } = await admin.from("site_owners").select("user_id").eq("user_id", userId).maybeSingle();
+    if (!isStaff && !ownerRow) return json({ error: "ADMIN_REQUIRED" }, 403);
     const caseType = String(body.case_type || "");
     const caseId = String(body.case_id || "");
     const reply = String(body.reply || "").trim();
@@ -299,12 +345,7 @@ async function main(req: Request) {
       title = "通報への返信";
     }
     const { error: notifyError } = await admin.from("notifications").insert({
-      recipient_id: recipientId,
-      sender_id: userId,
-      type: "case_reply",
-      title,
-      body: reply,
-      link_url: "notifications.html"
+      recipient_id: recipientId, sender_id: userId, type: "system", title, body: reply, link_url: "notifications.html"
     });
     if (notifyError) return json({ error: "REPLY_DELIVERY_FAILED" }, 500);
     return json({ ok: true });
