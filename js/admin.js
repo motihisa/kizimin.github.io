@@ -2,6 +2,7 @@
   "use strict";
   const SUPABASE_URL = "https://bimddapbkdakspjaemsm.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf";
+  if (!window.supabase?.createClient) { const loading=document.getElementById("admin-loading"); if(loading) loading.textContent="Supabaseライブラリを読み込めませんでした。ページを再読み込みしてください。"; console.error("Supabase SDK is unavailable."); return; }
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
   const $ = (id) => document.getElementById(id);
   let currentAdminRole = "user";
@@ -17,10 +18,11 @@
   const errorMessage=e=>{const m=String(e?.message||e||"");if(/permission denied|not authorized|row-level security/i.test(m))return "この操作を行う権限がありません。";if(/network|fetch failed/i.test(m))return "通信に失敗しました。";return "処理に失敗しました。しばらくしてからもう一度お試しください。";};
 
   function forbidden(message, detail = "") {
-    $("admin-loading").classList.add("hidden");
-    $("admin-app").classList.add("hidden");
-    $("admin-forbidden").classList.remove("hidden");
-    $("admin-forbidden-reason").textContent = message;
+    $("admin-loading")?.classList.add("hidden");
+    $("admin-app")?.classList.add("hidden");
+    $("admin-forbidden")?.classList.remove("hidden");
+    const reasonEl = $("admin-forbidden-reason");
+    if (reasonEl) reasonEl.textContent = message;
     const detailEl = $("admin-forbidden-detail");
     if (detailEl) detailEl.textContent = detail;
   }
