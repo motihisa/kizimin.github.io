@@ -263,3 +263,27 @@ button:focus-visible,a:focus-visible{outline:3px solid rgba(143,118,236,.65);out
 .user-detail-open,.user-warning-open{margin:4px 4px 4px 0}
 @media(max-width:800px){.user-tools-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.user-tools-stats .user-stat-card:last-child{grid-column:1/-1}}
 @media(max-width:520px){.user-detail-dialog{padding:15px}.user-detail-grid{grid-template-columns:1fr}.user-detail-wide{grid-column:auto}.user-tools-filters{align-items:stretch}.user-tools-filters label,.user-tools-filters select{width:100%}}
+
+
+/* Readability fixes: admin tables and inquiry workflow */
+.admin-table-wrap{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.admin-table{width:100%;min-width:760px;border-collapse:separate;border-spacing:0;table-layout:auto}
+.admin-table th,.admin-table td{writing-mode:horizontal-tb;word-break:normal;overflow-wrap:anywhere;vertical-align:top;line-height:1.55}
+.admin-table th{white-space:nowrap}
+.admin-table td{min-width:90px}
+#view-users .admin-table{min-width:850px}
+#view-inquiries .admin-table{min-width:1050px}
+#view-inquiries .admin-table th:nth-child(1){min-width:140px}
+#view-inquiries .admin-table th:nth-child(2){min-width:155px}
+#view-inquiries .admin-table th:nth-child(3){min-width:240px}
+#view-inquiries .admin-table th:nth-child(4){min-width:290px}
+#view-inquiries .admin-table th:nth-child(5){min-width:145px}
+#view-inquiries .inquiry-message{min-width:240px;max-width:440px;white-space:pre-wrap;overflow-wrap:anywhere}
+#view-inquiries .inquiry-status,#view-inquiries .inquiry-note,#view-inquiries .inquiry-reply{display:block;width:100%;min-width:240px;box-sizing:border-box;margin:7px 0;padding:10px 12px;border:1px solid var(--admin-border,#d8dbe5);border-radius:9px;background:var(--admin-card,#fff);color:var(--admin-text,#202235);font:inherit;line-height:1.5}
+#view-inquiries .inquiry-note,#view-inquiries .inquiry-reply{min-height:82px;resize:vertical}
+#view-inquiries .inquiry-save,#view-inquiries .inquiry-reply-send{margin:5px 0 12px;white-space:nowrap}
+#view-inquiries .inquiry-save:disabled,#view-inquiries .inquiry-reply-send:disabled{opacity:.65;cursor:wait}
+@media(max-width:640px){
+  .admin-table th,.admin-table td{padding:10px 12px}
+  #view-inquiries .admin-table{min-width:1000px}
+}
