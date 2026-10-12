@@ -287,3 +287,32 @@ button:focus-visible,a:focus-visible{outline:3px solid rgba(143,118,236,.65);out
   .admin-table th,.admin-table td{padding:10px 12px}
   #view-inquiries .admin-table{min-width:1000px}
 }
+
+
+/* 2026-10-13: give admin tables and inquiry actions enough breathing room */
+.admin-main{padding-left:clamp(22px,3vw,42px);padding-right:clamp(22px,3vw,42px)}
+.admin-panel{padding:clamp(20px,2.2vw,30px);margin-bottom:24px}
+.admin-panel-head{margin-bottom:24px}
+.admin-table-wrap{width:100%;max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain}
+#view-inquiries .admin-table{width:1400px;min-width:1400px;table-layout:fixed}
+#view-inquiries .admin-table th:nth-child(1),#view-inquiries .admin-table td:nth-child(1){width:170px}
+#view-inquiries .admin-table th:nth-child(2),#view-inquiries .admin-table td:nth-child(2){width:210px}
+#view-inquiries .admin-table th:nth-child(3),#view-inquiries .admin-table td:nth-child(3){width:340px}
+#view-inquiries .admin-table th:nth-child(4),#view-inquiries .admin-table td:nth-child(4){width:440px}
+#view-inquiries .admin-table th:nth-child(5),#view-inquiries .admin-table td:nth-child(5){width:190px}
+#view-inquiries .admin-table th,#view-inquiries .admin-table td{padding:18px 20px;white-space:normal;overflow-wrap:anywhere}
+#view-inquiries .admin-table td{line-height:1.7}
+#view-inquiries .inquiry-message{max-width:none;min-width:0}
+#view-inquiries .inquiry-status,#view-inquiries .inquiry-note,#view-inquiries .inquiry-reply{display:block;width:100%;min-width:0;max-width:none;box-sizing:border-box;margin:0 0 12px;padding:12px 14px;border-radius:10px;font-size:14px;line-height:1.65}
+#view-inquiries .inquiry-status{min-height:44px}
+#view-inquiries .inquiry-note,#view-inquiries .inquiry-reply{min-height:100px;resize:vertical}
+#view-inquiries .inquiry-save,#view-inquiries .inquiry-reply-send{display:inline-flex;align-items:center;justify-content:center;min-height:42px;margin:0 0 18px;padding:11px 16px;white-space:normal;text-align:center}
+#view-inquiries .inquiry-reply{margin-top:2px}
+#view-inquiries .inquiry-save{margin-bottom:22px}
+#view-inquiries .inquiry-save:focus-visible,#view-inquiries .inquiry-reply-send:focus-visible{outline:3px solid #c4b5fd;outline-offset:3px}
+#view-inquiries .admin-table tbody tr+tr td{border-top:1px solid #eee9f7}
+@media(max-width:700px){
+ .admin-main{padding:18px 14px 40px}
+ .admin-panel{padding:16px}
+ #view-inquiries .admin-table th,#view-inquiries .admin-table td{padding:15px}
+}
