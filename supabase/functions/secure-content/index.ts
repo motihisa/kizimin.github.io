@@ -300,7 +300,7 @@ async function main(req: Request) {
     if (findError) return json({error:"COMMENT_LOOKUP_FAILED"},500);
     if (!comment) return json({error:"COMMENT_NOT_FOUND"},404);
     const {data:deleted,error}=await admin.from("comments").delete().eq("id",commentId).select("id").maybeSingle();
-    if (error) return json({error:"COMMENT_DELETE_FAILED",detail:error.message},500);
+    if (error) return json({error:"COMMENT_DELETE_FAILED"},500);
     if (!deleted) return json({error:"COMMENT_NOT_DELETED"},500);
     return json({ok:true});
   }
@@ -316,7 +316,7 @@ async function main(req: Request) {
     if (findError) return json({error:"ARTICLE_LOOKUP_FAILED"},500);
     if (!article) return json({error:"ARTICLE_NOT_FOUND"},404);
     const {data:deleted,error}=await admin.from("articles").delete().eq("id",articleId).select("id").maybeSingle();
-    if (error) return json({error:"ARTICLE_DELETE_FAILED",detail:error.message},500);
+    if (error) return json({error:"ARTICLE_DELETE_FAILED"},500);
     if (!deleted) return json({error:"ARTICLE_NOT_DELETED"},500);
     return json({ok:true});
   }
