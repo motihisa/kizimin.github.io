@@ -29,8 +29,8 @@
 
       links.forEach(link => {
         let label = link.querySelector(".notification-link-label");
-        if (!label) {
-          // 既存のアイコンや子要素を消さず、ラベルだけ追加する。
+        if (!label && !link.textContent.includes("通知")) {
+          // 既存のアイコンや子要素、表示済みのラベルは消さない。
           label = document.createElement("span");
           label.className = "notification-link-label";
           label.textContent = "通知";
