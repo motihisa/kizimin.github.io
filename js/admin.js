@@ -412,6 +412,7 @@
           ${["admin","owner"].includes(currentAdminRole) && u.id !== "9589135e-4f75-4913-b13f-35407eeedf3b" && (u.role !== "admin" || currentAdminRole === "owner") ? `<button type="button" class="user-delete" data-id="${esc(u.id)}" data-name="${esc(u.display_name || u.username || u.id)}">強制削除</button>` : ""}
         </td>
       </tr>`).join("") : '<tr><td colspan="6">ユーザーはいません。</td></tr>';
+    window.KiziminUserTools?.refresh?.();
     document.querySelectorAll(".user-role-select").forEach(s => s.onchange = () => changeRole(s.dataset.id, s.dataset.current, s.value, s));
     document.querySelectorAll(".account-status").forEach(select => {
       select.addEventListener("change", () => {
