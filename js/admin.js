@@ -681,44 +681,80 @@
 
   async function loadInquiries() {
     const { data, error } = await supabase.from("inquiries")
-      .select("id,name,email,subject,message,status,admin_note,created_at,resolved_at")
-      .order("created_at",{ascending:false});
-    if(error) throw error;
-    $("inquiries-body").innerHTML=data.length?data.map(i=>'<tr><td>'+esc(i.subject)+'</td><td>'+esc(i.name||"-")+'<br>'+esc(i.email||"-")+'</td><td class="inquiry-message">'+esc(i.message)+'</td><td><select class="inquiry-status" data-id="'+esc(i.id)+'">'+["open","reviewing","resolved","closed"].map(s=>'<option value="'+s+'" '+(s===i.status?"selected":"")+'>'+statusLabel(s)+'</option>').join("")+'</select><br><textarea class="inquiry-note" data-id="'+esc(i.id)+'" placeholder="管理者メモ">'+esc(i.admin_note||"")+'</textarea><br><button type="button" class="inquiry-save" data-id="'+esc(i.id)+'">保存</button></td><td>'+esc(date(i.created_at))+'</td></tr>').join(""):'<tr><td colspan="5">問い合わせはありません。</td></tr>';
-    document.querySelectorAll(".inquiry-save").forEach(b=>b.onclick=()=>saveInquiry(b.dataset.id));
+      .select("id,user_id,name,email,subject,message,status,admin_note,created_at,resolved_at")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    $("inquiries-body").innerHTML = data.length ? data.map(i => '<tr>' +
+      '<td>' + esc(i.subject) + '</td>' +
+      '<td>' + esc(i.name || "-") + '<br>' + esc(i.email || "-") + '<div class="admin-muted">返信先: ' + esc(i.user_id ? "サイト内通知" : (i.email ? "メール未対応" : "返信先なし")) + '</div></td>' +
+      '<td class="inquiry-message">' + esc(i.message) + '</td>' +
+      '<td><select class="inquiry-status" data-id="' + esc(i.id) + '">' + ["open","reviewing","resolved","closed","dismissed"].map(s => '<option value="' + s + '" ' + (s === i.status ? "selected" : "") + '>' + statusLabel(s) + '</option>').join("") + '</select><br>' +
+      '<textarea class="inquiry-note" data-id="' + esc(i.id) + '" placeholder="管理者メモ">' + esc(i.admin_note || "") + '</textarea><br>' +
+      '<button type="button" class="inquiry-save admin-btn" data-id="' + esc(i.id) + '">状態・メモを保存</button>' +
+      '<textarea class="inquiry-reply" data-id="' + esc(i.id) + '" maxlength="4000" placeholder="問い合わせ本人への返信（サイト内通知）"></textarea>' +
+      '<button type="button" class="inquiry-reply-send admin-btn primary" data-id="' + esc(i.id) + '" ' + (!i.user_id ? 'disabled title="ログインユーザーとの紐付けがない問い合わせには返信できません"' : '') + '>返信を送信</button></td>' +
+      '<td>' + esc(date(i.created_at)) + '</td></tr>').join("") : '<tr><td colspan="5">問い合わせはありません。</td></tr>';
+    document.querySelectorAll(".inquiry-save").forEach(b => b.onclick = () => saveInquiry(b.dataset.id));
+    document.querySelectorAll(".inquiry-reply-send").forEach(b => b.onclick = () => sendCaseReply("inquiry", b.dataset.id));
   }
-  async function saveInquiry(id){
-    const status=document.querySelector('.inquiry-status[data-id="'+CSS.escape(id)+'"]').value;
-    const note=document.querySelector('.inquiry-note[data-id="'+CSS.escape(id)+'"]').value;
-    const {error}=await supabase.from("inquiries").update({status,admin_note:note,resolved_at:["resolved","closed"].includes(status)?new Date().toISOString():null}).eq("id",id);
-    if(error){alert("問い合わせの更新に失敗しました: "+errorMessage(error));return;}
+  async function saveInquiry(id) {
+    const status = document.querySelector('.inquiry-status[data-id="' + CSS.escape(id) + '"]').value;
+    const note = document.querySelector('.inquiry-note[data-id="' + CSS.escape(id) + '"]').value;
+    const { error } = await supabase.from("inquiries").update({
+      status, admin_note: note,
+      resolved_at: ["resolved","closed","dismissed"].includes(status) ? new Date().toISOString() : null
+    }).eq("id", id);
+    if (error) { alert("問い合わせの更新に失敗しました: " + errorMessage(error)); return; }
     await loadInquiries(); await loadDashboard();
+  }
+
+  async function sendCaseReply(kind, id) {
+    const fieldClass = kind === "inquiry" ? ".inquiry-reply" : ".report-reply";
+    const buttonClass = kind === "inquiry" ? ".inquiry-reply-send" : ".report-reply-send";
+    const field = document.querySelector(fieldClass + '[data-id="' + CSS.escape(id) + '"]');
+    const button = document.querySelector(buttonClass + '[data-id="' + CSS.escape(id) + '"]');
+    const message = field?.value.trim() || "";
+    if (!message) { alert("返信内容を入力してください。"); return; }
+    if (!confirm("返信をサイト内通知として本人に送信しますか？")) return;
+    if (button) button.disabled = true;
+    try {
+      await secureContent("admin_case_reply", { case_type: kind, case_id: id, reply: message });
+      if (field) field.value = "";
+      alert("返信をサイト内通知で送信しました。");
+    } catch (error) {
+      alert("返信を送信できませんでした: " + errorMessage(error));
+    } finally {
+      if (button) button.disabled = false;
+    }
   }
 
   async function loadReports() {
     const { data, error } = await supabase.from("reports")
-      .select("id,article_id,comment_id,reporter_id,reason,status,admin_note,created_at").order("created_at",{ascending:false});
+      .select("id,article_id,comment_id,reporter_id,reason,status,admin_note,created_at").order("created_at", { ascending: false });
     if (error) throw error;
-    const articleIds=[...new Set((data||[]).map(r=>r.article_id).filter(Boolean))];
-    const articleNames=new Map();
-    if(articleIds.length){
-      const {data:articleRows,error:articleError}=await supabase.from("articles").select("id,title").in("id",articleIds);
-      if(articleError)console.warn("通報対象の記事名を取得できませんでした:",articleError);
-      for(const row of articleRows||[])articleNames.set(row.id,row.title);
+    const articleIds = [...new Set((data || []).map(r => r.article_id).filter(Boolean))];
+    const articleNames = new Map();
+    if (articleIds.length) {
+      const { data: articleRows, error: articleError } = await supabase.from("articles").select("id,title").in("id", articleIds);
+      if (articleError) console.warn("通報対象の記事名を取得できませんでした:", articleError);
+      for (const row of articleRows || []) articleNames.set(row.id, row.title);
     }
     $("reports-body").innerHTML = data.length ? data.map(r => `
-      <tr><td>${esc(r.article_id ? "記事: " + (articleNames.get(r.article_id)||"削除済みの記事") : "コメント: " + r.comment_id)}</td><td class="admin-log">${esc(r.reason)}</td><td><span class="admin-badge">${esc(statusLabel(r.status))}</span></td><td>${esc(date(r.created_at))}</td>
-      <td><select class="report-status" data-id="${esc(r.id)}">${["open","reviewing","resolved","dismissed"].map(s => `<option value="${s}" ${s===r.status?"selected":""}>${statusLabel(s)}</option>`).join("")}</select><br>
-      <textarea class="report-note" data-id="${esc(r.id)}" placeholder="管理者メモ">${esc(r.admin_note || "")}</textarea><br><button type="button" class="report-save" data-id="${esc(r.id)}">保存</button></td></tr>`).join("") : '<tr><td colspan="5">通報はありません。</td></tr>';
+      <tr><td>${esc(r.article_id ? "記事: " + (articleNames.get(r.article_id) || "削除済みの記事") : "コメント: " + r.comment_id)}</td><td class="admin-log">${esc(r.reason)}</td><td><span class="admin-badge">${esc(statusLabel(r.status))}</span></td><td>${esc(date(r.created_at))}</td>
+      <td><select class="report-status" data-id="${esc(r.id)}">${["open","reviewing","resolved","dismissed"].map(s => `<option value="${s}" ${s === r.status ? "selected" : ""}>${statusLabel(s)}</option>`).join("")}</select><br>
+      <textarea class="report-note" data-id="${esc(r.id)}" placeholder="管理者メモ">${esc(r.admin_note || "")}</textarea><br><button type="button" class="report-save admin-btn" data-id="${esc(r.id)}">状態・メモを保存</button>
+      <textarea class="report-reply" data-id="${esc(r.id)}" maxlength="4000" placeholder="通報した本人への返信（サイト内通知）"></textarea>
+      <button type="button" class="report-reply-send admin-btn primary" data-id="${esc(r.id)}" ${(!r.reporter_id ? 'disabled title="通報者が特定できないため返信できません"' : "")}>返信を送信</button></td></tr>`).join("") : '<tr><td colspan="5">通報はありません。</td></tr>';
     document.querySelectorAll(".report-save").forEach(b => b.onclick = () => saveReport(b.dataset.id));
+    document.querySelectorAll(".report-reply-send").forEach(b => b.onclick = () => sendCaseReply("report", b.dataset.id));
   }
   async function saveReport(id) {
     const status = document.querySelector('.report-status[data-id="' + CSS.escape(id) + '"]').value;
     const note = document.querySelector('.report-note[data-id="' + CSS.escape(id) + '"]').value;
     const { error } = await supabase.from("reports").update({
-      status, admin_note:note,
+      status, admin_note: note,
       resolved_at: status === "resolved" || status === "dismissed" ? new Date().toISOString() : null
-    }).eq("id",id);
+    }).eq("id", id);
     if (error) { alert("通報の更新に失敗しました: " + errorMessage(error)); return; }
     await loadReports();
   }
