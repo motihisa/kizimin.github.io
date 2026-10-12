@@ -1,8 +1,8 @@
 (() => {
   "use strict";
   const URL = "https://bimddapbkdakspjaemsm.supabase.co";
-  const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpbWRkYXBia2Rha3NwamFlbXNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzMTU0MTksImV4cCI6MjEwNjg5MTQxOX0.qezG4VOkyYfaa4DxClk1PSV7bZEne7WEbxj52m1l7iM";
-  if (!window.supabase) return;
+  const KEY = "sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf";
+  if (!window.supabase?.createClient) return;
   const sb = window.supabase.createClient(URL, KEY);
 
   async function update() {
@@ -30,14 +30,7 @@
       links.forEach(link => {
         let label = link.querySelector(".notification-link-label");
         if (!label) {
-          const original = link.textContent.trim();
-          link.textContent = "";
-          if (original.includes("🔔")) {
-            const icon = document.createElement("span");
-            icon.textContent = "🔔 ";
-            icon.setAttribute("aria-hidden", "true");
-            link.append(icon);
-          }
+          // 既存のアイコンや子要素を消さず、ラベルだけ追加する。
           label = document.createElement("span");
           label.className = "notification-link-label";
           label.textContent = "通知";
