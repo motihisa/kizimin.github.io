@@ -404,7 +404,7 @@
           <select class="account-status" data-id="${esc(u.id)}" data-current="${esc(u.account_status || "active")}" aria-label="アカウント状態" ${(u.id === "9589135e-4f75-4913-b13f-35407eeedf3b" || (u.role === "admin" && currentAdminRole !== "owner")) ? "disabled" : ""}>
             ${["active","banned","suspended"].map(s => '<option value="'+s+'" '+(s===(u.account_status||"active")?"selected":"")+'>'+statusLabel(s)+'</option>').join("")}
           </select>
-          <label class="ban-expiry-field">
+          <label class="ban-expiry-field" style="${(u.account_status || "active") === "banned" ? "" : "display:none"}">
             <span class="admin-muted">BAN解除日時（JST）</span>
             <input class="ban-expires" data-id="${esc(u.id)}" type="datetime-local" step="1" value="${esc(jstDateTimeValue(u.ban_expires_at))}" aria-label="BAN解除日時（JST）">
           </label>
@@ -413,6 +413,12 @@
         </td>
       </tr>`).join("") : '<tr><td colspan="6">ユーザーはいません。</td></tr>';
     document.querySelectorAll(".user-role-select").forEach(s => s.onchange = () => changeRole(s.dataset.id, s.dataset.current, s.value, s));
+    document.querySelectorAll(".account-status").forEach(select => {
+      select.addEventListener("change", () => {
+        const field = document.querySelector('.ban-expiry-field input.ban-expires[data-id="' + CSS.escape(select.dataset.id) + '"]')?.closest(".ban-expiry-field");
+        if (field) field.style.display = select.value === "banned" ? "" : "none";
+      });
+    });
     document.querySelectorAll(".account-status-save").forEach(b => b.onclick = () => saveAccountStatus(b.dataset.id));
     document.querySelectorAll(".user-delete").forEach(b => b.onclick = () => forceDeleteUser(b.dataset.id, b.dataset.name));
   }
