@@ -2,6 +2,8 @@
   "use strict";
   const SUPABASE_URL = "https://bimddapbkdakspjaemsm.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf";
+  if (!document.getElementById("editor-loading") || !document.getElementById("editor-app")) return;
+  if (!window.supabase?.createClient) { const loading=document.getElementById("editor-loading"); if(loading) loading.textContent="Supabaseライブラリを読み込めませんでした。ページを再読み込みしてください。"; return; }
   const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
   const $ = id => document.getElementById(id);
   const esc = value => String(value ?? "").replace(/[&<>"\']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;", "'":"&#039;"}[c]));
@@ -134,8 +136,8 @@
     showPolls:true, showChallenges:true, showQA:true, showLibrary:true
   };
   let userId = null, saved = {...DEFAULTS};
-  const status = (message, kind="") => { const el=$("editor-status"); el.textContent=message; el.className="editor-status"+(kind?" "+kind:""); };
-  function denied(message){ $("editor-loading").classList.add("hidden"); $("editor-app").classList.add("hidden"); $("editor-denied").classList.remove("hidden"); $("editor-denied-reason").textContent=message; }
+  const status = (message, kind="") => { const el=$("editor-status"); if(!el)return; el.textContent=message; el.className="editor-status"+(kind?" "+kind:""); };
+  function denied(message){ $("editor-loading")?.classList.add("hidden"); $("editor-app")?.classList.add("hidden"); $("editor-denied")?.classList.remove("hidden"); const reason=$("editor-denied-reason"); if(reason)reason.textContent=message; }
   async function authorize(){
     const {data:{session},error}=await db.auth.getSession();
     if(error){denied("ログイン状態を確認できませんでした。");return false;}
@@ -143,9 +145,9 @@
     userId=session.user.id;
     const {data:profile,error:profileError}=await db.from("profiles").select("role,account_status").eq("id",userId).maybeSingle();
     if(profileError){denied("管理者権限の確認に失敗しました。");return false;}
-    const {data:owner,error:ownerError}=await db.rpc("is_site_owner");
-    const allowed=!ownerError && owner===true;
-    if(!allowed || (profile?.account_status && profile.account_status!=="active")){denied("サイトエディターを利用できるのはオーナーのみです。");return false;}
+    const {data:ownerFlag,error:ownerError}=await db.rpc("is_site_owner");
+    const isOwner=!ownerError && ownerFlag===true;
+    if(!isOwner || (profile?.account_status && profile.account_status!=="active")){denied("サイトエディターを利用できるのはオーナーのみです。");return false;}
     $("editor-loading").classList.add("hidden"); $("editor-app").classList.remove("hidden");
     return true;
   }
