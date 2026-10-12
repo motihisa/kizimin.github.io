@@ -64,5 +64,6 @@ async function warn(id){
  try{const client=window.supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf");const r=await client.functions.invoke("secure-content",{body:{action:"admin_user_warning",user_id:id,reason:reason.trim(),note:note.trim()}});if(r.error||!r.data?.ok)throw r.error||new Error(r.data?.error||"送信失敗");alert("警告通知を送信しました。")}
  catch(e){console.error("警告通知失敗",e);alert("警告通知を送信できませんでした。secure-content関数の更新・デプロイ状態と権限を確認してください。")}
 }
+window.KiziminUserTools={refresh:decorate,details,warn};
 const obs=new MutationObserver(setup);obs.observe(document.documentElement,{childList:true,subtree:true});document.addEventListener("DOMContentLoaded",setup);setTimeout(setup,0);
 })();
