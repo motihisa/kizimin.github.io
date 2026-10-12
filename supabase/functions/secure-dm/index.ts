@@ -80,25 +80,25 @@ async function main(req: Request) {
   if (action === "dm_list") {
     const { data: memberships, error } = await admin.from("conversation_members")
       .select("conversation_id,last_read_at").eq("user_id", userId);
-    if (error) return json({ error: error.message }, 500);
+    if (error) return json({ error: "INTERNAL_ERROR" }, 500);
 
     const result = [];
     for (const membership of memberships || []) {
       const { data: conv, error: convError } = await admin.from("conversations")
         .select("id,created_at,updated_at").eq("id", membership.conversation_id).maybeSingle();
-      if (convError) return json({ error: convError.message }, 500);
+      if (convError) return json({ error: "INTERNAL_ERROR" }, 500);
       if (!conv) continue;
 
       const { data: members, error: membersError } = await admin.from("conversation_members")
         .select("user_id").eq("conversation_id", conv.id);
-      if (membersError) return json({ error: membersError.message }, 500);
+      if (membersError) return json({ error: "INTERNAL_ERROR" }, 500);
 
       const memberIds = (members || []).map(m => m.user_id).filter(Boolean);
       let profiles = [];
       if (memberIds.length) {
         const { data: profileRows, error: profileError } = await admin.from("profiles")
           .select("id,username,display_name").in("id", memberIds);
-        if (profileError) return json({ error: profileError.message }, 500);
+        if (profileError) return json({ error: "INTERNAL_ERROR" }, 500);
         profiles = profileRows || [];
       }
       const profileById = new Map(profiles.map(p => [p.id, p]));
@@ -110,7 +110,7 @@ async function main(req: Request) {
       const { data: latest, error: latestError } = await admin.from("messages")
         .select("id,sender_id,content_encrypted,content_iv,created_at")
         .eq("conversation_id", conv.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
-      if (latestError) return json({ error: latestError.message }, 500);
+      if (latestError) return json({ error: "INTERNAL_ERROR" }, 500);
 
       let preview = "";
       if (latest?.content_encrypted && latest?.content_iv) {
@@ -135,7 +135,7 @@ async function main(req: Request) {
     const { data, error } = await admin.from("messages")
       .select("id,sender_id,content_encrypted,content_iv,created_at")
       .eq("conversation_id", conversationId).order("created_at", { ascending: true }).limit(500);
-    if (error) return json({ error: error.message }, 500);
+    if (error) return json({ error: "INTERNAL_ERROR" }, 500);
 
     const messages = [];
     for (const m of data || []) {
@@ -153,7 +153,7 @@ async function main(req: Request) {
     const { error: readError } = await admin.from("conversation_members")
       .update({ last_read_at: new Date().toISOString() })
       .eq("conversation_id", conversationId).eq("user_id", userId);
-    if (readError) return json({ error: readError.message }, 500);
+    if (readError) return json({ error: "INTERNAL_ERROR" }, 500);
     return json({ messages });
   }
 
@@ -173,7 +173,7 @@ async function main(req: Request) {
       content_encrypted: encrypted.ciphertext,
       content_iv: encrypted.iv
     }).select("id,sender_id,created_at").single();
-    if (error) return json({ error: error.message }, 500);
+    if (error) return json({ error: "INTERNAL_ERROR" }, 500);
 
     const { error: conversationError } = await admin.from("conversations")
       .update({ updated_at: new Date().toISOString() }).eq("id", conversationId);
@@ -206,6 +206,6 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     console.error("secure-dm unhandled error:", error);
     const message = error instanceof Error ? error.message : String(error);
-    return json({ error: "INTERNAL_ERROR", detail: message.slice(0, 500) }, 500);
+    return json({ error: "INTERNAL_ERROR" }, 500);
   }
 });
