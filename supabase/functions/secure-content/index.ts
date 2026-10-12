@@ -276,6 +276,40 @@ async function main(req: Request) {
     return json({ok:true});
   }
 
+
+  if (action === "admin_case_reply") {
+    if (!isStaff) return json({ error: "ADMIN_REQUIRED" }, 403);
+    const caseType = String(body.case_type || "");
+    const caseId = String(body.case_id || "");
+    const reply = String(body.reply || "").trim();
+    if (!["inquiry", "report"].includes(caseType) || !caseId || !reply || reply.length > 4000) return json({ error: "INVALID_REPLY" }, 400);
+    let recipientId = "";
+    let title = "";
+    if (caseType === "inquiry") {
+      const { data: inquiry, error } = await admin.from("inquiries").select("id,user_id,subject").eq("id", caseId).maybeSingle();
+      if (error) return json({ error: "CASE_LOOKUP_FAILED" }, 500);
+      if (!inquiry?.user_id) return json({ error: "NO_LINKED_USER" }, 400);
+      recipientId = inquiry.user_id;
+      title = "お問い合わせへの返信: " + String(inquiry.subject || "お問い合わせ").slice(0, 180);
+    } else {
+      const { data: report, error } = await admin.from("reports").select("id,reporter_id").eq("id", caseId).maybeSingle();
+      if (error) return json({ error: "CASE_LOOKUP_FAILED" }, 500);
+      if (!report?.reporter_id) return json({ error: "NO_LINKED_USER" }, 400);
+      recipientId = report.reporter_id;
+      title = "通報への返信";
+    }
+    const { error: notifyError } = await admin.from("notifications").insert({
+      recipient_id: recipientId,
+      sender_id: userId,
+      type: "case_reply",
+      title,
+      body: reply,
+      link_url: "notifications.html"
+    });
+    if (notifyError) return json({ error: "REPLY_DELIVERY_FAILED" }, 500);
+    return json({ ok: true });
+  }
+
   return json({ error: "UNKNOWN_ACTION" }, 400);
 }
 
