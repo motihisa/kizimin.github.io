@@ -65,7 +65,19 @@ async function main(req: Request) {
   const userId = authData.user.id;
   const body = await req.json().catch(() => ({}));
   const action = String(body.action || "");
-  const key = await getCryptoKey(secretKey);
+  const { data: encryptionSecret, error: encryptionKeyError } = await admin.rpc("get_kizimin_content_encryption_key");
+  if (encryptionKeyError || typeof encryptionSecret !== "string" || encryptionSecret.length < 32) {
+    return json({ error: "ENCRYPTION_KEY_NOT_CONFIGURED" }, 500);
+  }
+  const key = await getCryptoKey(encryptionSecret);
+  const legacyKey = await getCryptoKey(secretKey);
+  const decryptStoredText = async (ciphertext: string, iv: string) => {
+    try {
+      return await decryptText(key, ciphertext, iv);
+    } catch {
+      return await decryptText(legacyKey, ciphertext, iv);
+    }
+  };
 
   const isMember = async (conversationId: string) => {
     const { data, error } = await admin.from("conversation_members")
@@ -114,7 +126,7 @@ async function main(req: Request) {
 
       let preview = "";
       if (latest?.content_encrypted && latest?.content_iv) {
-        try { preview = await decryptText(key, latest.content_encrypted, latest.content_iv); }
+        try { preview = await decryptStoredText(latest.content_encrypted, latest.content_iv); }
         catch { preview = "暗号化されたメッセージ"; }
       }
       result.push({
@@ -142,7 +154,7 @@ async function main(req: Request) {
       let content = "";
       try {
         content = m.content_encrypted && m.content_iv
-          ? await decryptText(key, m.content_encrypted, m.content_iv)
+          ? await decryptStoredText(m.content_encrypted, m.content_iv)
           : "";
       } catch {
         content = "メッセージを復号できませんでした。";
