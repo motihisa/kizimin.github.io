@@ -478,11 +478,12 @@
         : statusLabel(status) + "（無期限）";
       if (!confirm("このアカウントを「" + label + "」にしますか？")) return;
 
-      const { error } = await supabase.from("profiles").update({
-        account_status: status,
-        ban_reason: reason.trim(),
-        ban_expires_at: expiresAt
-      }).eq("id", id);
+      const { error } = await supabase.rpc("admin_set_account_status", {
+        p_target_id: id,
+        p_status: status,
+        p_reason: reason.trim(),
+        p_expires_at: expiresAt
+      });
       if (error) {
         alert("アカウント状態の変更に失敗しました: " + errorMessage(error));
         await loadUsers();
@@ -490,11 +491,12 @@
       }
     } else {
       if (!confirm("このアカウントの利用制限を解除しますか？")) return;
-      const { error } = await supabase.from("profiles").update({
-        account_status: "active",
-        ban_reason: null,
-        ban_expires_at: null
-      }).eq("id", id);
+      const { error } = await supabase.rpc("admin_set_account_status", {
+        p_target_id: id,
+        p_status: "active",
+        p_reason: null,
+        p_expires_at: null
+      });
       if (error) {
         alert("アカウント状態の変更に失敗しました: " + errorMessage(error));
         await loadUsers();
@@ -533,7 +535,10 @@
     }
     if (selectEl) selectEl.disabled = true;
     try {
-      const { error } = await supabase.from("profiles").update({ role: next }).eq("id", id);
+      const { error } = await supabase.rpc("admin_change_profile_role", {
+        p_target_id: id,
+        p_new_role: next
+      });
       if (error) throw error;
       await loadUsers();
       try {
