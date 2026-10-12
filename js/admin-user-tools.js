@@ -21,8 +21,10 @@ function setup(){
  new MutationObserver(decorate).observe($("users-body")||view,{childList:true,subtree:true});decorate();
 }
 function read(r){
+ const cells=Array.from(r.cells||r.children||[]);
+ const cellText=index=>cells[index]?.textContent?.trim()||"";
  const s=r.querySelector(".account-status"),ro=r.querySelector(".user-role-select"),ex=r.querySelector(".ban-expires");
- return {row:r,id:s?.dataset.id||ro?.dataset.id||ex?.dataset.id,status:s?.value||(r.children[3]?.textContent.includes("BAN")?"banned":"active"),role:ro?.value||(r.children[2]?.textContent.includes("オーナー")?"owner":r.children[2]?.textContent.includes("管理者")?"admin":r.children[2]?.textContent.includes("モデレーター")?"moderator":"user"),expiry:ex?.value||"",name:r.children[1]?.textContent.trim()||r.children[0]?.textContent.trim()||"ユーザー",username:r.children[0]?.textContent.trim()||"",registered:r.children[4]?.textContent.trim()||"-",reason:r.children[3]?.querySelector(".admin-muted")?.textContent||""};
+ return {row:r,id:s?.dataset.id||ro?.dataset.id||ex?.dataset.id,status:s?.value||(cellText(3).includes("BAN")?"banned":"active"),role:ro?.value||(cellText(2).includes("オーナー")?"owner":cellText(2).includes("管理者")?"admin":cellText(2).includes("モデレーター")?"moderator":"user"),expiry:ex?.value||"",name:cellText(1)||cellText(0)||"ユーザー",username:cellText(0),registered:cellText(4)||"-",reason:cells[3]?.querySelector(".admin-muted")?.textContent||""};
 }
 function decorate(){
  const b=$("users-body");if(!b)return;rows=[...b.querySelectorAll("tr")].filter(r=>r.querySelector(".account-status")||r.querySelector(".user-role-select")).map(read);
