@@ -63,13 +63,16 @@ async function main(req: Request) {
 
   const userId = authData.user.id;
   const { data: profile } = await admin.from("profiles").select("role,account_status").eq("id", userId).maybeSingle();
-  const isStaff = ["admin","moderator"].includes(profile?.role) && (profile?.account_status || "active") === "active";
+  const { data: actorOwnerRow, error: actorOwnerError } = await admin.from("site_owners")
+    .select("user_id").eq("user_id", userId).maybeSingle();
+  const isOwner = !actorOwnerError && !!actorOwnerRow;
+  const isStaff = !!profile
+    && (isOwner || ["admin","moderator"].includes(profile.role))
+    && (profile.account_status || "active") === "active";
 
   const hasPermission = async (permissionKey: string) => {
     if (!profile || (profile.account_status || "active") !== "active") return false;
-    const { data: ownerRow, error: ownerError } = await admin.from("site_owners")
-      .select("user_id").eq("user_id", userId).maybeSingle();
-    if (!ownerError && ownerRow) return true;
+    if (isOwner) return true;
     const { data, error } = await admin.from("role_permissions")
       .select("allowed")
       .eq("role", profile.role)
