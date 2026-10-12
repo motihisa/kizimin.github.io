@@ -102,7 +102,7 @@ async function main(req: Request) {
       .eq("recipient_id", userId)
       .order("created_at", { ascending: false })
       .limit(100);
-    if (error) return json({ error: error.message }, 500);
+    if (error) return json({ error: "INTERNAL_ERROR" }, 500);
     return json({ notifications: data || [] });
   }
 
@@ -115,30 +115,30 @@ async function main(req: Request) {
       .is("read_at", null);
     if (notificationId) query = query.eq("id", notificationId);
     const { error } = await query;
-    if (error) return json({ error: error.message }, 500);
+    if (error) return json({ error: "INTERNAL_ERROR" }, 500);
     return json({ ok: true });
   }
 
   if (action === "dm_list") {
     const { data: memberships, error } = await admin.from("conversation_members").select("conversation_id,last_read_at").eq("user_id", userId);
-    if (error) return json({ error: error.message }, 500);
+    if (error) return json({ error: "INTERNAL_ERROR" }, 500);
     const result = [];
     for (const membership of memberships || []) {
       const { data: conv } = await admin.from("conversations").select("id,created_at,updated_at").eq("id", membership.conversation_id).maybeSingle();
       if (!conv) continue;
       const { data: members, error: membersError } = await admin.from("conversation_members").select("user_id").eq("conversation_id", conv.id);
-      if (membersError) return json({ error: membersError.message }, 500);
+      if (membersError) return json({ error: "INTERNAL_ERROR" }, 500);
       const memberIds = (members || []).map(m => m.user_id).filter(Boolean);
       let profiles = [];
       if (memberIds.length) {
         const { data: profileRows, error: profileError } = await admin.from("profiles").select("id,username,display_name").in("id", memberIds);
-        if (profileError) return json({ error: profileError.message }, 500);
+        if (profileError) return json({ error: "INTERNAL_ERROR" }, 500);
         profiles = profileRows || [];
       }
       const profileById = new Map(profiles.map(p => [p.id, p]));
       const memberView = (members || []).map(m => ({ user_id: m.user_id, profiles: profileById.get(m.user_id) || null }));
       const { data: latest, error: latestError } = await admin.from("messages").select("id,sender_id,content,content_encrypted,content_iv,created_at").eq("conversation_id", conv.id).order("created_at",{ascending:false}).limit(1).maybeSingle();
-      if (latestError) return json({ error: latestError.message }, 500);
+      if (latestError) return json({ error: "INTERNAL_ERROR" }, 500);
       let preview = "";
       if (latest?.content_encrypted && latest?.content_iv) {
         try { preview = await decryptText(key, latest.content_encrypted, latest.content_iv); } catch { preview = "暗号化されたメッセージ"; }
@@ -153,7 +153,7 @@ async function main(req: Request) {
     const conversationId = String(body.conversation_id || "");
     if (!conversationId || !(await isMember(conversationId))) return json({ error: "FORBIDDEN" }, 403);
     const { data, error } = await admin.from("messages").select("id,sender_id,content,content_encrypted,content_iv,created_at").eq("conversation_id", conversationId).order("created_at",{ascending:true}).limit(500);
-    if (error) return json({ error: error.message }, 500);
+    if (error) return json({ error: "INTERNAL_ERROR" }, 500);
     const messages = [];
     for (const m of data || []) {
       let content = "";
@@ -177,7 +177,7 @@ async function main(req: Request) {
       content_encrypted: encrypted.ciphertext,
       content_iv: encrypted.iv
     }).select("id,sender_id,created_at").single();
-    if (error) return json({ error: error.message }, 500);
+    if (error) return json({ error: "INTERNAL_ERROR" }, 500);
     await admin.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", conversationId);
     const { data: recipients } = await admin.from("conversation_members").select("user_id").eq("conversation_id", conversationId).neq("user_id", userId);
     if (recipients?.length) {
@@ -196,7 +196,7 @@ async function main(req: Request) {
   if (action === "admin_comments_list") {
     if (!(await hasPermission("moderate_comments"))) return json({ error: "PERMISSION_DENIED" }, 403);
     const { data, error } = await admin.from("comments").select("id,article_id,author_id,content,content_encrypted,content_iv,parent_id,status,created_at,profiles:profiles!comments_author_id_fkey(id,username,display_name)").order("created_at",{ascending:false}).limit(500);
-    if (error) return json({ error:error.message },500);
+    if (error) return json({ error: "INTERNAL_ERROR" }, 500);
     const comments = [];
     for (const c of data || []) {
       let content = "";
@@ -210,7 +210,7 @@ async function main(req: Request) {
     const articleId = String(body.article_id || "");
     if (!articleId || !(await canViewArticle(articleId))) return json({ error:"FORBIDDEN" },403);
     const { data, error } = await admin.from("comments").select("id,article_id,author_id,content,content_encrypted,content_iv,parent_id,status,created_at,profiles:profiles!comments_author_id_fkey(id,username,display_name)").eq("article_id",articleId).order("created_at",{ascending:true}).limit(500);
-    if (error) return json({ error:error.message },500);
+    if (error) return json({ error: "INTERNAL_ERROR" }, 500);
     const comments = [];
     for (const c of data || []) {
       let content = "";
@@ -251,7 +251,7 @@ async function main(req: Request) {
       article_id:articleId, author_id:userId, parent_id:parentId, content:"[暗号化コメント]",
       content_encrypted:encrypted.ciphertext, content_iv:encrypted.iv, status:"visible"
     }).select("id,article_id,author_id,parent_id,status,created_at").single();
-    if (error) return json({error:error.message},500);
+    if (error) return json({ error: "INTERNAL_ERROR" }, 500);
     return json({comment:data});
   }
 
@@ -288,7 +288,7 @@ async function main(req: Request) {
     const status = String(body.status || "");
     if (!["visible","hidden","deleted"].includes(status)) return json({error:"INVALID_STATUS"},400);
     const {error} = await admin.from("comments").update({status}).eq("id",commentId);
-    if (error) return json({error:error.message},500);
+    if (error) return json({ error: "INTERNAL_ERROR" }, 500);
     return json({ok:true});
   }
 
@@ -402,6 +402,6 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     console.error("secure-content unhandled error:", error);
     const message = error instanceof Error ? error.message : String(error);
-    return json({ error: "INTERNAL_ERROR", detail: message.slice(0, 500) }, 500);
+    return json({ error: "INTERNAL_ERROR" }, 500);
   }
 });
