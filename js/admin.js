@@ -918,7 +918,7 @@
         const permissionLabel = permissionMeta.find(x => x[0] === input.dataset.permission)?.[1] || input.dataset.permission;
         const previousAllowed = !input.checked;
         const nextState = input.checked ? "許可する" : "禁止する";
-        if (!confirm("権限変更を実行しますか？\\n\\n対象ロール: " + input.dataset.role + "\\n権限: " + permissionLabel + "\\n変更: " + (previousAllowed ? "許可" : "禁止") + " → " + (input.checked ? "許可" : "禁止") + "\\n\\nサイトオーナーとして変更を確定します。")) {
+        if (!confirm("権限変更を実行しますか？\n\n対象ロール: " + input.dataset.role + "\n権限: " + permissionLabel + "\n変更: " + (previousAllowed ? "許可" : "禁止") + " → " + (input.checked ? "許可" : "禁止") + "\n\nサイトオーナーとして変更を確定します。")) {
           input.checked = previousAllowed;
           return;
         }
