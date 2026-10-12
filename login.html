@@ -29,6 +29,14 @@
 <input id="passwordConfirm" class="form-input" type="password" autocomplete="new-password" minlength="6">
 </div>
 
+<div id="legalConsentGroup" class="form-group hidden" style="padding:14px;border:1px solid #ddd;border-radius:12px;background:#fafafa">
+  <label style="display:flex;align-items:flex-start;gap:10px;line-height:1.7;cursor:pointer">
+    <input id="legalConsent" type="checkbox" style="margin-top:6px;flex:0 0 auto">
+    <span><a href="terms.html" target="_blank" rel="noopener noreferrer">利用規約</a>と<a href="privacy.html" target="_blank" rel="noopener noreferrer">プライバシーポリシー</a>を読み、内容に同意します。</span>
+  </label>
+  <p class="text-muted" style="margin:8px 0 0;font-size:13px">アカウント作成には、両方への同意が必要です。</p>
+</div>
+
 <button id="submit" class="write-button" type="button">ログイン</button>
 <button id="switch" class="login" style="width:100%;margin-top:10px" type="button">アカウントを作成する</button>
 <p id="message" class="text-muted"></p>
@@ -47,6 +55,8 @@ const title = document.querySelector("#title");
 const submit = document.querySelector("#submit");
 const switchButton = document.querySelector("#switch");
 const confirmGroup = document.querySelector("#confirmGroup");
+const legalConsentGroup = document.querySelector("#legalConsentGroup");
+const legalConsent = document.querySelector("#legalConsent");
 const message = document.querySelector("#message");
 let signupMode = false;
 
@@ -75,6 +85,8 @@ function setMode(isSignup) {
   submit.textContent = isSignup ? "アカウントを作成" : "ログイン";
   switchButton.textContent = isSignup ? "ログインに戻る" : "アカウントを作成する";
   confirmGroup.classList.toggle("hidden", !isSignup);
+  legalConsentGroup.classList.toggle("hidden", !isSignup);
+  if (!isSignup) legalConsent.checked = false;
   setMessage("");
 }
 
@@ -111,6 +123,12 @@ submit.addEventListener("click", async () => {
 
     if (password !== confirm) {
       setMessage("パスワードが一致していません。");
+      return;
+    }
+
+    if (!legalConsent.checked) {
+      setMessage("アカウントを作成するには、利用規約とプライバシーポリシーへの同意が必要です。");
+      legalConsent.focus();
       return;
     }
 
