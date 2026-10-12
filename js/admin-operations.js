@@ -3,18 +3,20 @@
 const $ = id => document.getElementById(id);
 const SUPABASE_URL = "https://bimddapbkdakspjaemsm.supabase.co";
 const KEY = "sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf";
+if (!document.getElementById("ops-app") || !document.getElementById("ops-loading")) return;
+if (!window.supabase?.createClient) { const loading = document.getElementById("ops-loading"); if (loading) loading.textContent = "Supabaseライブラリを読み込めませんでした。ページを再読み込みしてください。"; return; }
 const db = window.supabase.createClient(SUPABASE_URL, KEY);
 let sessionUser = null, role = "user", lastStats = {}, lastHealth = "未実行";
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const date = s => s ? new Date(s).toLocaleString("ja-JP",{timeZone:"Asia/Tokyo"}) : "未記録";
-const showDenied = msg => { $("ops-loading").classList.add("hidden"); $("ops-denied").classList.remove("hidden"); $("ops-denied-reason").textContent = msg; };
+const showDenied = msg => { const loading=$("ops-loading"), denied=$("ops-denied"), reason=$("ops-denied-reason"), app=$("ops-app"); if(loading)loading.classList.add("hidden"); if(app)app.classList.add("hidden"); if(denied)denied.classList.remove("hidden"); if(reason)reason.textContent=msg; };
 const readTasks = () => { try { const v=JSON.parse(localStorage.getItem("kizimin_admin_ops_tasks_v1")||"[]"); return Array.isArray(v)?v:[]; } catch { return []; } };
 const writeTasks = v => { try { localStorage.setItem("kizimin_admin_ops_tasks_v1",JSON.stringify(v)); return true; } catch { return false; } };
 function download(name, body, type="text/plain;charset=utf-8") { const u=URL.createObjectURL(new Blob([body],{type})); const a=document.createElement("a"); a.href=u; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(u),1000); }
 async function guard() {
  try {
   const {data:{session},error:sessionError}=await db.auth.getSession();
-  if(sessionError||!session?.user?.id) return showDenied("ログインセッションを確認できません。管理画面からログインしてください。");
+  if(sessionError||!session?.user?.id) { showDenied("ログインセッションを確認できません。管理画面からログインしてください。"); return false; }
   sessionUser=session.user;
   let isOwner=false, ownerCheckError=null;
   const {data:ownerFlag,error:ownerError}=await db.rpc("is_site_owner");
@@ -24,13 +26,14 @@ async function guard() {
    if(!ownerRowError && ownerRow?.user_id===session.user.id) isOwner=true; else if(ownerRowError) ownerCheckError=ownerRowError;
   }
   const {data:p,error:pe}=await db.from("profiles").select("role,account_status").eq("id",session.user.id).maybeSingle();
-  if(pe && !isOwner) { console.error("運営ツール: 権限確認失敗",pe,ownerCheckError); return showDenied("プロフィールの権限確認に失敗しました。"); }
-  if(!p && !isOwner) return showDenied("プロフィールが取得できず、オーナー確認にも失敗しました。");
-  if(p?.account_status && p.account_status!=="active") return showDenied("このアカウントは利用できません。");
-  if(!isOwner && !["admin","moderator"].includes(p?.role)) return showDenied("管理者またはオーナーのみ利用できます。");
+  if(pe && !isOwner) { console.error("運営ツール: 権限確認失敗",pe,ownerCheckError); showDenied("プロフィールの権限確認に失敗しました。"); return false; }
+  if(!p && !isOwner) { showDenied("プロフィールが取得できず、オーナー確認にも失敗しました。"); return false; }
+  if(p?.account_status && p.account_status!=="active") { showDenied("このアカウントは利用できません。"); return false; }
+  if(!isOwner && !["admin","moderator"].includes(p?.role)) { showDenied("管理者またはオーナーのみ利用できます。"); return false; }
   role=isOwner?"owner":p.role;
-  $("ops-loading").classList.add("hidden"); $("ops-app").classList.remove("hidden"); $("ops-auth-state").textContent=role;
- } catch(e) { console.error(e); showDenied("管理者権限の確認に失敗しました。"); }
+  $("ops-loading")?.classList.add("hidden"); $("ops-app")?.classList.remove("hidden"); const authState=$("ops-auth-state"); if(authState)authState.textContent=role;
+  return true;
+ } catch(e) { console.error(e); showDenied("管理者権限の確認に失敗しました。"); return false; }
 }
 function renderTasks() {
  const items=readTasks();
@@ -93,5 +96,5 @@ $("ops-health-run").addEventListener("click",async()=>{
  target.textContent=lastHealth;
 });
 $("ops-refresh").addEventListener("click",()=>refreshData().catch(e=>{console.error(e);renderAlerts([{title:"更新に失敗",detail:e.message,level:"エラー"}]);}));
-guard().then(async()=>{renderTasks();perf();await refreshData();});
+guard().then(async allowed=>{if(!allowed)return;renderTasks();perf();await refreshData();}).catch(error=>{console.error("運営ツール初期化失敗",error);showDenied("運営ツールの初期化に失敗しました。");});
 })();
