@@ -322,6 +322,48 @@ async function main(req: Request) {
   }
 
 
+  if (action === "admin_user_activity") {
+    const { data: ownerRow } = await admin.from("site_owners").select("user_id").eq("user_id", userId).maybeSingle();
+    if (!isStaff && !ownerRow) return json({ error: "ADMIN_REQUIRED" }, 403);
+    const targetId = String(body.user_id || "");
+    if (!targetId) return json({ error: "INVALID_USER" }, 400);
+    const [{ data: reports, error: reportsError }, { data: notifications, error: notificationsError }] = await Promise.all([
+      admin.from("reports").select("id,reason,status,created_at").eq("reporter_id", targetId).order("created_at", { ascending: false }).limit(30),
+      admin.from("notifications").select("title,body,type,created_at").eq("recipient_id", targetId).order("created_at", { ascending: false }).limit(30)
+    ]);
+    if (reportsError || notificationsError) return json({ error: "USER_ACTIVITY_LOOKUP_FAILED" }, 500);
+    const items = [
+      ...(reports || []).map((r: any) => ({ kind: "通報履歴", title: "通報", body: String(r.reason || "") + " / 状態: " + String(r.status || "不明"), created_at: r.created_at })),
+      ...(notifications || []).map((n: any) => ({ kind: "通知履歴", title: String(n.title || "通知"), body: String(n.body || ""), created_at: n.created_at }))
+    ].sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 40);
+    return json({ ok: true, items });
+  }
+
+  if (action === "admin_user_warning") {
+    const { data: ownerRow } = await admin.from("site_owners").select("user_id").eq("user_id", userId).maybeSingle();
+    if (!ownerRow && profile?.role !== "admin") return json({ error: "ADMIN_REQUIRED" }, 403);
+    const targetId = String(body.user_id || "");
+    const reason = String(body.reason || "").trim();
+    const note = String(body.note || "").trim();
+    if (!targetId || !reason || reason.length > 1000 || note.length > 2000) return json({ error: "INVALID_WARNING" }, 400);
+    if (targetId === userId) return json({ error: "SELF_WARNING_NOT_ALLOWED" }, 400);
+    const { data: target, error: targetError } = await admin.from("profiles").select("id,role").eq("id", targetId).maybeSingle();
+    if (targetError) return json({ error: "USER_LOOKUP_FAILED" }, 500);
+    if (!target) return json({ error: "USER_NOT_FOUND" }, 404);
+    if (target.role === "owner") return json({ error: "OWNER_PROTECTED" }, 403);
+    const warningBody = "運営からの警告です。\n理由: " + reason + (note ? "\n補足: " + note : "");
+    const { error: notifyError } = await admin.from("notifications").insert({
+      recipient_id: targetId,
+      sender_id: userId,
+      type: "system",
+      title: "運営からの警告",
+      body: warningBody,
+      link_url: "notifications.html"
+    });
+    if (notifyError) return json({ error: "WARNING_DELIVERY_FAILED" }, 500);
+    return json({ ok: true });
+  }
+
   if (action === "admin_case_reply") {
     const { data: ownerRow } = await admin.from("site_owners").select("user_id").eq("user_id", userId).maybeSingle();
     if (!isStaff && !ownerRow) return json({ error: "ADMIN_REQUIRED" }, 403);
