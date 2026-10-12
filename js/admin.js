@@ -816,14 +816,39 @@
       '</tr>').join("") : '<tr><td colspan="6">送信履歴はありません。</td></tr>';
   }
 
+  function updateBroadcastPreview() {
+    const title = $("broadcast-title")?.value.trim() || "";
+    const body = $("broadcast-body")?.value || "";
+    const link = $("broadcast-link")?.value.trim() || "";
+    if ($("broadcast-preview-title")) $("broadcast-preview-title").textContent = title || "タイトル未入力";
+    if ($("broadcast-preview-body")) $("broadcast-preview-body").textContent = body || "本文がここに表示されます。";
+    if ($("broadcast-preview-link")) $("broadcast-preview-link").textContent = link ? "リンク: " + link : "リンクなし";
+    if ($("broadcast-length")) $("broadcast-length").textContent = "本文 " + body.length + " / 5000文字";
+  }
+
   async function broadcastNotification() {
     const title = $("broadcast-title")?.value.trim();
     const body = $("broadcast-body")?.value.trim() || "";
-    const link = $("broadcast-link")?.value.trim() || null;
+    const rawLink = $("broadcast-link")?.value.trim() || "";
     const result = $("broadcast-result");
     const button = $("broadcast-send");
-    if (!title) { alert("通知タイトルを入力してください。"); return; }
-    if (!confirm("この通知を全ユーザーに送信しますか？")) return;
+    if (!title) { alert("通知タイトルを入力してください。"); $("broadcast-title")?.focus(); return; }
+    if (!body) { alert("通知本文を入力してください。"); $("broadcast-body")?.focus(); return; }
+    let link = rawLink || null;
+    if (link) {
+      try {
+        const parsed = new URL(link, window.location.href);
+        if (parsed.protocol !== "https:" || /^(?:javascript|data|vbscript):/i.test(link) || link.startsWith("//")) {
+          throw new Error("INVALID_LINK");
+        }
+      } catch {
+        alert("リンクはサイト内の相対パス、またはHTTPSのURLを入力してください。");
+        $("broadcast-link")?.focus();
+        return;
+      }
+    }
+    const confirmed = confirm("全ユーザー向け通知を送信します。\n\nタイトル: " + title + "\n本文: " + body.slice(0, 500) + (body.length > 500 ? "…" : "") + "\nリンク: " + (link || "なし") + "\n\n送信先: 全ユーザー\n送信方法: サイト内通知（メールは送信しません）\n\nこの内容で送信しますか？");
+    if (!confirmed) return;
     button.disabled = true;
     result.textContent = "送信しています...";
     try {
@@ -837,6 +862,8 @@
       $("broadcast-title").value = "";
       $("broadcast-body").value = "";
       $("broadcast-link").value = "";
+      updateBroadcastPreview();
+      await loadNotificationHistory().catch(e => console.warn("通知履歴を更新できませんでした", e));
     } catch (e) {
       result.textContent = "";
       alert("通知の送信に失敗しました: " + errorMessage(e));
@@ -885,6 +912,13 @@
         if (currentAdminRole !== "owner") {
           input.checked = !input.checked;
           alert("権限設定を変更できるのはサイトオーナーのみです。");
+          return;
+        }
+        const permissionLabel = permissionMeta.find(x => x[0] === input.dataset.permission)?.[1] || input.dataset.permission;
+        const previousAllowed = !input.checked;
+        const nextState = input.checked ? "許可する" : "禁止する";
+        if (!confirm("権限変更を実行しますか？\\n\\n対象ロール: " + input.dataset.role + "\\n権限: " + permissionLabel + "\\n変更: " + (previousAllowed ? "許可" : "禁止") + " → " + (input.checked ? "許可" : "禁止") + "\\n\\nサイトオーナーとして変更を確定します。")) {
+          input.checked = previousAllowed;
           return;
         }
         input.disabled = true;
@@ -938,6 +972,10 @@
     });
 
     $("broadcast-send")?.addEventListener("click", broadcastNotification);
+    ["broadcast-title", "broadcast-body", "broadcast-link"].forEach(id => {
+      $(id)?.addEventListener("input", updateBroadcastPreview);
+    });
+    updateBroadcastPreview();
 
     $("maintenance-toggle")?.addEventListener("change", e => {
       const enabled = e.target.checked;
