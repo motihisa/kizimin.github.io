@@ -83,7 +83,19 @@ async function main(req: Request) {
 
   const body = await req.json().catch(() => ({}));
   const action = String(body.action || "");
-  const key = await getCryptoKey(secretKey);
+  const { data: encryptionSecret, error: encryptionKeyError } = await admin.rpc("get_kizimin_content_encryption_key");
+  if (encryptionKeyError || typeof encryptionSecret !== "string" || encryptionSecret.length < 32) {
+    return json({ error: "ENCRYPTION_KEY_NOT_CONFIGURED" }, 500);
+  }
+  const key = await getCryptoKey(encryptionSecret);
+  const legacyKey = await getCryptoKey(secretKey);
+  const decryptStoredText = async (ciphertext: string, iv: string) => {
+    try {
+      return await decryptText(key, ciphertext, iv);
+    } catch {
+      return await decryptText(legacyKey, ciphertext, iv);
+    }
+  };
 
   const isMember = async (conversationId: string) => {
     const { data } = await admin.from("conversation_members").select("user_id").eq("conversation_id", conversationId).eq("user_id", userId).maybeSingle();
@@ -144,7 +156,7 @@ async function main(req: Request) {
       if (latestError) return json({ error: "INTERNAL_ERROR" }, 500);
       let preview = "";
       if (latest?.content_encrypted && latest?.content_iv) {
-        try { preview = await decryptText(key, latest.content_encrypted, latest.content_iv); } catch { preview = "暗号化されたメッセージ"; }
+        try { preview = await decryptStoredText(latest.content_encrypted, latest.content_iv); } catch { preview = "暗号化されたメッセージ"; }
       }
       result.push({ ...conv, last_read_at: membership.last_read_at, members: memberView, latest: latest ? { id: latest.id, sender_id: latest.sender_id, content: preview, created_at: latest.created_at } : null });
     }
@@ -160,7 +172,7 @@ async function main(req: Request) {
     const messages = [];
     for (const m of data || []) {
       let content = "";
-      try { content = m.content_encrypted && m.content_iv ? await decryptText(key,m.content_encrypted,m.content_iv) : ""; } catch { content = "メッセージを復号できませんでした。"; }
+      try { content = m.content_encrypted && m.content_iv ? await decryptStoredText(m.content_encrypted,m.content_iv) : ""; } catch { content = "メッセージを復号できませんでした。"; }
       messages.push({ id:m.id, sender_id:m.sender_id, content, created_at:m.created_at });
     }
     await admin.from("conversation_members").update({ last_read_at: new Date().toISOString() }).eq("conversation_id", conversationId).eq("user_id", userId);
@@ -203,7 +215,7 @@ async function main(req: Request) {
     const comments = [];
     for (const c of data || []) {
       let content = "";
-      try { content = c.content_encrypted && c.content_iv ? await decryptText(key,c.content_encrypted,c.content_iv) : ""; } catch { content = "コメントを復号できませんでした。"; }
+      try { content = c.content_encrypted && c.content_iv ? await decryptStoredText(c.content_encrypted,c.content_iv) : ""; } catch { content = "コメントを復号できませんでした。"; }
       comments.push({...c,content});
     }
     return json({comments});
@@ -217,7 +229,7 @@ async function main(req: Request) {
     const comments = [];
     for (const c of data || []) {
       let content = "";
-      try { content = c.content_encrypted && c.content_iv ? await decryptText(key,c.content_encrypted,c.content_iv) : ""; } catch { content = "コメントを復号できませんでした。"; }
+      try { content = c.content_encrypted && c.content_iv ? await decryptStoredText(c.content_encrypted,c.content_iv) : ""; } catch { content = "コメントを復号できませんでした。"; }
       if (c.status === "visible" || isStaff || c.author_id === userId) comments.push({...c,content});
     }
     const commentIds = comments.map(c => c.id);
