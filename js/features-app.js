@@ -1,11 +1,12 @@
 (() => {
 "use strict";
+if(!window.supabase?.createClient){console.error("Supabaseライブラリを読み込めませんでした。");return;}
 const db=window.supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf");
 const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
 const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const date=v=>v?new Intl.DateTimeFormat("ja-JP",{year:"numeric",month:"short",day:"numeric"}).format(new Date(v)):"";
 let user=null,articles=[],collections=[];
-function msg(t){let n=$(".feature-notice");if(!n){n=document.createElement("div");n.className="feature-notice";document.body.append(n)}n.textContent=t;n.classList.add("visible");clearTimeout(n.timer);n.timer=setTimeout(()=>n.classList.remove("visible"),2600)}
+function msg(t){let n=$(".feature-notice");if(!n){n=document.createElement("div");n.className="feature-notice";(document.body||document.documentElement).append(n)}n.textContent=t;n.classList.add("visible");clearTimeout(n._timer);n._timer=setTimeout(()=>n.classList.remove("visible"),2600)}
 function login(){if(!user){msg("この操作にはログインが必要です。");setTimeout(()=>location.href="login.html",700);return false}return true}
 function fail(e){console.error(e);msg("処理に失敗しました。入力内容やログイン状態を確認してください。")}
 function formMsg(form,t){form.insertAdjacentHTML("beforebegin",'<p class="feature-muted">'+esc(t)+"</p>")}
