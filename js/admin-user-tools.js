@@ -50,7 +50,7 @@ async function details(id){
  const client=window.supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf");
  const r=await client.functions.invoke("secure-content",{body:{action:"admin_user_activity",user_id:id}});
  if(r.error||!r.data?.ok)throw r.error||new Error(r.data?.error||"取得失敗");
- const el=$("user-activity-loading");if(el)el.outerHTML='<div class="user-activity-list">'+(r.data.items||[]).map(v=>'<div class="user-activity-item"><strong>'+esc(v.title||v.kind||"履歴")+'</strong><p>'+esc(v.body||v.reason||v.status||"")+'</p><small>'+esc(fmt(v.created_at))+'</small></div>').join("")||'<p class="admin-muted">表示できる履歴はありません。</p>'+'</div>';
+ const el=$("user-activity-loading");if(el){const items=(r.data.items||[]);el.outerHTML='<div class="user-activity-list">'+(items.length?items.map(v=>'<div class="user-activity-item"><strong>'+esc(v.title||v.kind||"履歴")+'</strong><p>'+esc(v.body||v.reason||v.status||"")+'</p><small>'+esc(fmt(v.created_at))+'</small></div>').join(""):'<p class="admin-muted">表示できる履歴はありません。</p>')+'</div>';}
  }catch(e){const el=$("user-activity-loading");if(el)el.innerHTML='<div class="admin-alert">履歴を読み込めませんでした。secure-content関数の更新・デプロイ状態と権限を確認してください。</div>';console.warn("ユーザー履歴取得失敗",e)}
 }
 async function warn(id){
