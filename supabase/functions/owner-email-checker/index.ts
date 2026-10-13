@@ -100,6 +100,73 @@ function isDisposable(domain: string, domains: Set<string>): boolean {
   return domains.has(candidate);
 }
 
+type CheckMailCheck = {
+  configured: boolean; checked: boolean; valid: boolean | null; block: boolean | null;
+  disposable: boolean | null; risk: number | null; role_based: boolean | null;
+  email_forwarder: boolean | null; public_free: boolean | null; provider: string | null;
+  diagnostic_code: string | null; note: string;
+};
+
+async function checkWithCheckMail(email: string): Promise<CheckMailCheck> {
+  const apiKey = Deno.env.get("CHECK_MAIL_API_KEY")?.trim() || undefined;
+  const base: CheckMailCheck = {
+    configured: Boolean(apiKey), checked: false, valid: null, block: null,
+    disposable: null, risk: null, role_based: null, email_forwarder: null,
+    public_free: null, provider: null,
+    diagnostic_code: apiKey ? "UNCLASSIFIED" : "NOT_CONFIGURED",
+    note: apiKey ? "Check-Mailから判定結果を取得できませんでした。" : "CHECK_MAIL_API_KEY未設定のため未実行です。"
+  };
+  if (!apiKey) return base;
+  let failureCode = "NETWORK_ERROR";
+  let httpStatus: number | null = null;
+  try {
+    let response: Response;
+    try {
+      response = await fetch("https://api.check-mail.org/v2/", {
+        method: "POST",
+        headers: { "Authorization": "Bearer " + apiKey, "Accept": "application/json", "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ email }),
+        signal: AbortSignal.timeout(7000)
+      });
+    } catch (error) {
+      failureCode = error instanceof Error && error.name === "TimeoutError" ? "TIMEOUT" : "NETWORK_ERROR";
+      throw error;
+    }
+    httpStatus = response.status;
+    if (!response.ok) {
+      failureCode = response.status === 401 || response.status === 403 ? "AUTH_ERROR"
+        : response.status === 429 ? "RATE_OR_QUOTA_LIMIT"
+        : response.status >= 500 ? "PROVIDER_ERROR" : "HTTP_ERROR";
+      throw new Error("CHECK_MAIL_HTTP_ERROR");
+    }
+    let data: any;
+    try { data = await response.json(); }
+    catch { failureCode = "INVALID_RESPONSE"; throw new Error("CHECK_MAIL_INVALID_RESPONSE"); }
+    const nullableBool = (value: unknown): boolean | null => typeof value === "boolean" ? value : null;
+    const riskRaw = data?.risk;
+    const riskValue = typeof riskRaw === "number" || typeof riskRaw === "string" ? Number(riskRaw) : NaN;
+    return {
+      configured: true, checked: true, valid: nullableBool(data?.valid), block: nullableBool(data?.block),
+      disposable: nullableBool(data?.is_disposable), risk: Number.isFinite(riskValue) ? riskValue : null,
+      role_based: nullableBool(data?.is_role_based_email), email_forwarder: nullableBool(data?.is_email_forwarder),
+      public_free: nullableBool(data?.is_public_free),
+      provider: typeof data?.email_provider === "string" && data.email_provider ? data.email_provider : null,
+      diagnostic_code: null,
+      note: "Check-Mailの判定結果です。メールアドレス全体を外部サービスへ送信しています。判定はメールボックスの存在や本人による所有を完全に保証するものではありません。"
+    };
+  } catch {
+    const note = failureCode === "AUTH_ERROR" ? "Check-Mailの認証に失敗しました（HTTP " + httpStatus + "）。SupabaseのCHECK_MAIL_API_KEYを確認してください。"
+      : failureCode === "RATE_OR_QUOTA_LIMIT" ? "Check-Mailの利用上限またはリクエスト制限に達しました（HTTP 429）。"
+      : failureCode === "PROVIDER_ERROR" ? "Check-Mail側でエラーが発生しました（HTTP " + httpStatus + "）。"
+      : failureCode === "HTTP_ERROR" ? "Check-MailがHTTP " + httpStatus + "を返しました。"
+      : failureCode === "TIMEOUT" ? "Check-Mailへの接続がタイムアウトしました。"
+      : failureCode === "INVALID_RESPONSE" ? "Check-Mailから予期しない形式の応答が返されました。"
+      : "Check-Mailへの通信に失敗しました。ネットワークまたはサービス状態を確認してください。";
+    console.warn("check_mail_api_check_failed", JSON.stringify({ provider: "check-mail", code: failureCode, http_status: httpStatus }));
+    return { ...base, diagnostic_code: failureCode, note };
+  }
+}
+
 type AbstractCheck = {
   configured: boolean;
   checked: boolean;
@@ -251,12 +318,13 @@ Deno.serve(async (req: Request) => {
     if (!formatValid) return json({ result: { format_valid: false, domain, mx_found: null, domain_resolves: null, disposable: "unknown", disposable_sources: 0, role_based: false, note: "メールアドレスの形式が正しくありません。" } });
 
     const roleBased = /^(admin|administrator|support|info|contact|help|sales|billing|postmaster|webmaster|noreply|no-reply|security|abuse|office|team|hello)$/i.test(local);
-    const [disposableData, mxResult, txtResult, dmarcResult, abstractResult] = await Promise.all([
+    const [disposableData, mxResult, txtResult, dmarcResult, abstractResult, checkMailResult] = await Promise.all([
       getDisposableDomains(),
       dnsQuery(domain, "MX").catch(() => null),
       dnsQuery(domain, "TXT").catch(() => null),
       dnsQuery("_dmarc." + domain, "TXT").catch(() => null),
-      checkWithAbstract(email)
+      checkWithAbstract(email),
+      checkWithCheckMail(email)
     ]);
     const mxFound = !!mxResult && Number(mxResult.Status) === 0 &&
       Array.isArray(mxResult.Answer) && mxResult.Answer.some((a: any) => Number(a.type) === 15);
@@ -298,7 +366,8 @@ Deno.serve(async (req: Request) => {
       dmarc_found: dmarcFound,
       dmarc_policy: policy,
       abstract_api: abstractResult,
-      note: "使い捨て判定は最大2つの公開リストを照合します。SPF/DMARCはドメインの送信認証設定の確認です。DNS確認ではドメイン名のみをGoogle Public DNSへ送信します。ABSTRACT_API_KEYを設定した場合、メールアドレス全体をAbstract APIへ送信して追加判定します。メールアドレスはこの関数で保存しません。判定不能は失敗や不正を意味しません。"
+      check_mail: checkMailResult,
+      note: "使い捨て判定は最大2つの公開リストを照合します。SPF/DMARCはドメインの送信認証設定の確認です。DNS確認ではドメイン名のみをGoogle Public DNSへ送信します。ABSTRACT_API_KEYを設定した場合はメールアドレス全体をAbstract APIへ、CHECK_MAIL_API_KEYを設定した場合はCheck-Mailへ送信して追加判定します。メールアドレスはこの関数で保存しません。判定不能は失敗や不正を意味しません。"
     }});
   } catch (error) {
     console.error("owner-email-checker error", error instanceof Error ? error.message : "unknown");
