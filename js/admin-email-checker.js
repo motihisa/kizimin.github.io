@@ -63,6 +63,21 @@
         item("DMARC（なりすまし対策）", dmarcLabel + dmarcPolicy, r.dmarc_found === true ? "good" : "warn") +
         item("ロール系アドレス", r.role_based ? "該当の可能性あり" : "該当パターンなし", r.role_based ? "warn" : "") +
         (() => {
+          const c = r.check_mail || {};
+          const state = !c.configured ? "未設定" : !c.checked ? "接続失敗／上限の可能性" : "外部APIで判定済み";
+          const tone = !c.configured || !c.checked ? "warn" : "good";
+          const boolLabel = v => v === true ? "はい" : v === false ? "いいえ" : "判定不能";
+          const risk = typeof c.risk === "number" ? c.risk + "/100" : "判定不能";
+          return item("Check-Mail API", state, tone) +
+            (c.checked ? item("Check-Mail推奨ブロック", boolLabel(c.block), c.block === true ? "bad" : c.block === false ? "good" : "warn") +
+              item("使い捨てメール（外部API）", boolLabel(c.disposable), c.disposable === true ? "bad" : c.disposable === false ? "good" : "warn") +
+              item("リスクスコア", risk, typeof c.risk === "number" && c.risk >= 70 ? "warn" : "") +
+              item("メール転送サービス", boolLabel(c.email_forwarder), c.email_forwarder === true ? "warn" : "") +
+              item("公開無料メール", boolLabel(c.public_free), "") +
+              item("メールプロバイダー", c.provider || "判定情報なし", "") : "") +
+            (c.note ? '<p class="email-checker-note">' + esc(c.note) + '</p>' : "");
+        })() +
+        (() => {
           const a = r.abstract_api || {};
           const state = !a.configured ? "未設定（従来の判定のみ）" : !a.checked ? "APIに接続できず／上限の可能性" : "外部APIで判定済み";
           const tone = !a.configured ? "warn" : !a.checked ? "warn" : "good";
