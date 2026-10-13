@@ -126,6 +126,7 @@ async function checkWithAbstract(email: string): Promise<AbstractCheck> {
 
   let failureCode = "NETWORK_ERROR";
   let httpStatus: number | null = null;
+  let providerAuthReason = "UNKNOWN";
   try {
     const endpoint = new URL("https://emailvalidation.abstractapi.com/v1/");
     endpoint.searchParams.set("api_key", apiKey);
@@ -143,6 +144,20 @@ async function checkWithAbstract(email: string): Promise<AbstractCheck> {
         : response.status === 429 ? "RATE_OR_QUOTA_LIMIT"
         : response.status >= 500 ? "PROVIDER_ERROR"
         : "HTTP_ERROR";
+      if (failureCode === "AUTH_ERROR") {
+        // Read provider error only to classify it. Never log or return the raw body.
+        let providerErrorText = "";
+        try {
+          providerErrorText = (await response.clone().text()).slice(0, 2000).toLowerCase();
+        } catch { /* keep UNKNOWN */ }
+        if (/invalid.{0,20}(api.?key|key)|api.?key.{0,20}(invalid|not valid|incorrect)/i.test(providerErrorText)) {
+          providerAuthReason = "INVALID_API_KEY";
+        } else if (/not.{0,20}(authorized|allowed)|permission|access denied|not enabled|subscription|plan/i.test(providerErrorText)) {
+          providerAuthReason = "API_ACCESS_OR_PLAN";
+        } else {
+          providerAuthReason = "AUTH_ERROR_UNSPECIFIED";
+        }
+      }
       throw new Error("ABSTRACT_HTTP_ERROR");
     }
     let data: any;
@@ -181,7 +196,11 @@ async function checkWithAbstract(email: string): Promise<AbstractCheck> {
     };
   } catch (error) {
     const safeStatus = httpStatus;
-    const note = failureCode === "AUTH_ERROR" ? "Abstract APIの認証に失敗しました（HTTP " + safeStatus + "）。APIキーと契約状態を確認してください。"
+    const note = failureCode === "AUTH_ERROR" ? (providerAuthReason === "INVALID_API_KEY"
+      ? "Abstract APIがAPIキーを無効と判定しました（HTTP " + safeStatus + "）。SupabaseのABSTRACT_API_KEYにEmail Validation API専用の新しいキーが保存されているか確認してください。"
+      : providerAuthReason === "API_ACCESS_OR_PLAN"
+        ? "Abstract APIがこのキーのAPI利用権限を拒否しました（HTTP " + safeStatus + "）。Email Validation APIのキーとアカウントの利用権限を確認してください。"
+        : "Abstract APIの認証に失敗しました（HTTP " + safeStatus + "）。APIキーとEmail Validation APIへのアクセス権を確認してください。")
       : failureCode === "RATE_OR_QUOTA_LIMIT" ? "Abstract APIの利用上限またはリクエスト制限に達しました（HTTP 429）。利用状況を確認してください。"
       : failureCode === "PROVIDER_ERROR" ? "Abstract API側でエラーが発生しました（HTTP " + safeStatus + "）。時間をおいて再試行してください。"
       : failureCode === "HTTP_ERROR" ? "Abstract APIがHTTP " + safeStatus + "を返しました。API設定を確認してください。"
@@ -189,7 +208,7 @@ async function checkWithAbstract(email: string): Promise<AbstractCheck> {
       : failureCode === "INVALID_RESPONSE" ? "Abstract APIから予期しない形式の応答が返されました。"
       : "Abstract APIへの通信に失敗しました。ネットワークまたはサービス状態を確認してください。";
     // メールアドレス、APIキー、URL、レスポンス本文、例外メッセージは記録しない。
-    console.warn("abstract_api_check_failed", JSON.stringify({ provider: "abstractapi", code: failureCode, http_status: safeStatus }));
+    console.warn("abstract_api_check_failed", JSON.stringify({ provider: "abstractapi", code: failureCode, http_status: safeStatus, auth_reason: failureCode === "AUTH_ERROR" ? providerAuthReason : undefined }));
     return { ...base, diagnostic_code: failureCode, note };
   }
 }
