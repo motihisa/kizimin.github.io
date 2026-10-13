@@ -132,6 +132,41 @@ submit.addEventListener("click", async () => {
       return;
     }
 
+    // Check the submitted email on the server before creating the account.
+    // The Edge Function fails open if Check-Mail is temporarily unavailable.
+    setMessage("メールアドレスを確認しています...");
+    let emailCheckUnavailable = false;
+    try {
+      const { data: check, error: checkError } = await sb.functions.invoke("signup-email-check", {
+        body: { email }
+      });
+      if (checkError) {
+        emailCheckUnavailable = true;
+      } else if (check?.error === "INVALID_EMAIL") {
+        setMessage("メールアドレスの形式を確認してください。");
+        return;
+      } else if (check?.blocked === true) {
+        const result = check.result || {};
+        const details = [];
+        if (result.text) details.push(result.text);
+        if (result.reason) details.push("判定理由: " + result.reason);
+        if (typeof result.risk === "number") details.push("リスクスコア: " + result.risk + "/100");
+        if (Array.isArray(result.possible_typo) && result.possible_typo.length) {
+          details.push("入力ミスの候補: " + result.possible_typo.join("、"));
+        }
+        setMessage("このメールアドレスでは登録できません。\n" + (details.join("\n") || "Check-Mailにより登録非推奨と判定されました。"));
+        return;
+      } else if (check?.unavailable === true || check?.blocked !== false) {
+        emailCheckUnavailable = true;
+      }
+    } catch {
+      emailCheckUnavailable = true;
+    }
+
+    if (emailCheckUnavailable) {
+      setMessage("メール判定サービスに接続できなかったため、確認を省略して登録を続行します。");
+    }
+
     const { data, error } = await sb.auth.signUp({ email, password });
     if (error) throw error;
 
