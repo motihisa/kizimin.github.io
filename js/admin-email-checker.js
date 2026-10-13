@@ -48,12 +48,19 @@
       const yesNo = value => value === true ? "確認できました" : value === false ? "確認できません" : "判定不能";
       const mxLabel = r.mx_found === true ? "MXレコードあり" : r.mx_found === false ? "MXレコードなし／確認できず" : "判定不能";
       const domainLabel = r.domain_resolves === true ? "DNSで確認できました" : r.domain_resolves === false ? "ドメインが見つかりません" : "判定不能";
-      const disposable = r.disposable === "yes" ? ["使い捨ての可能性が高い","bad"] : r.disposable === "no" ? ["リスト上では検出なし","good"] : ["判定不能","warn"];
+      const disposable = r.disposable === "yes" ? ["公開リストで検出","bad"] : r.disposable === "no" ? ["公開リストでは未検出","good"] : ["判定不能","warn"];
+      const spfLabel = r.spf_found === true ? "SPFあり" : r.spf_found === false ? "SPFを確認できず" : "判定不能";
+      const dmarcLabel = r.dmarc_found === true ? "DMARCあり" : r.dmarc_found === false ? "DMARCを確認できず" : "判定不能";
+      const dmarcPolicy = r.dmarc_policy ? "（ポリシー: "+r.dmarc_policy+"）" : "";
+      const spfMultiple = r.spf_multiple === true ? "複数SPFの疑い" : r.spf_multiple === false ? "複数SPFは未検出" : "件数判定不能";
       resultBox.innerHTML = '<h2>判定結果</h2><p class="email-checker-domain">'+esc(r.domain || "")+'</p>' +
         item("メール形式", r.format_valid ? "形式は有効" : "形式が無効", r.format_valid ? "good" : "bad") +
         item("MXレコード", yesNo(r.mx_found), r.mx_found === true ? "good" : r.mx_found === false ? "warn" : "warn") +
         item("ドメイン解決", yesNo(r.domain_resolves), r.domain_resolves === true ? "good" : r.domain_resolves === false ? "bad" : "warn") +
         item("使い捨てメール", disposable[0], disposable[1]) +
+        item("SPF（送信元認証）", spfLabel, r.spf_found === true ? "good" : "warn") +
+        item("SPFレコード数", spfMultiple, r.spf_multiple === true ? "warn" : "") +
+        item("DMARC（なりすまし対策）", dmarcLabel + dmarcPolicy, r.dmarc_found === true ? "good" : "warn") +
         item("ロール系アドレス", r.role_based ? "該当の可能性あり" : "該当パターンなし", r.role_based ? "warn" : "") +
         '<p class="email-checker-note">'+esc(r.note || "")+'</p>';
       resultBox.classList.remove("hidden");
