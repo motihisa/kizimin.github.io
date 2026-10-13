@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>オーナー専用メールチェッカー | Kizimin</title>
+<link rel="stylesheet" href="css/style.css"><link rel="stylesheet" href="css/admin.css"><link rel="stylesheet" href="css/admin-email-checker.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="admin-page">
+<main class="email-checker-shell">
+  <header class="email-checker-head"><a href="admin.html">← 管理画面へ戻る</a><span class="email-checker-owner">🔒 オーナー専用</span></header>
+  <section id="email-checker-loading" class="admin-panel"><strong>オーナー権限を確認しています...</strong></section>
+  <section id="email-checker-denied" class="admin-panel hidden"><div class="admin-alert"><strong>アクセスできません</strong><p id="email-checker-denied-message">この機能はサイトオーナー専用です。</p></div><a class="admin-btn" href="admin.html">管理画面へ戻る</a></section>
+  <section id="email-checker-app" class="hidden">
+    <div class="email-checker-hero"><p class="email-checker-eyebrow">KIZIMIN / OWNER TOOLS</p><h1>メールチェッカー</h1><p>形式・MXレコード・使い捨てドメインを確認します。メールボックスそのものの存在を保証するものではありません。</p></div>
+    <div class="admin-panel">
+      <form id="email-checker-form">
+        <label for="email-checker-input"><strong>確認するメールアドレス</strong></label>
+        <div class="email-checker-input-row"><input id="email-checker-input" type="email" maxlength="254" autocomplete="off" required placeholder="example@example.com"><button class="admin-btn primary" id="email-checker-submit" type="submit">チェックする</button></div>
+        <p class="admin-muted">入力したメールアドレスはこの機能の判定処理に使用します。DNS確認時に外部へ送信するのはドメイン名のみです。</p>
+      </form>
+      <div id="email-checker-error" class="admin-alert hidden" role="alert"></div>
+      <div id="email-checker-result" class="email-checker-results hidden" aria-live="polite"></div>
+    </div>
+    <p class="email-checker-footnote">使い捨て判定は公開ドメインリストとの照合です。リスト未取得時は「判定不能」と表示します。SMTP接続や認証メール送信は行いません。</p>
+  </section>
+</main>
+<script src="js/admin-email-checker.js"></script>
+</body></html>
