@@ -110,25 +110,48 @@ type AbstractCheck = {
   catchall: boolean | null;
   role_based: boolean | null;
   quality_score: number | null;
+  diagnostic_code: string | null;
   note: string;
 };
 
 async function checkWithAbstract(email: string): Promise<AbstractCheck> {
   const apiKey = Deno.env.get("ABSTRACT_API_KEY");
-  const base = {
+  const base: AbstractCheck = {
     configured: Boolean(apiKey), checked: false, deliverability: null,
     smtp_valid: null, mx_valid: null, disposable: null, catchall: null,
-    role_based: null, quality_score: null,
+    role_based: null, quality_score: null, diagnostic_code: apiKey ? "UNCLASSIFIED" : "NOT_CONFIGURED",
     note: apiKey ? "外部APIから判定結果を取得できませんでした。" : "ABSTRACT_API_KEY未設定のため未実行です。"
   };
   if (!apiKey) return base;
+
+  let failureCode = "NETWORK_ERROR";
+  let httpStatus: number | null = null;
   try {
     const endpoint = new URL("https://emailvalidation.abstractapi.com/v1/");
     endpoint.searchParams.set("api_key", apiKey);
     endpoint.searchParams.set("email", email);
-    const response = await fetch(endpoint, { signal: AbortSignal.timeout(7000) });
-    if (!response.ok) return base;
-    const data = await response.json();
+    let response: Response;
+    try {
+      response = await fetch(endpoint, { signal: AbortSignal.timeout(7000) });
+    } catch (error) {
+      failureCode = error instanceof Error && error.name === "TimeoutError" ? "TIMEOUT" : "NETWORK_ERROR";
+      throw error;
+    }
+    httpStatus = response.status;
+    if (!response.ok) {
+      failureCode = response.status === 401 || response.status === 403 ? "AUTH_ERROR"
+        : response.status === 429 ? "RATE_OR_QUOTA_LIMIT"
+        : response.status >= 500 ? "PROVIDER_ERROR"
+        : "HTTP_ERROR";
+      throw new Error("ABSTRACT_HTTP_ERROR");
+    }
+    let data: any;
+    try {
+      data = await response.json();
+    } catch {
+      failureCode = "INVALID_RESPONSE";
+      throw new Error("ABSTRACT_INVALID_RESPONSE");
+    }
     const delivery = data?.email_deliverability ?? {};
     const quality = data?.email_quality ?? {};
     const nullableBool = (value: unknown): boolean | null => {
@@ -153,10 +176,21 @@ async function checkWithAbstract(email: string): Promise<AbstractCheck> {
       catchall: nullableBool(data?.is_catchall_email ?? data?.is_catchall ?? quality?.is_catchall),
       role_based: nullableBool(data?.is_role_email ?? data?.is_role ?? quality?.is_role),
       quality_score: Number.isFinite(scoreValue) ? scoreValue : null,
+      diagnostic_code: null,
       note: "Abstract APIの結果です。メールアドレスは判定のため外部サービスへ送信されます。SMTP判定も受信箱の存在を完全に保証するものではありません。"
     };
-  } catch {
-    return base;
+  } catch (error) {
+    const safeStatus = httpStatus;
+    const note = failureCode === "AUTH_ERROR" ? "Abstract APIの認証に失敗しました（HTTP " + safeStatus + "）。APIキーと契約状態を確認してください。"
+      : failureCode === "RATE_OR_QUOTA_LIMIT" ? "Abstract APIの利用上限またはリクエスト制限に達しました（HTTP 429）。利用状況を確認してください。"
+      : failureCode === "PROVIDER_ERROR" ? "Abstract API側でエラーが発生しました（HTTP " + safeStatus + "）。時間をおいて再試行してください。"
+      : failureCode === "HTTP_ERROR" ? "Abstract APIがHTTP " + safeStatus + "を返しました。API設定を確認してください。"
+      : failureCode === "TIMEOUT" ? "Abstract APIへの接続がタイムアウトしました。"
+      : failureCode === "INVALID_RESPONSE" ? "Abstract APIから予期しない形式の応答が返されました。"
+      : "Abstract APIへの通信に失敗しました。ネットワークまたはサービス状態を確認してください。";
+    // メールアドレス、APIキー、URL、レスポンス本文、例外メッセージは記録しない。
+    console.warn("abstract_api_check_failed", JSON.stringify({ provider: "abstractapi", code: failureCode, http_status: safeStatus }));
+    return { ...base, diagnostic_code: failureCode, note };
   }
 }
 
