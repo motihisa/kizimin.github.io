@@ -60,13 +60,34 @@ async function getDisposableDomains(): Promise<{ domains: Set<string>; sources: 
   return { domains: merged, sources: successfulSources };
 }
 
-async function dnsQuery(domain: string, type: "MX" | "A" | "AAAA") {
+async function dnsQuery(domain: string, type: "MX" | "A" | "AAAA" | "TXT") {
   const response = await fetch("https://dns.google/resolve?name=" + encodeURIComponent(domain) + "&type=" + type, {
     headers: { "Accept": "application/dns-json" },
     signal: AbortSignal.timeout(5000)
   });
   if (!response.ok) throw new Error("DNS_LOOKUP_FAILED");
   return await response.json();
+}
+
+
+function txtRecords(response: any): string[] {
+  if (!response || Number(response.Status) !== 0 || !Array.isArray(response.Answer)) return [];
+  return response.Answer
+    .filter((answer: any) => Number(answer.type) === 16 && typeof answer.data === "string")
+    .map((answer: any) => String(answer.data).replace(/^"|"$/g, "").replace(/"\s+"/g, ""));
+}
+
+function hasTxtPrefix(response: any, prefix: string): boolean | null {
+  if (!response) return null;
+  if (Number(response.Status) === 3) return false;
+  if (Number(response.Status) !== 0) return null;
+  return txtRecords(response).some(record => record.trim().toLowerCase().startsWith(prefix.toLowerCase()));
+}
+
+function dmarcPolicy(response: any): string | null {
+  const record = txtRecords(response).find(value => /^\s*v=DMARC1(?:;|$)/i.test(value));
+  const match = record?.match(/(?:^|;)\s*p\s*=\s*(none|quarantine|reject)\s*(?:;|$)/i);
+  return match ? match[1].toLowerCase() : null;
 }
 
 function isDisposable(domain: string, domains: Set<string>): boolean {
@@ -117,9 +138,11 @@ Deno.serve(async (req: Request) => {
     if (!formatValid) return json({ result: { format_valid: false, domain, mx_found: null, domain_resolves: null, disposable: "unknown", disposable_sources: 0, role_based: false, note: "メールアドレスの形式が正しくありません。" } });
 
     const roleBased = /^(admin|administrator|support|info|contact|help|sales|billing|postmaster|webmaster|noreply|no-reply|security|abuse|office|team|hello)$/i.test(local);
-    const [disposableData, mxResult] = await Promise.all([
+    const [disposableData, mxResult, txtResult, dmarcResult] = await Promise.all([
       getDisposableDomains(),
-      dnsQuery(domain, "MX").catch(() => null)
+      dnsQuery(domain, "MX").catch(() => null),
+      dnsQuery(domain, "TXT").catch(() => null),
+      dnsQuery("_dmarc." + domain, "TXT").catch(() => null)
     ]);
     const mxFound = !!mxResult && Number(mxResult.Status) === 0 &&
       Array.isArray(mxResult.Answer) && mxResult.Answer.some((a: any) => Number(a.type) === 15);
@@ -144,6 +167,10 @@ Deno.serve(async (req: Request) => {
     const disposable = disposableData
       ? (isDisposable(domain, disposableData.domains) ? "yes" : "no")
       : "unknown";
+    const spfRecords = txtRecords(txtResult).filter(record => /^\s*v=spf1(?:\s|$)/i.test(record));
+    const spfFound = hasTxtPrefix(txtResult, "v=spf1");
+    const dmarcFound = hasTxtPrefix(dmarcResult, "v=DMARC1");
+    const policy = dmarcPolicy(dmarcResult);
     return json({ result: {
       format_valid: true,
       domain,
@@ -152,7 +179,11 @@ Deno.serve(async (req: Request) => {
       disposable,
       disposable_sources: disposableData?.sources ?? 0,
       role_based: roleBased,
-      note: "使い捨て判定は2つの公開リストを照合します（取得できたリスト数も表示）。DNS確認ではドメイン名のみを外部DNSサービスへ送信します。個別のメールボックスの存在・受信可能性は確認していません。MXがないドメインでも、構成によってはメールを受信できる場合があります。"
+      spf_found: spfFound,
+      spf_multiple: spfRecords.length > 1 ? true : spfRecords.length === 1 ? false : spfFound === false ? false : null,
+      dmarc_found: dmarcFound,
+      dmarc_policy: policy,
+      note: "使い捨て判定は最大2つの公開リストを照合します。SPF/DMARCはドメインの送信認証設定の確認であり、受信箱の存在確認ではありません。DNS確認ではドメイン名のみをGoogle Public DNSへ送信します。個別メールボックスの存在・受信可能性は確認していません。判定不能は失敗や不正を意味しません。"
     }});
   } catch (error) {
     console.error("owner-email-checker error", error instanceof Error ? error.message : "unknown");
