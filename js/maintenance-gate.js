@@ -7,9 +7,6 @@
   const URL = "https://bimddapbkdakspjaemsm.supabase.co";
   const KEY = "sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf";
   const GATE = "kizimin-maintenance-gate";
-  const client = window.supabase?.createClient(URL, KEY);
-  if (!client) return;
-
   function render() {
     if (document.getElementById(GATE) || !document.body) return;
     const overlay = document.createElement("div");
@@ -29,6 +26,10 @@
 
   async function check() {
     try {
+      // Resolve the client at DOM ready, so pages that include this file before
+      // the Supabase CDN script still get the maintenance check.
+      const client = window.supabase?.createClient(URL, KEY);
+      if (!client) return;
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 4000);
       let result;
