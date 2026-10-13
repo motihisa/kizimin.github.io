@@ -83,6 +83,7 @@
 
     currentAdminRole = isOwner ? "owner" : profile.role;
     document.querySelector('a[href="admin-site-editor.html"]')?.classList.toggle("hidden", !isOwner);
+    document.querySelector(".owner-only-email-tool")?.classList.toggle("hidden", !isOwner);
     document.querySelector('.admin-nav [data-view="permissions"]')?.classList.toggle("hidden", !isOwner);
     $("view-permissions")?.classList.toggle("hidden", !isOwner);
     if (!isOwner && location.hash === "#permissions") history.replaceState(null, "", "#dashboard");
