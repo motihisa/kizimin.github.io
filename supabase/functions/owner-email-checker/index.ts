@@ -100,6 +100,59 @@ function isDisposable(domain: string, domains: Set<string>): boolean {
   return domains.has(candidate);
 }
 
+type AbstractCheck = {
+  configured: boolean;
+  checked: boolean;
+  deliverability: string | null;
+  smtp_valid: boolean | null;
+  mx_valid: boolean | null;
+  disposable: boolean | null;
+  catchall: boolean | null;
+  role_based: boolean | null;
+  quality_score: number | null;
+  note: string;
+};
+
+async function checkWithAbstract(email: string): Promise<AbstractCheck> {
+  const apiKey = Deno.env.get("ABSTRACT_API_KEY");
+  const base = {
+    configured: Boolean(apiKey), checked: false, deliverability: null,
+    smtp_valid: null, mx_valid: null, disposable: null, catchall: null,
+    role_based: null, quality_score: null,
+    note: apiKey ? "外部APIから判定結果を取得できませんでした。" : "ABSTRACT_API_KEY未設定のため未実行です。"
+  };
+  if (!apiKey) return base;
+  try {
+    const endpoint = new URL("https://emailvalidation.abstractapi.com/v1/");
+    endpoint.searchParams.set("api_key", apiKey);
+    endpoint.searchParams.set("email", email);
+    const response = await fetch(endpoint, { signal: AbortSignal.timeout(7000) });
+    if (!response.ok) return base;
+    const data = await response.json();
+    const delivery = data?.email_deliverability ?? {};
+    const quality = data?.email_quality ?? {};
+    const nullableBool = (value: unknown): boolean | null =>
+      typeof value === "boolean" ? value : null;
+    const scoreValue = Number(data?.quality_score ?? quality?.score);
+    return {
+      configured: true,
+      checked: true,
+      deliverability: typeof data?.deliverability === "string"
+        ? data.deliverability
+        : typeof delivery?.status === "string" ? delivery.status : null,
+      smtp_valid: nullableBool(data?.is_smtp_valid ?? delivery?.is_smtp_valid),
+      mx_valid: nullableBool(data?.is_mx_valid ?? delivery?.is_mx_valid),
+      disposable: nullableBool(data?.is_disposable ?? quality?.is_disposable),
+      catchall: nullableBool(data?.is_catchall ?? quality?.is_catchall),
+      role_based: nullableBool(data?.is_role ?? quality?.is_role),
+      quality_score: Number.isFinite(scoreValue) ? scoreValue : null,
+      note: "Abstract APIの結果です。メールアドレスは判定のため外部サービスへ送信されます。SMTP判定も受信箱の存在を完全に保証するものではありません。"
+    };
+  } catch {
+    return base;
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "METHOD_NOT_ALLOWED" }, 405);
@@ -138,11 +191,12 @@ Deno.serve(async (req: Request) => {
     if (!formatValid) return json({ result: { format_valid: false, domain, mx_found: null, domain_resolves: null, disposable: "unknown", disposable_sources: 0, role_based: false, note: "メールアドレスの形式が正しくありません。" } });
 
     const roleBased = /^(admin|administrator|support|info|contact|help|sales|billing|postmaster|webmaster|noreply|no-reply|security|abuse|office|team|hello)$/i.test(local);
-    const [disposableData, mxResult, txtResult, dmarcResult] = await Promise.all([
+    const [disposableData, mxResult, txtResult, dmarcResult, abstractResult] = await Promise.all([
       getDisposableDomains(),
       dnsQuery(domain, "MX").catch(() => null),
       dnsQuery(domain, "TXT").catch(() => null),
-      dnsQuery("_dmarc." + domain, "TXT").catch(() => null)
+      dnsQuery("_dmarc." + domain, "TXT").catch(() => null),
+      checkWithAbstract(email)
     ]);
     const mxFound = !!mxResult && Number(mxResult.Status) === 0 &&
       Array.isArray(mxResult.Answer) && mxResult.Answer.some((a: any) => Number(a.type) === 15);
@@ -183,7 +237,8 @@ Deno.serve(async (req: Request) => {
       spf_multiple: spfRecords.length > 1 ? true : spfRecords.length === 1 ? false : spfFound === false ? false : null,
       dmarc_found: dmarcFound,
       dmarc_policy: policy,
-      note: "使い捨て判定は最大2つの公開リストを照合します。SPF/DMARCはドメインの送信認証設定の確認であり、受信箱の存在確認ではありません。DNS確認ではドメイン名のみをGoogle Public DNSへ送信します。個別メールボックスの存在・受信可能性は確認していません。判定不能は失敗や不正を意味しません。"
+      abstract_api: abstractResult,
+      note: "使い捨て判定は最大2つの公開リストを照合します。SPF/DMARCはドメインの送信認証設定の確認です。DNS確認ではドメイン名のみをGoogle Public DNSへ送信します。ABSTRACT_API_KEYを設定した場合、メールアドレス全体をAbstract APIへ送信して追加判定します。メールアドレスはこの関数で保存しません。判定不能は失敗や不正を意味しません。"
     }});
   } catch (error) {
     console.error("owner-email-checker error", error instanceof Error ? error.message : "unknown");
