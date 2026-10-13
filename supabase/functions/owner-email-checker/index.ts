@@ -131,9 +131,16 @@ async function checkWithAbstract(email: string): Promise<AbstractCheck> {
     const data = await response.json();
     const delivery = data?.email_deliverability ?? {};
     const quality = data?.email_quality ?? {};
-    const nullableBool = (value: unknown): boolean | null =>
-      typeof value === "boolean" ? value : null;
-    const scoreValue = Number(data?.quality_score ?? quality?.score);
+    const nullableBool = (value: unknown): boolean | null => {
+      if (typeof value === "boolean") return value;
+      if (value && typeof value === "object" && "value" in value) {
+        const inner = (value as { value?: unknown }).value;
+        return typeof inner === "boolean" ? inner : null;
+      }
+      return null;
+    };
+    const scoreRaw = data?.quality_score ?? quality?.score;
+    const scoreValue = typeof scoreRaw === "string" || typeof scoreRaw === "number" ? Number(scoreRaw) : NaN;
     return {
       configured: true,
       checked: true,
@@ -141,10 +148,10 @@ async function checkWithAbstract(email: string): Promise<AbstractCheck> {
         ? data.deliverability
         : typeof delivery?.status === "string" ? delivery.status : null,
       smtp_valid: nullableBool(data?.is_smtp_valid ?? delivery?.is_smtp_valid),
-      mx_valid: nullableBool(data?.is_mx_valid ?? delivery?.is_mx_valid),
-      disposable: nullableBool(data?.is_disposable ?? quality?.is_disposable),
-      catchall: nullableBool(data?.is_catchall ?? quality?.is_catchall),
-      role_based: nullableBool(data?.is_role ?? quality?.is_role),
+      mx_valid: nullableBool(data?.is_mx_found ?? data?.is_mx_valid ?? delivery?.is_mx_valid),
+      disposable: nullableBool(data?.is_disposable_email ?? data?.is_disposable ?? quality?.is_disposable),
+      catchall: nullableBool(data?.is_catchall_email ?? data?.is_catchall ?? quality?.is_catchall),
+      role_based: nullableBool(data?.is_role_email ?? data?.is_role ?? quality?.is_role),
       quality_score: Number.isFinite(scoreValue) ? scoreValue : null,
       note: "Abstract APIの結果です。メールアドレスは判定のため外部サービスへ送信されます。SMTP判定も受信箱の存在を完全に保証するものではありません。"
     };
