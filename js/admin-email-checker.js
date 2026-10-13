@@ -40,12 +40,14 @@
       const {data,error} = await db.functions.invoke("owner-email-checker", {body:{email}});
       if (error) throw error;
       if (data?.error) {
-        const messages = {OWNER_ONLY:"オーナー権限がありません。",AUTH_REQUIRED:"ログインしてください。",INVALID_SESSION:"セッションが切れています。再ログインしてください。",INVALID_EMAIL:"メールアドレスの形式を確認してください。",CHECK_FAILED:"チェックに失敗しました。時間をおいて再試行してください。"};
+        const messages = {OWNER_ONLY:"オーナー権限がありません。",OWNER_CHECK_FAILED:"オーナー権限の確認に失敗しました。",AUTH_REQUIRED:"ログインしてください。",INVALID_SESSION:"セッションが切れています。再ログインしてください。",INVALID_EMAIL:"メールアドレスの形式を確認してください。",CHECK_FAILED:"チェックに失敗しました。時間をおいて再試行してください。"};
         throw new Error(messages[data.error] || "判定に失敗しました。");
       }
       const r = data.result;
       if (!r) throw new Error("判定結果を取得できませんでした。");
       const yesNo = value => value === true ? "確認できました" : value === false ? "確認できません" : "判定不能";
+      const mxLabel = r.mx_found === true ? "MXレコードあり" : r.mx_found === false ? "MXレコードなし／確認できず" : "判定不能";
+      const domainLabel = r.domain_resolves === true ? "DNSで確認できました" : r.domain_resolves === false ? "ドメインが見つかりません" : "判定不能";
       const disposable = r.disposable === "yes" ? ["使い捨ての可能性が高い","bad"] : r.disposable === "no" ? ["リスト上では検出なし","good"] : ["判定不能","warn"];
       resultBox.innerHTML = '<h2>判定結果</h2><p class="email-checker-domain">'+esc(r.domain || "")+'</p>' +
         item("メール形式", r.format_valid ? "形式は有効" : "形式が無効", r.format_valid ? "good" : "bad") +
