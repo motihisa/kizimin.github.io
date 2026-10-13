@@ -115,7 +115,7 @@ type AbstractCheck = {
 };
 
 async function checkWithAbstract(email: string): Promise<AbstractCheck> {
-  const apiKey = Deno.env.get("ABSTRACT_API_KEY");
+  const apiKey = Deno.env.get("ABSTRACT_API_KEY")?.trim() || undefined;
   const base: AbstractCheck = {
     configured: Boolean(apiKey), checked: false, deliverability: null,
     smtp_valid: null, mx_valid: null, disposable: null, catchall: null,
