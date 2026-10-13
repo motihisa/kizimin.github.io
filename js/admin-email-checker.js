@@ -62,6 +62,19 @@
         item("SPFレコード数", spfMultiple, r.spf_multiple === true ? "warn" : "") +
         item("DMARC（なりすまし対策）", dmarcLabel + dmarcPolicy, r.dmarc_found === true ? "good" : "warn") +
         item("ロール系アドレス", r.role_based ? "該当の可能性あり" : "該当パターンなし", r.role_based ? "warn" : "") +
+        (() => {
+          const a = r.abstract_api || {};
+          const state = !a.configured ? "未設定（従来の判定のみ）" : !a.checked ? "APIに接続できず／上限の可能性" : "外部APIで判定済み";
+          const tone = !a.configured ? "warn" : !a.checked ? "warn" : "good";
+          const boolLabel = v => v === true ? "はい" : v === false ? "いいえ" : "判定不能";
+          const score = typeof a.quality_score === "number" ? Math.round(a.quality_score * 100) + "%" : "判定不能";
+          return item("Abstract API", state, tone) +
+            (a.checked ? item("受信可能性の目安", a.deliverability || "判定不能", a.deliverability === "deliverable" ? "good" : "warn") +
+              item("SMTP確認", boolLabel(a.smtp_valid), a.smtp_valid === true ? "good" : "warn") +
+              item("外部APIの使い捨て判定", boolLabel(a.disposable), a.disposable === true ? "bad" : a.disposable === false ? "good" : "warn") +
+              item("外部APIの品質スコア", score, "") : "") +
+            (a.note ? '<p class="email-checker-note">' + esc(a.note) + '</p>' : "");
+        })() +
         '<p class="email-checker-note">'+esc(r.note || "")+'</p>';
       resultBox.classList.remove("hidden");
     } catch (error) {
