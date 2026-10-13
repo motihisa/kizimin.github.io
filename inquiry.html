@@ -25,14 +25,26 @@ const $=id=>document.getElementById(id); const friendlyError=e=>/permission deni
  if(data.session){ $("email").value=data.session.user.email||""; }
 })();
 $("send").onclick=async()=>{
- const subject=$("subject").value.trim(), message=$("messageText").value.trim();
+ const subject=$("subject").value.trim(), message=$("messageText").value.trim(), email=$("email").value.trim();
  if(!subject||!message){$("result").textContent="件名と内容を入力してください。";return;}
  $("send").disabled=true;
- const {data:{session}}=await sb.auth.getSession();
- const {error}=await sb.from("inquiries").insert({user_id:session?.user?.id||null,name:$("name").value.trim()||null,email:$("email").value.trim()||null,subject,message});
- $("result").textContent=error?friendlyError(error):"問い合わせを送信しました。";
- if(!error){$("subject").value="";$("messageText").value="";}
- $("send").disabled=false;
+ try{
+  if(email){
+   const {data:check,error:checkError}=await sb.functions.invoke("signup-email-check",{body:{email}});
+   if(checkError)console.warn("問い合わせメール検証を利用できませんでした。");
+   if(check?.result?.is_disposable===true){
+    $("result").textContent="使い捨てメールアドレスはお問い合わせに使用できません。通常のメールアドレスを入力してください。";
+    return;
+   }
+  }
+  const {data:{session}}=await sb.auth.getSession();
+  const {error}=await sb.from("inquiries").insert({user_id:session?.user?.id||null,name:$("name").value.trim()||null,email:email||null,subject,message});
+  $("result").textContent=error?friendlyError(error):"問い合わせを送信しました。";
+  if(!error){$("subject").value="";$("messageText").value="";}
+ }catch(error){
+  console.error("問い合わせ送信エラー:",error);
+  $("result").textContent="問い合わせの送信に失敗しました。時間をおいて再度お試しください。";
+ }finally{$("send").disabled=false;}
 };
 </script>
 <script src="js/access.js"></script>
