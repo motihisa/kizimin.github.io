@@ -28,8 +28,17 @@ form.addEventListener("submit",async e=>{
   e.preventDefault();submit.disabled=true;submit.textContent="送信中…";status.textContent="";
   try{
     const {data:{session}}=await sb.auth.getSession();
-    const payload={name:document.getElementById("contact-name").value.trim()||null,email:document.getElementById("contact-email").value.trim()||null,subject:document.getElementById("contact-subject").value.trim(),message:document.getElementById("contact-message").value.trim()};
+    const email=document.getElementById("contact-email").value.trim();
+    const payload={name:document.getElementById("contact-name").value.trim()||null,email:email||null,subject:document.getElementById("contact-subject").value.trim(),message:document.getElementById("contact-message").value.trim()};
     if(!payload.subject||!payload.message)throw new Error("件名と内容を入力してください。");
+    if(email){
+      const {data:check,error:checkError}=await sb.functions.invoke("signup-email-check",{body:{email}});
+      if(checkError)console.warn("お問い合わせメール検証を利用できませんでした。");
+      if(check?.result?.is_disposable===true){
+        status.textContent="使い捨てメールアドレスはお問い合わせに使用できません。通常のメールアドレスを入力してください。";
+        return;
+      }
+    }
     if(session?.user?.id)payload.user_id=session.user.id;
     const {error}=await sb.from("inquiries").insert(payload);
     if(error)throw error;
