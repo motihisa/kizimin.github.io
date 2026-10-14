@@ -19,13 +19,14 @@
 const baseUrl = String(process.env.SUPABASE_URL || "").replace(/\/$/, "");
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const enabled = String(process.env.BOT_ENABLED || "true").toLowerCase() === "true";
-const autoSuspend = String(process.env.BOT_AUTO_SUSPEND || "false").toLowerCase() === "true";
+let autoSuspend = false; // Enabled only by the admin-saved Supabase policy.
 const batchLimit = Math.max(10, Math.min(500, Number(process.env.BOT_BATCH_LIMIT) || 100));
-const suspendThreshold = Math.max(2, Math.min(10, Number(process.env.BOT_SUSPEND_THRESHOLD) || 3));
-const suspendMinutes = Math.max(15, Math.min(1440, Number(process.env.BOT_SUSPEND_MINUTES) || 60));
+let suspendThreshold = Math.max(2, Math.min(10, Number(process.env.BOT_SUSPEND_THRESHOLD) || 3));
+let suspendMinutes = Math.max(15, Math.min(1440, Number(process.env.BOT_SUSPEND_MINUTES) || 60));
+let windowHours = 24;
 const nowDate = new Date();
 const now = nowDate.toISOString();
-const windowStart = new Date(nowDate.getTime() - 24 * 60 * 60 * 1000).toISOString();
+let windowStart = new Date(nowDate.getTime() - windowHours * 60 * 60 * 1000).toISOString();
 
 if (!enabled) {
   console.log(JSON.stringify({ bot: "kizimin-composite", status: "disabled", at: now }));
