@@ -62,7 +62,20 @@ async function main(req: Request) {
   if (authError || !authData.user) return json({ error: "INVALID_SESSION" }, 401);
 
   const userId = authData.user.id;
-  const { data: profile } = await admin.from("profiles").select("role,account_status").eq("id", userId).maybeSingle();
+  const { data: profile, error: profileError } = await admin
+    .from("profiles")
+    .select("role,account_status")
+    .eq("id", userId)
+    .maybeSingle();
+
+  // Enforce account restrictions before any privileged content or DM action.
+  if (profileError) {
+    console.error("secure-content account status lookup failed:", profileError.message);
+    return json({ error: "ACCOUNT_STATUS_CHECK_FAILED" }, 500);
+  }
+  if (!profile || (profile.account_status || "active") !== "active") {
+    return json({ error: "ACCOUNT_RESTRICTED" }, 403);
+  }
   const { data: actorOwnerRow, error: actorOwnerError } = await admin.from("site_owners")
     .select("user_id").eq("user_id", userId).maybeSingle();
   const isOwner = !actorOwnerError && !!actorOwnerRow;
