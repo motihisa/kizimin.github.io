@@ -6,6 +6,7 @@
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
   const $ = (id) => document.getElementById(id);
   let currentAdminRole = "user";
+  let currentEffectivePermissions = new Set();
 
   const esc = (v) => String(v ?? "").replace(/[&<>"']/g, c => ({
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
@@ -73,15 +74,35 @@
     const { data: ownerFlag, error: ownerFlagError } = await supabase.rpc("is_site_owner");
     const isOwner = !ownerFlagError && ownerFlag === true;
 
-    if (!["admin","moderator"].includes(profile.role) && !isOwner) {
+    const { data: effectiveRows, error: effectiveError } = await supabase.rpc("get_my_effective_permissions");
+    if (effectiveError) {
+      console.error("個別権限の確認に失敗しました", effectiveError);
+      currentEffectivePermissions = new Set();
+    } else {
+      currentEffectivePermissions = new Set((effectiveRows || []).filter(row => row.allowed === true).map(row => row.permission_key));
+    }
+    const isStaffRole = ["admin","moderator"].includes(profile.role) || isOwner;
+    const userUsablePermissions = ["moderate_comments","manage_reports","manage_inquiries","broadcast_notifications"];
+    if (!isStaffRole && !userUsablePermissions.some(key => currentEffectivePermissions.has(key))) {
       forbidden(
         "管理画面へのアクセスが拒否されました。",
-        "現在のKiziminプロフィール権限: " + (profile.role || "不明") + " / ログインユーザーID: " + userId
+        "このアカウントには管理画面で利用できる個別権限が設定されていません。"
       );
       return false;
     }
 
     currentAdminRole = isOwner ? "owner" : profile.role;
+    const viewPermission = {
+      dashboard: null, users: null, articles: null, permissions: null,
+      comments: "moderate_comments", reports: "manage_reports",
+      inquiries: "manage_inquiries", notifications: "broadcast_notifications"
+    };
+    document.querySelectorAll(".admin-nav [data-view]").forEach(button => {
+      const key = button.dataset.view;
+      const allowed = isStaffRole || (viewPermission[key] && currentEffectivePermissions.has(viewPermission[key]));
+      button.classList.toggle("hidden", !allowed);
+      document.getElementById("view-" + key)?.classList.toggle("hidden", !allowed);
+    });
     document.querySelector('a[href="admin-site-editor.html"]')?.classList.toggle("hidden", !isOwner);
     document.querySelector(".owner-only-email-tool")?.classList.toggle("hidden", !isOwner);
     document.querySelector('.admin-nav [data-view="permissions"]')?.classList.toggle("hidden", !isOwner);
@@ -1221,8 +1242,9 @@
     });
 
     const hash = location.hash.slice(1);
-    const initial = viewMeta[hash] ? hash : "dashboard";
-    const button = document.querySelector('.admin-nav [data-view="' + initial + '"]');
+    const requested = viewMeta[hash] ? hash : "dashboard";
+    const button = document.querySelector('.admin-nav [data-view="' + requested + '"]:not(.hidden)')
+      || document.querySelector('.admin-nav [data-view]:not(.hidden)');
     button?.click();
   }
 
