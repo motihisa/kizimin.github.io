@@ -8,11 +8,12 @@
  * Optional:
  *   BOT_ENABLED=true
  *   BOT_BATCH_LIMIT=100
- *   BOT_AUTO_SUSPEND=false       Must be explicitly enabled in Render
+ *   BOT_AUTO_SUSPEND=false       Must be true in Render AND enabled in admin policy
  *   BOT_SUSPEND_THRESHOLD=3      Suspicious visible posts per user in 24 hours
  *   BOT_SUSPEND_MINUTES=60       Temporary suspension duration (15-1440)
  *
- * Detection runs read-only unless BOT_AUTO_SUSPEND=true. When enabled, the
+ * Detection runs read-only unless BOT_AUTO_SUSPEND=true AND the saved admin
+ * policy mode is auto_suspend. Both gates are required. When enabled, the
  * worker only updates profiles for role=user and account_status=active.
  * It never deletes content, changes admin/moderator accounts, collects IPs,
  * or overrides an existing ban/suspension.
@@ -20,7 +21,8 @@
 const baseUrl = String(process.env.SUPABASE_URL || "").replace(/\/$/, "");
 const serviceKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 const enabled = String(process.env.BOT_ENABLED || "true").toLowerCase() === "true";
-let autoSuspend = false; // Enabled only by the admin-saved Supabase policy.
+const envAllowsAutoSuspend = String(process.env.BOT_AUTO_SUSPEND || "false").toLowerCase() === "true";
+let autoSuspend = false; // Both Render environment and saved admin policy must enable it.
 const batchLimit = Math.max(10, Math.min(500, Number(process.env.BOT_BATCH_LIMIT) || 100));
 let suspendThreshold = Math.max(2, Math.min(10, Number(process.env.BOT_SUSPEND_THRESHOLD) || 3));
 let suspendMinutes = Math.max(15, Math.min(1440, Number(process.env.BOT_SUSPEND_MINUTES) || 60));
@@ -58,7 +60,7 @@ try {
   if (!settingsResponse.ok) throw new Error(`HTTP ${settingsResponse.status}`);
   const rows = await settingsResponse.json();
   const settings = rows?.[0]?.settings || {};
-  autoSuspend = settings.mode === "auto_suspend";
+  autoSuspend = envAllowsAutoSuspend && settings.mode === "auto_suspend";
   suspendThreshold = Math.max(2, Math.min(10, Number(settings.threshold) || 3));
   suspendMinutes = Math.max(15, Math.min(1440, Number(settings.suspend_minutes) || 60));
   windowHours = Math.max(1, Math.min(168, Number(settings.window_hours) || 24));
@@ -198,14 +200,14 @@ await Promise.all([
   }, { created_at: `gte.${windowStart}`, status: "eq.visible" }),
   safeScan("articles", "id,author_id,title,excerpt,content,status,created_at", rows => {
     for (const row of rows) {
-      if (!row.created_at || row.created_at < windowStart) continue;
+      if (row.status !== "visible" || !row.created_at || row.created_at < windowStart) continue;
       const reason = spamReason([row.title, row.excerpt, row.content].filter(Boolean).join("\n"));
       if (reason) {
         counts.suspiciousArticles++;
         noteSuspicious(row.author_id, "article", row.id, `${reason}: ${row.title || "タイトルなし"}`);
       }
     }
-  }, { created_at: `gte.${windowStart}` })
+  }, { created_at: `gte.${windowStart}`, status: "eq.visible" })
 ]);
 
 await suspendEligibleUsers();
