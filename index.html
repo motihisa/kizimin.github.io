@@ -8,7 +8,7 @@
   <title>Kizimin</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/features.css">
-  <link rel="stylesheet" href="css/site-features.css">
+  <link rel="stylesheet" href="css/site-features.css?v=20261014-home-layout1">
 </head>
 <body class="home-page">
   <header class="header">
@@ -33,6 +33,10 @@
     <section class="hero">
       <h1>好きなことを、<br>好きなように書こう。</h1>
       <p>Kiziminは、記事を読んだり、書いたりできる場所です。</p>
+      <div class="hero-actions">
+        <button id="write-button" class="write-button" type="button">✍️ 記事を書く</button>
+        <a class="hero-secondary" href="#latest">記事を読む <span aria-hidden="true">↓</span></a>
+      </div>
     </section>
 
     <section id="home-announcements" class="site-widget home-announcements" aria-labelledby="announcements-heading">
@@ -62,10 +66,13 @@
       </div>
 
       <aside class="sidebar">
-        <div class="side-card">
-          <h2>記事を書いてみよう</h2>
-          <p>あなたの知っていること、考えたこと、好きなことを文章にできます。</p>
-          <button id="write-button" class="write-button" type="button">記事を書く</button>
+        <div class="side-card community-shortcuts">
+          <h2>コミュニティ</h2>
+          <p>読むだけでも、参加してもOK。</p>
+          <a href="#community-qa">🧩 質問・回答 <span>›</span></a>
+          <a href="#community-polls">📊 みんなの投票 <span>›</span></a>
+          <a href="#community-challenges">🎯 チャレンジ <span>›</span></a>
+          <a href="#community-library">📚 情報ライブラリ <span>›</span></a>
         </div>
 
         <div class="categories" id="categories">
