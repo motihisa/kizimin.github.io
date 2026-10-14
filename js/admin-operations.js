@@ -29,8 +29,10 @@ async function guard() {
   if(pe && !isOwner) { console.error("運営ツール: 権限確認失敗",pe,ownerCheckError); showDenied("プロフィールの権限確認に失敗しました。"); return false; }
   if(!p && !isOwner) { showDenied("プロフィールが取得できず、オーナー確認にも失敗しました。"); return false; }
   if(p?.account_status && p.account_status!=="active") { showDenied("このアカウントは利用できません。"); return false; }
-  if(!isOwner && !["admin","moderator"].includes(p?.role)) { showDenied("管理者またはオーナーのみ利用できます。"); return false; }
-  role=isOwner?"owner":p.role;
+  const {data:effectivePermissions,error:permissionError}=await db.rpc("get_my_effective_permissions");
+  const canViewLogs=!permissionError&&(effectivePermissions||[]).some(item=>item.permission_key==="view_logs"&&item.allowed===true);
+  if(!isOwner && !["admin","moderator"].includes(p?.role) && !canViewLogs) { showDenied("管理者・オーナー、または監査ログ閲覧権限が必要です。"); return false; }
+  role=isOwner?"owner":canViewLogs&&!["admin","moderator"].includes(p?.role)?"view_logs":p.role;
   $("ops-loading")?.classList.add("hidden"); $("ops-app")?.classList.remove("hidden"); const authState=$("ops-auth-state"); if(authState)authState.textContent=role;
   return true;
  } catch(e) { console.error(e); showDenied("管理者権限の確認に失敗しました。"); return false; }
