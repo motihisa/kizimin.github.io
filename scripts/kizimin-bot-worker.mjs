@@ -1,5 +1,5 @@
 /**
- * Kizimin read-only background moderation worker for Render Cron Jobs.
+ * Kizimin background moderation worker for Render Cron Jobs.
  *
  * Required Render environment variables:
  *   SUPABASE_URL
@@ -7,17 +7,28 @@
  * Optional:
  *   BOT_ENABLED=true
  *   BOT_BATCH_LIMIT=100
+ *   BOT_AUTO_SUSPEND=false       Must be explicitly enabled in Render
+ *   BOT_SUSPEND_THRESHOLD=3      Suspicious visible posts per user in 24 hours
+ *   BOT_SUSPEND_MINUTES=60       Temporary suspension duration (15-1440)
  *
- * This worker only performs GET requests against Supabase REST. It never deletes,
- * updates, bans, collects IPs, or sends user notifications. Findings go to Render logs.
+ * Detection runs read-only unless BOT_AUTO_SUSPEND=true. When enabled, the
+ * worker only updates profiles for role=user and account_status=active.
+ * It never deletes content, changes admin/moderator accounts, collects IPs,
+ * or overrides an existing ban/suspension.
  */
 const baseUrl = String(process.env.SUPABASE_URL || "").replace(/\/$/, "");
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const enabled = String(process.env.BOT_ENABLED || "true").toLowerCase() === "true";
+const autoSuspend = String(process.env.BOT_AUTO_SUSPEND || "false").toLowerCase() === "true";
 const batchLimit = Math.max(10, Math.min(500, Number(process.env.BOT_BATCH_LIMIT) || 100));
+const suspendThreshold = Math.max(2, Math.min(10, Number(process.env.BOT_SUSPEND_THRESHOLD) || 3));
+const suspendMinutes = Math.max(15, Math.min(1440, Number(process.env.BOT_SUSPEND_MINUTES) || 60));
+const nowDate = new Date();
+const now = nowDate.toISOString();
+const windowStart = new Date(nowDate.getTime() - 24 * 60 * 60 * 1000).toISOString();
 
 if (!enabled) {
-  console.log(JSON.stringify({ bot: "kizimin-composite", status: "disabled", at: new Date().toISOString() }));
+  console.log(JSON.stringify({ bot: "kizimin-composite", status: "disabled", at: now }));
   process.exit(0);
 }
 if (!baseUrl || !serviceKey) {
@@ -34,16 +45,24 @@ const headers = {
   Authorization: `Bearer ${serviceKey}`,
   Accept: "application/json"
 };
-const now = new Date().toISOString();
 const findings = [];
 const errors = [];
-const counts = { openReports: 0, openInquiries: 0, suspiciousComments: 0, suspiciousArticles: 0 };
+const counts = {
+  openReports: 0,
+  openInquiries: 0,
+  suspiciousComments: 0,
+  suspiciousArticles: 0,
+  suspensionCandidates: 0,
+  suspendedUsers: 0
+};
+const suspiciousByAuthor = new Map();
 
-async function readTable(table, columns) {
+async function readTable(table, columns, filters = {}) {
   const url = new URL(`${baseUrl}/rest/v1/${table}`);
   url.searchParams.set("select", columns);
   url.searchParams.set("order", "created_at.desc");
   url.searchParams.set("limit", String(batchLimit));
+  for (const [key, value] of Object.entries(filters)) url.searchParams.set(key, value);
   const response = await fetch(url, { method: "GET", headers, signal: AbortSignal.timeout(20000) });
   if (!response.ok) {
     const body = (await response.text()).slice(0, 400);
@@ -69,10 +88,64 @@ function spamReason(value) {
 function add(level, category, id, summary) {
   findings.push({ level, category, id: String(id ?? ""), summary: String(summary).slice(0, 300) });
 }
-async function safeScan(table, columns, callback) {
-  try { await callback(await readTable(table, columns)); }
+function noteSuspicious(authorId, category, id, reason) {
+  if (!authorId) return;
+  const entry = suspiciousByAuthor.get(String(authorId)) || { ids: [], categories: new Set() };
+  entry.ids.push(String(id));
+  entry.categories.add(category);
+  suspiciousByAuthor.set(String(authorId), entry);
+  add("review", category, id, reason);
+}
+async function safeScan(table, columns, callback, filters = {}) {
+  try { await callback(await readTable(table, columns, filters)); }
   catch (error) { errors.push(error.message); }
 }
+async function suspendEligibleUsers() {
+  if (!autoSuspend) return;
+  const candidates = [...suspiciousByAuthor.entries()]
+    .filter(([, entry]) => entry.ids.length >= suspendThreshold);
+  counts.suspensionCandidates = candidates.length;
+  for (const [userId, entry] of candidates) {
+    try {
+      const url = new URL(`${baseUrl}/rest/v1/profiles`);
+      url.searchParams.set("id", `eq.${userId}`);
+      url.searchParams.set("role", "eq.user");
+      url.searchParams.set("account_status", "eq.active");
+      const expiresAt = new Date(Date.now() + suspendMinutes * 60 * 1000).toISOString();
+      const response = await fetch(url, {
+        method: "PATCH",
+        headers: {
+          ...headers,
+          "Content-Type": "application/json",
+          Prefer: "return=representation"
+        },
+        body: JSON.stringify({
+          account_status: "suspended",
+          ban_reason: `自動モデレーション: 24時間以内に不審な投稿を${entry.ids.length}件検知`,
+          ban_expires_at: expiresAt,
+          updated_at: now
+        }),
+        signal: AbortSignal.timeout(20000)
+      });
+      if (!response.ok) {
+        const body = (await response.text()).slice(0, 400);
+        errors.push(`profile suspension failed for ${userId}: HTTP ${response.status} ${body}`);
+        continue;
+      }
+      const updated = await response.json();
+      if (Array.isArray(updated) && updated.length === 1) {
+        counts.suspendedUsers++;
+        add("high", "auto-suspension", userId,
+          `自動一時停止: ${suspendMinutes}分、検知投稿${entry.ids.length}件（${[...entry.categories].join("/")})`);
+      }
+      // No returned row means the profile was not an active ordinary user;
+      // leave existing status and privileged accounts untouched.
+    } catch (error) {
+      errors.push(`profile suspension failed for ${userId}: ${error.message}`);
+    }
+  }
+}
+
 await Promise.all([
   safeScan("reports", "id,reason,status,created_at", rows => {
     for (const row of rows.filter(r => isOpen(r.status))) {
@@ -86,9 +159,10 @@ await Promise.all([
       add("medium", "inquiry", row.id, `未対応の問い合わせ: ${row.subject || "件名なし"}`);
     }
   }),
-  safeScan("comments", "id,content,status,created_at", rows => {
+  safeScan("comments", "id,author_id,content,status,created_at", rows => {
     const seen = new Set();
     for (const row of rows) {
+      if (row.status !== "visible" || !row.created_at || row.created_at < windowStart) continue;
       const text = String(row.content || "");
       const reason = spamReason(text);
       const fingerprint = text.toLowerCase().replace(/\s+/g, " ").trim();
@@ -96,25 +170,30 @@ await Promise.all([
       if (fingerprint.length >= 20) seen.add(fingerprint);
       if (reason || repeated) {
         counts.suspiciousComments++;
-        add("review", "comment", row.id, repeated ? "別のコメントと本文が一致しています" : reason);
+        noteSuspicious(row.author_id, "comment", row.id,
+          repeated ? "別のコメントと本文が一致しています" : reason);
       }
     }
-  }),
-  safeScan("articles", "id,title,excerpt,content,status,created_at", rows => {
+  }, { created_at: `gte.${windowStart}`, status: "eq.visible" }),
+  safeScan("articles", "id,author_id,title,excerpt,content,status,created_at", rows => {
     for (const row of rows) {
+      if (!row.created_at || row.created_at < windowStart) continue;
       const reason = spamReason([row.title, row.excerpt, row.content].filter(Boolean).join("\n"));
       if (reason) {
         counts.suspiciousArticles++;
-        add("review", "article", row.id, `${reason}: ${row.title || "タイトルなし"}`);
+        noteSuspicious(row.author_id, "article", row.id, `${reason}: ${row.title || "タイトルなし"}`);
       }
     }
-  })
+  }, { created_at: `gte.${windowStart}` })
 ]);
 
+await suspendEligibleUsers();
 const result = {
   bot: "kizimin-composite",
   status: errors.length ? "partial" : "ok",
   at: now,
+  autoSuspend,
+  policy: { threshold: suspendThreshold, windowHours: 24, suspensionMinutes: suspendMinutes },
   counts,
   findingCount: findings.length,
   findings: findings.slice(0, 100),
