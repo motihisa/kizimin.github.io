@@ -37,6 +37,33 @@
   <p class="text-muted" style="margin:8px 0 0;font-size:13px">アカウント作成には、両方への同意が必要です。</p>
 </div>
 
+<div id="accountTypeGroup" class="form-group hidden">
+  <label class="form-label" for="accountType">作成するアカウント</label>
+  <select id="accountType" class="form-input">
+    <option value="personal">個人アカウント</option>
+    <option value="organization">団体アカウント（審査あり）</option>
+  </select>
+  <p class="text-muted" style="font-size:13px;margin-top:6px">団体アカウントは登録と同時に申請できます。承認されるまでは団体名義で投稿できません。</p>
+</div>
+
+<div id="organizationFields" class="form-group hidden" style="padding:16px;border:1px solid #ddd;border-radius:12px;background:#fafafa">
+  <h2 style="font-size:17px;margin:0 0 12px">団体情報</h2>
+  <label class="form-label" for="orgName">団体名</label>
+  <input id="orgName" class="form-input" maxlength="120" placeholder="団体・サークル名">
+  <label class="form-label" for="orgType" style="margin-top:12px">団体の種類</label>
+  <select id="orgType" class="form-input">
+    <option value="company">企業・事業者</option><option value="school">学校・教育関係</option><option value="circle">サークル・グループ</option><option value="community">オンラインコミュニティ</option><option value="individual">個人運営の団体</option><option value="other">その他</option>
+  </select>
+  <label class="form-label" for="orgRepresentative" style="margin-top:12px">代表者名</label>
+  <input id="orgRepresentative" class="form-input" maxlength="100" placeholder="代表者の氏名・活動名">
+  <label class="form-label" for="orgContactEmail" style="margin-top:12px">連絡用メールアドレス</label>
+  <input id="orgContactEmail" class="form-input" type="email" maxlength="254" placeholder="連絡を受け取れるメールアドレス">
+  <label class="form-label" for="orgWebsite" style="margin-top:12px">公式サイト（任意）</label>
+  <input id="orgWebsite" class="form-input" type="url" maxlength="500" placeholder="https://example.com">
+  <label class="form-label" for="orgDescription" style="margin-top:12px">団体の説明</label>
+  <textarea id="orgDescription" class="form-input" maxlength="3000" rows="4" placeholder="活動内容や団体の目的"></textarea>
+</div>
+
 <button id="submit" class="write-button" type="button">ログイン</button>
 <button id="switch" class="login" style="width:100%;margin-top:10px" type="button">アカウントを作成する</button>
 <p id="message" class="text-muted"></p>
@@ -57,8 +84,50 @@ const switchButton = document.querySelector("#switch");
 const confirmGroup = document.querySelector("#confirmGroup");
 const legalConsentGroup = document.querySelector("#legalConsentGroup");
 const legalConsent = document.querySelector("#legalConsent");
+const accountTypeGroup = document.querySelector("#accountTypeGroup");
+const accountType = document.querySelector("#accountType");
+const organizationFields = document.querySelector("#organizationFields");
 const message = document.querySelector("#message");
 let signupMode = false;
+
+function updateAccountTypeFields() {
+  const isOrganization = signupMode && accountType.value === "organization";
+  organizationFields.classList.toggle("hidden", !isOrganization);
+  ["orgName", "orgRepresentative", "orgContactEmail"].forEach(id => {
+    document.getElementById(id).required = isOrganization;
+  });
+  if (isOrganization && !document.querySelector("#orgContactEmail").value.trim()) {
+    document.querySelector("#orgContactEmail").value = document.querySelector("#email").value.trim();
+  }
+}
+
+function getOrganizationApplication() {
+  return {
+    organization_name: document.querySelector("#orgName").value.trim(),
+    organization_type: document.querySelector("#orgType").value,
+    representative_name: document.querySelector("#orgRepresentative").value.trim(),
+    contact_email: document.querySelector("#orgContactEmail").value.trim(),
+    website: document.querySelector("#orgWebsite").value.trim() || null,
+    description: document.querySelector("#orgDescription").value.trim()
+  };
+}
+
+async function submitPendingOrganizationApplication(user) {
+  const key = "kizimin:pending-organization-application";
+  let pending;
+  try { pending = JSON.parse(localStorage.getItem(key) || "null"); } catch { pending = null; }
+  if (!pending || !user?.id || String(pending.email || "").toLowerCase() !== String(user.email || "").toLowerCase()) return;
+  const { data: existing, error: existingError } = await sb.from("organization_applications")
+    .select("id").eq("applicant_id", user.id).eq("status", "pending").limit(1);
+  if (existingError) throw existingError;
+  if (!existing?.length) {
+    const { error } = await sb.from("organization_applications").insert({
+      applicant_id: user.id, ...pending.application, status: "pending"
+    });
+    if (error) throw error;
+  }
+  localStorage.removeItem(key);
+}
 
 function getPostAuthDestination() {
   const next = new URLSearchParams(location.search).get("next");
@@ -86,7 +155,9 @@ function setMode(isSignup) {
   switchButton.textContent = isSignup ? "ログインに戻る" : "アカウントを作成する";
   confirmGroup.classList.toggle("hidden", !isSignup);
   legalConsentGroup.classList.toggle("hidden", !isSignup);
+  accountTypeGroup.classList.toggle("hidden", !isSignup);
   if (!isSignup) legalConsent.checked = false;
+  updateAccountTypeFields();
   setMessage("");
 }
 
@@ -115,8 +186,15 @@ submit.addEventListener("click", async () => {
 
   try {
     if (!signupMode) {
-      const { error } = await sb.auth.signInWithPassword({ email, password });
+      const { data: loginData, error } = await sb.auth.signInWithPassword({ email, password });
       if (error) throw error;
+      try {
+        await submitPendingOrganizationApplication(loginData.user);
+      } catch (applicationError) {
+        console.error("団体申請の送信に失敗しました:", applicationError);
+        setMessage("ログインしましたが、団体申請を送信できませんでした。団体アカウント画面から申請してください。");
+        return;
+      }
       location.href = getPostAuthDestination();
       return;
     }
@@ -167,8 +245,45 @@ submit.addEventListener("click", async () => {
       setMessage("メール判定サービスに接続できなかったため、確認を省略して登録を続行します。");
     }
 
+    const isOrganization = accountType.value === "organization";
+    const organizationApplication = isOrganization ? getOrganizationApplication() : null;
+    if (isOrganization) {
+      if (!organizationApplication.organization_name || !organizationApplication.representative_name || !organizationApplication.contact_email) {
+        setMessage("団体名・代表者名・連絡用メールアドレスを入力してください。");
+        return;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(organizationApplication.contact_email)) {
+        setMessage("連絡用メールアドレスの形式を確認してください。");
+        return;
+      }
+      if (organizationApplication.website && !/^https?:\/\//i.test(organizationApplication.website)) {
+        setMessage("公式サイトは https:// から始まるURLを入力してください。");
+        return;
+      }
+    }
+
     const { data, error } = await sb.auth.signUp({ email, password });
     if (error) throw error;
+
+    if (isOrganization) {
+      const pending = { email, application: organizationApplication };
+      if (data.session && data.user) {
+        const { error: applicationError } = await sb.from("organization_applications").insert({
+          applicant_id: data.user.id, ...organizationApplication, status: "pending"
+        });
+        if (applicationError) {
+          console.error("団体申請エラー:", applicationError);
+          setMessage("アカウントは作成されましたが、団体申請を送信できませんでした。ログイン後、団体アカウント画面から申請してください。");
+          return;
+        }
+        setMessage("アカウントと団体申請を作成しました。管理者の審査結果をお待ちください。");
+        location.href = "organization.html";
+      } else {
+        localStorage.setItem("kizimin:pending-organization-application", JSON.stringify(pending));
+        setMessage("アカウントを作成しました。確認メールで認証した後、このメールアドレスでログインすると団体申請が自動送信されます。");
+      }
+      return;
+    }
 
     if (data.session) {
       setMessage("アカウントを作成しました。");
@@ -184,6 +299,11 @@ submit.addEventListener("click", async () => {
 });
 
 switchButton.addEventListener("click", () => setMode(!signupMode));
+accountType.addEventListener("change", updateAccountTypeFields);
+document.querySelector("#email").addEventListener("input", () => {
+  const contact = document.querySelector("#orgContactEmail");
+  if (!contact.value.trim()) contact.value = document.querySelector("#email").value.trim();
+});
 
 sb.auth.getSession().then(({ data }) => {
   if (data.session) location.href = getPostAuthDestination();
