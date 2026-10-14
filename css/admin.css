@@ -593,3 +593,18 @@ button:focus-visible,a:focus-visible{outline:3px solid rgba(143,118,236,.65);out
   #view-inquiries .admin-table{width:1050px;min-width:1050px}
   #view-inquiries .admin-table th,#view-inquiries .admin-table td{padding:10px}
 }
+
+
+/* Individual user permission overrides */
+.user-permission-panel{background:#fbfcff;border:1px solid #dce6f4}
+.user-permission-target-label{display:grid;gap:7px;max-width:620px;margin:4px 0 14px;color:#31415d;font-size:13px}
+.user-permission-target-label select{width:100%;min-height:44px;padding:10px 12px;border:1px solid #d5e0ef;border-radius:11px;background:#fff;color:#23324b;font:inherit}
+#user-permission-notice{margin:0 0 12px}
+.user-permission-empty{padding:22px;border:1px dashed #cbd7e8;border-radius:12px;background:#fff;text-align:center}
+.user-permission-table{min-width:620px}
+.user-permission-table select{min-width:190px;max-width:100%;padding:9px 11px;border:1px solid #d5e0ef;border-radius:9px;background:#fff;color:#26354c;font:inherit}
+.user-permission-effective{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:850}
+.user-permission-effective.is-allowed{background:#e4f7ef;color:#147455}
+.user-permission-effective.is-denied{background:#fff0f1;color:#b4233d}
+.user-permission-source{display:block;margin-top:5px;color:#78869b;font-size:10px}
+@media(max-width:650px){.user-permission-panel{padding:14px}.user-permission-table select{min-width:165px}}
