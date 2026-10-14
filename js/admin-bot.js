@@ -8,7 +8,7 @@
   const fmt = value => value ? new Date(value).toLocaleString("ja-JP", {timeZone:"Asia/Tokyo",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit"}) : "日時不明";
   if (!$("view-bot") || !window.supabase?.createClient) return;
   const db = window.supabase.createClient(SUPABASE_URL, PUBLISHABLE_KEY);
-  let userId = null, intervalId = null, running = false, scanInProgress = false, lastAlerts = [], lastRunAt = null;
+  let userId = null, intervalId = null, running = false, scanInProgress = false, pendingRealtimeScan = false, realtimeChannel = null, realtimeTimer = null, lastAlerts = [], lastRunAt = null;
   const defaults = { enabled:false, intervalMinutes:5, reports:true, inquiries:true, comments:true, articles:true };
   const defaultPolicy = { mode:"detect_only", threshold:3, window_hours:24, suspend_minutes:60 };
   let policy = {...defaultPolicy}, policyLoaded = false;
@@ -173,7 +173,43 @@
     } finally {
       scanInProgress=false;
       if(button) button.disabled=false;
+      if(pendingRealtimeScan) {
+        pendingRealtimeScan=false;
+        setTimeout(()=>scan("Supabase Realtime更新"),250);
+      }
     }
+  }
+  function scheduleRealtimeScan() {
+    if(realtimeTimer) clearTimeout(realtimeTimer);
+    realtimeTimer=setTimeout(()=>{
+      realtimeTimer=null;
+      if(scanInProgress) { pendingRealtimeScan=true; return; }
+      scan("Supabase Realtime更新");
+    },700);
+  }
+  function startRealtime() {
+    if(realtimeChannel) return;
+    realtimeChannel=db.channel("kizimin-admin-bot-live-v1");
+    for(const table of ["reports","inquiries","comments","articles"]) {
+      realtimeChannel.on("postgres_changes",{event:"*",schema:"public",table},()=>{
+        scheduleRealtimeScan();
+      });
+    }
+    realtimeChannel.on("postgres_changes",{event:"*",schema:"public",table:"kizimin_bot_settings"},()=>{
+      loadPolicy().catch(error=>{
+        policyLoaded=false;
+        renderPolicy();
+        setStatus("Bot設定のリアルタイム更新に失敗しました: "+error.message,"error");
+      });
+    });
+    realtimeChannel.subscribe(status=>{
+      if(status==="SUBSCRIBED") {
+        setStatus("Supabase Realtime接続済み。通報・問い合わせ・コメント・記事の変更を自動反映します。","success");
+      } else if(status==="CHANNEL_ERROR" || status==="TIMED_OUT" || status==="CLOSED") {
+        setStatus("Supabase Realtimeに接続できません。Supabase側のRealtime公開設定と権限を確認してください。手動チェックは引き続き利用できます。","error");
+        console.warn("[Kizimin Bot] Realtime subscription status:",status);
+      }
+    });
   }
   function renderResults(stats,alerts,reason) {
     const kpis=[
@@ -249,7 +285,9 @@
     renderConfig();renderHistory();
     renderPolicy();
     loadPolicy().catch(error=>{policyLoaded=false;renderPolicy();setStatus(error.message+" 保存済み設定を確認できないため、設定変更を無効にしました。","error");});
+    startRealtime();
     if(config.enabled) { setRunning(true); scan("起動時チェック"); }
+    else scan("初回チェック");
   }
   (async()=>{
     const allowed=await authorize();
@@ -257,5 +295,5 @@
     if(!allowed){nav?.classList.add("hidden");$("view-bot")?.classList.add("hidden");return;}
     bind();
   })().catch(error=>{console.error("Bot権限確認失敗",error);document.querySelector('.admin-nav [data-view="bot"]')?.classList.add("hidden");setStatus("Botの権限確認に失敗しました。再読み込みしてください。","error");});
-  window.addEventListener("beforeunload",()=>{if(intervalId)clearInterval(intervalId);});
+  window.addEventListener("beforeunload",()=>{if(intervalId)clearInterval(intervalId);if(realtimeTimer)clearTimeout(realtimeTimer);if(realtimeChannel)db.removeChannel(realtimeChannel);});
 })();
