@@ -125,3 +125,27 @@ body.admin-page[data-admin-theme="win7"] .admin-theme-picker select{
  body.admin-page[data-admin-theme="win7"] .admin-main{padding:10px}
 }
 @media(max-width:560px){body.admin-page[data-admin-theme="win7"] .admin-theme-picker{width:100%;justify-content:space-between}}
+
+/* Win7 controls override the XP stylesheet's intentionally strong control reset. */
+body.admin-page[data-admin-theme="win7"] select,
+body.admin-page[data-admin-theme="win7"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+body.admin-page[data-admin-theme="win7"] textarea{
+  color:#203c50!important;font:13px "Segoe UI","Yu Gothic UI",Meiryo,sans-serif!important;
+  background-color:#fff!important;border:1px solid #9db8ca!important;border-radius:3px!important;
+  box-shadow:inset 0 1px 2px rgba(37,75,103,.08)!important;
+}
+body.admin-page[data-admin-theme="win7"] select{
+  min-height:27px!important;padding:5px 8px!important;appearance:auto!important;-webkit-appearance:auto!important;
+  background-image:none!important;
+}
+body.admin-page[data-admin-theme="win7"] select:focus,
+body.admin-page[data-admin-theme="win7"] input:focus,
+body.admin-page[data-admin-theme="win7"] textarea:focus{
+  outline:1px solid #67a9d4!important;outline-offset:0!important;border-color:#4b9bca!important;
+}
+body.admin-page[data-admin-theme="win7"] option,
+body.admin-page[data-admin-theme="win7"] optgroup{
+  color:#203c50!important;background:#fff!important;font:13px "Segoe UI","Yu Gothic UI",Meiryo,sans-serif!important;
+}
+body.admin-page[data-admin-theme="win7"] input[type="checkbox"],
+body.admin-page[data-admin-theme="win7"] input[type="radio"]{accent-color:#267fb5!important}
