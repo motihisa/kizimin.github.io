@@ -112,12 +112,9 @@
 
   function updateAccountUI() {
     const status=$("#account-status"),authButton=$("#auth-button"),logout=$("#logout-button");
-    if (!status || !authButton || !logout) return;
-    if (state.session?.user) {
-      status.textContent=state.session.user.email||"ログイン中"; authButton.textContent="アカウント"; logout.classList.remove("hidden");
-    } else {
-      status.textContent="ログインしていません"; authButton.textContent="ログイン"; logout.classList.add("hidden");
-    }
+    if (status) status.textContent=state.session?.user ? (state.session.user.email||"ログイン中") : "ログインしていません";
+    if (authButton) authButton.textContent=state.session?.user ? "アカウント" : "ログイン";
+    if (logout) logout.classList.toggle("hidden",!state.session?.user);
   }
 
   async function init() {
@@ -128,7 +125,7 @@
     $("#article-search")?.addEventListener("input",(event)=>{state.searchQuery=event.target.value;renderArticles();});
     $("#auth-button")?.addEventListener("click",()=>{location.href=state.session?.user?"account.html":"login.html";});
     $("#write-button")?.addEventListener("click",()=>{location.href=state.session?.user?"write.html":"login.html";});
-    $("#logout-button")?.addEventListener("click",async()=>{const {error}=await supabase.auth.signOut();if(error)notice("ログアウトに失敗しました。");else notice("ログアウトしました。");});
+    $("#logout-button")?.addEventListener("click",async()=>{const {error}=await supabase.auth.signOut();if(error)notice("ログアウトに失敗しました。");else{notice("ログアウトしました。");setTimeout(()=>location.href="index.html",500);}});
     await Promise.all([loadCategories(),loadArticles()]);
   }
 
