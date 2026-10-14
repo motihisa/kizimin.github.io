@@ -92,6 +92,7 @@
     }
 
     currentAdminRole = isOwner ? "owner" : profile.role;
+    window.__kiziminCurrentUserRole = currentAdminRole;
     const viewPermission = {
       dashboard: null, users: null, articles: null, permissions: null,
       comments: "moderate_comments", reports: "manage_reports",
