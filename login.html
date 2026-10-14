@@ -116,7 +116,7 @@ async function submitPendingOrganizationApplication(user) {
   const key = "kizimin:pending-organization-application";
   let pending;
   try { pending = JSON.parse(localStorage.getItem(key) || "null"); } catch { pending = null; }
-  if (!pending || !user?.id || String(pending.email || "").toLowerCase() !== String(user.email || "").toLowerCase()) return;
+  if (!pending || !user?.id || String(pending.email || "").toLowerCase() !== String(user.email || "").toLowerCase()) return false;
   const { data: existing, error: existingError } = await sb.from("organization_applications")
     .select("id").eq("applicant_id", user.id).eq("status", "pending").limit(1);
   if (existingError) throw existingError;
@@ -127,6 +127,7 @@ async function submitPendingOrganizationApplication(user) {
     if (error) throw error;
   }
   localStorage.removeItem(key);
+  return true;
 }
 
 function getPostAuthDestination() {
@@ -305,8 +306,15 @@ document.querySelector("#email").addEventListener("input", () => {
   if (!contact.value.trim()) contact.value = document.querySelector("#email").value.trim();
 });
 
-sb.auth.getSession().then(({ data }) => {
-  if (data.session) location.href = getPostAuthDestination();
+sb.auth.getSession().then(async ({ data }) => {
+  if (!data.session) return;
+  try {
+    const submittedOrganizationApplication = await submitPendingOrganizationApplication(data.session.user);
+    location.href = submittedOrganizationApplication ? "organization.html" : getPostAuthDestination();
+  } catch (error) {
+    console.error("団体申請の送信に失敗しました:", error);
+    setMessage("ログイン状態ですが、団体申請を送信できませんでした。団体アカウント画面から申請してください。");
+  }
 });
 </script>
 <script src="js/access.js"></script>
