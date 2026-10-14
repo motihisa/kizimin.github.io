@@ -73,6 +73,13 @@ async function main(req: Request) {
   const hasPermission = async (permissionKey: string) => {
     if (!profile || (profile.account_status || "active") !== "active") return false;
     if (isOwner) return true;
+    const { data: override, error: overrideError } = await admin.from("user_permission_overrides")
+      .select("allowed")
+      .eq("user_id", userId)
+      .eq("permission_key", permissionKey)
+      .maybeSingle();
+    if (overrideError) return false;
+    if (override) return override.allowed === true;
     const { data, error } = await admin.from("role_permissions")
       .select("allowed")
       .eq("role", profile.role)
