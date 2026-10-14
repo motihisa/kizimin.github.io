@@ -48,6 +48,25 @@ const headers = {
 };
 const findings = [];
 const errors = [];
+try {
+  const settingsUrl = new URL(`${baseUrl}/rest/v1/kizimin_bot_settings`);
+  settingsUrl.searchParams.set("select", "settings");
+  settingsUrl.searchParams.set("id", "eq.true");
+  settingsUrl.searchParams.set("limit", "1");
+  const settingsResponse = await fetch(settingsUrl, { headers, signal: AbortSignal.timeout(15000) });
+  if (!settingsResponse.ok) throw new Error(`HTTP ${settingsResponse.status}`);
+  const rows = await settingsResponse.json();
+  const settings = rows?.[0]?.settings || {};
+  autoSuspend = settings.mode === "auto_suspend";
+  suspendThreshold = Math.max(2, Math.min(10, Number(settings.threshold) || 3));
+  suspendMinutes = Math.max(15, Math.min(1440, Number(settings.suspend_minutes) || 60));
+  windowHours = Math.max(1, Math.min(168, Number(settings.window_hours) || 24));
+} catch (error) {
+  // If policy retrieval fails, remain in detect-only mode.
+  autoSuspend = false;
+  errors.push(`Bot設定を読み込めないため検知のみで実行: ${error.message}`);
+}
+windowStart = new Date(nowDate.getTime() - windowHours * 60 * 60 * 1000).toISOString();
 const counts = {
   openReports: 0,
   openInquiries: 0,
@@ -122,7 +141,7 @@ async function suspendEligibleUsers() {
         },
         body: JSON.stringify({
           account_status: "suspended",
-          ban_reason: `自動モデレーション: 24時間以内に不審な投稿を${entry.ids.length}件検知`,
+          ban_reason: `自動モデレーション: 過去${windowHours}時間以内に不審な投稿を${entry.ids.length}件検知`,
           ban_expires_at: expiresAt,
           updated_at: now
         }),
@@ -194,7 +213,7 @@ const result = {
   status: errors.length ? "partial" : "ok",
   at: now,
   autoSuspend,
-  policy: { threshold: suspendThreshold, windowHours: 24, suspensionMinutes: suspendMinutes },
+  policy: { mode: autoSuspend ? "auto_suspend" : "detect_only", threshold: suspendThreshold, windowHours, suspensionMinutes: suspendMinutes },
   counts,
   findingCount: findings.length,
   findings: findings.slice(0, 100),
