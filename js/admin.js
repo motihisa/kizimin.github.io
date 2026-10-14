@@ -82,7 +82,7 @@
       currentEffectivePermissions = new Set((effectiveRows || []).filter(row => row.allowed === true).map(row => row.permission_key));
     }
     const isStaffRole = ["admin","moderator"].includes(profile.role) || isOwner;
-    const userUsablePermissions = ["moderate_comments","manage_reports","manage_inquiries","broadcast_notifications"];
+    const userUsablePermissions = ["moderate_comments","manage_reports","manage_inquiries","broadcast_notifications","manage_roles","ban_users","delete_accounts"];
     if (!isStaffRole && !userUsablePermissions.some(key => currentEffectivePermissions.has(key))) {
       forbidden(
         "管理画面へのアクセスが拒否されました。",
