@@ -417,8 +417,8 @@
             <input class="ban-expires" data-id="${esc(u.id)}" type="datetime-local" step="1" value="${esc(jstDateTimeValue(u.ban_expires_at))}" aria-label="BAN解除日時（JST）">
           </label>
           <button type="button" class="account-status-save" data-id="${esc(u.id)}">状態を保存</button>
-          ${["admin","moderator","owner"].includes(currentAdminRole) ? `<button type="button" class="user-identity-edit" data-id="${esc(u.id)}" data-username="${esc(u.username || "")}" data-display-name="${esc(u.display_name || "")}">名前を変更</button>` : ""}
-          ${currentAdminRole === "owner" ? `<button type="button" class="user-official-toggle" data-id="${esc(u.id)}" data-enabled="${isOfficial ? "true" : "false"}">${isOfficial ? "Official解除" : "Official付与"}</button>` : ""}
+          ${u.id !== "9589135e-4f75-4913-b13f-35407eeedf3b" && ["admin","moderator","owner"].includes(currentAdminRole) ? `<button type="button" class="user-identity-edit" data-id="${esc(u.id)}" data-username="${esc(u.username || "")}" data-display-name="${esc(u.display_name || "")}">名前を変更</button>` : ""}
+          ${currentAdminRole === "owner" && u.id !== "9589135e-4f75-4913-b13f-35407eeedf3b" ? `<button type="button" class="user-official-toggle" data-id="${esc(u.id)}" data-enabled="${isOfficial ? "true" : "false"}">${isOfficial ? "Official解除" : "Official付与"}</button>` : ""}
           ${["admin","owner"].includes(currentAdminRole) && u.id !== "9589135e-4f75-4913-b13f-35407eeedf3b" && (u.role !== "admin" || currentAdminRole === "owner") ? `<button type="button" class="user-delete" data-id="${esc(u.id)}" data-name="${esc(u.display_name || u.username || u.id)}">強制削除</button>` : ""}
         </td>
       </tr>`}).join("") : '<tr><td colspan="6">ユーザーはいません。</td></tr>';
