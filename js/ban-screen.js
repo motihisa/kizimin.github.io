@@ -87,15 +87,19 @@
       return;
     }
 
-    const state = await getAccountState(token);
+    const result = await getAccountState(token);
+    if (!result) return;
+
+    // PostgREST returns TABLE-valued RPC results as an array.
+    const state = Array.isArray(result) ? result[0] : result;
     if (!state) return;
 
     const status = String(state.status || "").toLowerCase();
     if (status === "banned" || status === "suspended") {
       setGate({
         kind: status,
-        reason: state.ban_reason || "利用ルールに違反した可能性があるため、利用が制限されています。",
-        until: state.ban_expires_at || ""
+        reason: state.reason || state.ban_reason || "利用ルールに違反した可能性があるため、利用が制限されています。",
+        until: state.expires_at || state.ban_expires_at || ""
       });
       return;
     }
