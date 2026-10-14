@@ -84,6 +84,10 @@
     const isStaffRole = ["admin","moderator"].includes(profile.role) || isOwner;
     const userUsablePermissions = ["moderate_comments","manage_reports","manage_inquiries","broadcast_notifications","manage_roles","ban_users","delete_accounts"];
     if (!isStaffRole && !userUsablePermissions.some(key => currentEffectivePermissions.has(key))) {
+      if (currentEffectivePermissions.has("view_logs")) {
+        location.href = "admin-operations.html";
+        return false;
+      }
       forbidden(
         "管理画面へのアクセスが拒否されました。",
         "このアカウントには管理画面で利用できる個別権限が設定されていません。"
