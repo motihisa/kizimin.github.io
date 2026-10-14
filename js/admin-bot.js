@@ -50,9 +50,18 @@
         suspend_minutes:Math.max(15,Math.min(1440,Number($("bot-suspend-minutes")?.value)||60))
       };
       if(mode==="auto_suspend"&&!confirm("自動一時停止を有効にします。条件に該当する一般ユーザーは自動で一時停止されます。続行しますか？")) { setStatus("保存をキャンセルしました。設定は変更されていません。"); return; }
-      const {error}=await db.from("kizimin_bot_settings").upsert({id:true,settings:next,updated_by:userId,updated_at:new Date().toISOString()},{onConflict:"id"});
+      if(!userId) throw new Error("ログイン状態を確認できません。管理画面に再ログインしてください。");
+      setStatus("Bot設定を保存しています…");
+      // The settings row is provisioned in advance. Update it directly so a normal save
+      // does not need INSERT privileges through an upsert conflict path.
+      const {data,error}=await db.from("kizimin_bot_settings")
+        .update({settings:next,updated_by:userId,updated_at:new Date().toISOString()})
+        .eq("id",true)
+        .select("id,settings")
+        .maybeSingle();
       if(error) throw error;
-      policy=next;
+      if(!data) throw new Error("保存対象が見つからないか、保存権限がありません。Supabaseの管理者ポリシーを確認してください。");
+      policy={...defaultPolicy,...(data.settings||next)};
       setStatus(mode==="auto_suspend"?"設定を保存しました。自動一時停止はバックグラウンドBotの次回実行から適用されます。":"設定を保存しました。現在は検知のみで、一時停止は行いません。","success");
       renderPolicy();
     } catch(error) {
