@@ -675,3 +675,29 @@ button:focus-visible,a:focus-visible{outline:3px solid rgba(143,118,236,.65);out
  #view-dashboard #maintenance-panel .admin-panel-head{flex-direction:column}
  .dashboard-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+
+/* 2026-10-14: keep the full admin menu reachable as features grow */
+.admin-sidebar{
+  position:sticky;
+  top:0;
+  height:100vh;
+  height:100dvh;
+  min-height:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+  scrollbar-color:rgba(214,208,234,.38) transparent;
+}
+.admin-sidebar::-webkit-scrollbar{width:6px}
+.admin-sidebar::-webkit-scrollbar-track{background:transparent}
+.admin-sidebar::-webkit-scrollbar-thumb{background:rgba(214,208,234,.32);border-radius:999px}
+.admin-sidebar::-webkit-scrollbar-thumb:hover{background:rgba(214,208,234,.58)}
+.admin-nav{min-height:0;flex:0 0 auto}
+.admin-sidebar-bottom{flex:0 0 auto;margin-top:20px}
+@media(max-width:900px){
+  .admin-sidebar{position:relative;top:auto;height:auto;min-height:0;max-height:none;overflow:visible}
+  .admin-nav{flex:0 0 auto;overflow:visible}
+  .admin-sidebar-bottom{margin-top:10px}
+}
