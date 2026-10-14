@@ -201,3 +201,99 @@ button:focus-visible,a:focus-visible{outline:1px dotted #222;outline-offset:2px}
   #view-dashboard.active{grid-template-columns:minmax(0,1fr);grid-template-areas:"overview" "maintenance" "chart" "audit"}
 }
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+
+/* Native controls: Windows XP Luna / classic select styling */
+.admin-page select,
+.admin-page input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+.admin-page textarea{
+  box-sizing:border-box;
+  color:#222;
+  font:12px Tahoma,"MS UI Gothic","Yu Gothic UI",sans-serif;
+  background-color:#fff;
+  border:1px solid #7f9db9;
+  border-radius:0;
+  box-shadow:inset 1px 1px 2px rgba(0,0,0,.13);
+}
+.admin-page select{
+  min-height:25px;
+  padding:3px 26px 3px 6px;
+  appearance:none;
+  -webkit-appearance:none;
+  -moz-appearance:none;
+  background-image:
+    linear-gradient(45deg,transparent 50%,#173d71 50%),
+    linear-gradient(135deg,#173d71 50%,transparent 50%),
+    linear-gradient(to right,#d5e4f5,#eef5fd);
+  background-position:
+    calc(100% - 11px) 10px,
+    calc(100% - 7px) 10px,
+    calc(100% - 22px) 0;
+  background-size:4px 4px,4px 4px,1px 100%;
+  background-repeat:no-repeat;
+}
+.admin-page select:hover{border-color:#3c7fb1;background-color:#fff}
+.admin-page select:focus,
+.admin-page input:focus,
+.admin-page textarea:focus{
+  outline:1px dotted #222;
+  outline-offset:1px;
+  border-color:#245edb;
+}
+.admin-page select:disabled,
+.admin-page input:disabled,
+.admin-page textarea:disabled{
+  color:#777;background-color:#ece9d8;box-shadow:none;cursor:not-allowed;
+}
+.admin-page option,.admin-page optgroup{
+  color:#222;background:#fff;font:12px Tahoma,"MS UI Gothic",sans-serif;
+}
+.admin-page input[type="checkbox"],
+.admin-page input[type="radio"]{
+  accent-color:#245edb;
+  width:13px;height:13px;
+}
+.admin-page input[type="range"]{accent-color:#245edb}
+.admin-page input[type="number"]{padding:4px 5px}
+.admin-page input[type="search"]{appearance:auto;-webkit-appearance:auto;padding:4px 6px}
+.admin-page input[type="file"]{padding:3px;background:#ece9d8;box-shadow:none}
+.admin-page input[type="color"]{border:1px solid #7f9db9;border-radius:0;background:#ece9d8}
+.admin-page fieldset{border:1px solid #aca899;border-radius:2px}
+.admin-page legend{color:#173d71;font-weight:bold}
+.admin-page .admin-search,
+.admin-page .admin-table select,
+.admin-page .admin-table textarea,
+.admin-page .admin-table input,
+.admin-page #view-notifications textarea,
+.admin-page #view-notifications input,
+.admin-page .bot-setting select,
+.admin-page .user-permission-target-label select,
+.admin-page .user-permission-table select{
+  border-radius:0;
+  font:12px Tahoma,"MS UI Gothic","Yu Gothic UI",sans-serif;
+}
+.admin-page .admin-table select,
+.admin-page .bot-setting select,
+.admin-page .user-permission-target-label select,
+.admin-page .user-permission-table select{
+  min-height:25px;
+  padding:3px 26px 3px 6px;
+  appearance:none;
+  -webkit-appearance:none;
+  background-image:
+    linear-gradient(45deg,transparent 50%,#173d71 50%),
+    linear-gradient(135deg,#173d71 50%,transparent 50%),
+    linear-gradient(to right,#d5e4f5,#eef5fd);
+  background-position:calc(100% - 11px) 10px,calc(100% - 7px) 10px,calc(100% - 22px) 0;
+  background-size:4px 4px,4px 4px,1px 100%;
+  background-repeat:no-repeat;
+}
+.admin-page .admin-table .user-role,
+.admin-page .admin-table .account-status,
+.admin-page .admin-table .ban-expires{border-radius:0}
+.admin-page .admin-btn{border-radius:3px}
+.admin-page .bot-setting{border-radius:2px}
+.admin-page .user-permission-target-label select,
+.admin-page .user-permission-table select{padding-right:26px}
+@media(forced-colors:active){
+  .admin-page select{appearance:auto;-webkit-appearance:auto;background-image:none}
+}
