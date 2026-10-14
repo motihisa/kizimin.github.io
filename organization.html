@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>団体アカウント | Kizimin</title><link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="stylesheet" href="css/style.css"><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+body{background:#f7f7f4;color:#20201e}.org-shell{max-width:1040px;margin:0 auto;padding:28px 18px 72px}.org-top{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:26px}.org-top a{color:inherit}.org-card{background:#fff;border:1px solid #e4e4df;border-radius:16px;padding:24px;margin:16px 0}.org-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.org-field{display:grid;gap:6px}.org-field input,.org-field textarea,.org-field select{width:100%;box-sizing:border-box;border:1px solid #d8d8d2;border-radius:9px;padding:11px;font:inherit;background:white}.org-field textarea{min-height:100px;resize:vertical}.org-btn{border:0;border-radius:9px;background:#20201e;color:#fff;padding:11px 15px;font:inherit;font-weight:700;cursor:pointer}.org-btn.secondary{background:#efefeb;color:#20201e}.org-btn:disabled{opacity:.5;cursor:not-allowed}.org-muted{color:#777;font-size:13px}.org-alert{padding:12px 14px;border-radius:10px;background:#f1f1ec;margin:12px 0;white-space:pre-wrap}.org-list{display:grid;gap:12px}.org-item{border:1px solid #e6e6e1;border-radius:12px;padding:16px}.org-item-head{display:flex;justify-content:space-between;gap:10px;align-items:start}.org-pill{font-size:12px;border-radius:999px;padding:5px 9px;background:#f0f0ec;white-space:nowrap}.org-members{display:grid;gap:8px;margin-top:12px}.org-member{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:9px;border-radius:9px;background:#f8f8f5}.org-inline{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.org-inline input,.org-inline select{border:1px solid #d8d8d2;border-radius:8px;padding:9px;font:inherit;max-width:100%}
+@media(max-width:680px){.org-grid{grid-template-columns:1fr}.org-card{padding:18px}.org-top{align-items:flex-start;flex-direction:column}}
+</style></head>
+<body><main class="org-shell">
+<header class="org-top"><div><a href="index.html" style="text-decoration:none;font-weight:800;font-size:23px">Kizimin</a><p class="org-muted">団体アカウント</p></div><div class="org-inline"><a href="account.html">アカウント設定</a><a href="index.html">サイトへ戻る</a></div></header>
+<section class="org-card"><h1>団体アカウントを申請</h1><p>企業・学校・サークル・オンラインコミュニティ・個人運営の団体が対象です。申請後、Kizimin管理者が審査します。承認前に団体名義での利用はできません。</p><div id="org-auth" class="org-alert">ログイン状態を確認しています...</div>
+<form id="org-application-form"><div class="org-grid">
+<label class="org-field">団体名<input name="organization_name" maxlength="120" required></label>
+<label class="org-field">団体の種類<select name="organization_type" required><option value="company">企業・事業者</option><option value="school">学校・教育関係</option><option value="circle">サークル・グループ</option><option value="community">オンラインコミュニティ</option><option value="individual">個人運営の団体</option><option value="other">その他</option></select></label>
+<label class="org-field">代表者名<input name="representative_name" maxlength="100" required></label>
+<label class="org-field">連絡用メールアドレス<input name="contact_email" type="email" maxlength="254" required></label>
+<label class="org-field" style="grid-column:1/-1">公式サイト（任意）<input name="website" type="url" maxlength="500" placeholder="https://example.com"></label>
+<label class="org-field" style="grid-column:1/-1">団体の説明<textarea name="description" maxlength="3000" placeholder="活動内容や団体の目的を記入してください"></textarea></label>
+</div><p class="org-muted">個人情報やパスワードは入力しないでください。連絡用メールアドレスは審査や連絡のために使用します。</p><button class="org-btn" id="org-apply-button" type="submit">申請を送信</button></form><div id="org-application-message" class="org-alert" aria-live="polite"></div></section>
+<section class="org-card"><h2>自分の申請状況</h2><div id="org-application-list" class="org-list"><p class="org-muted">読み込み中...</p></div></section>
+<section class="org-card"><h2>管理している団体</h2><p class="org-muted">承認済み団体の情報、メンバー、役割を管理します。</p><div id="org-managed-list" class="org-list"><p class="org-muted">読み込み中...</p></div></section>
+</main><script src="js/organization.js?v=20261015-org1"></script></body></html>
