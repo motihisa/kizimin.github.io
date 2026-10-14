@@ -301,8 +301,14 @@ Deno.serve(async (req: Request) => {
       admin.from("site_owners").select("user_id").eq("user_id", userId).maybeSingle(),
       admin.from("profiles").select("account_status").eq("id", userId).maybeSingle()
     ]);
-    if (ownerError || profileError) return json({ error: "OWNER_CHECK_FAILED" }, 500);
-    if (!ownerRow || (profile?.account_status && profile.account_status !== "active")) return json({ error: "OWNER_ONLY" }, 403);
+    if (ownerError || profileError) {
+      console.error("owner-email-checker owner/profile lookup failed");
+      return json({ error: "OWNER_CHECK_FAILED" }, 500);
+    }
+    // Fail closed: owner access requires both an owner record and an existing active profile.
+    if (!ownerRow || !profile || (profile.account_status || "active") !== "active") {
+      return json({ error: "OWNER_ONLY" }, 403);
+    }
 
     const body = await req.json().catch(() => ({}));
     const email = String(body.email || "").trim();
