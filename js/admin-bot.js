@@ -69,7 +69,7 @@
       if(error) throw error;
       if(!data) throw new Error("保存対象が見つからないか、保存権限がありません。Supabaseの管理者ポリシーを確認してください。");
       policy={...defaultPolicy,...(data.settings||next)};
-      setStatus(mode==="auto_suspend"?"設定を保存しました。自動一時停止はバックグラウンドBotの次回実行から適用されます。":"設定を保存しました。現在は検知のみで、一時停止は行いません。","success");
+      setStatus(mode==="auto_suspend"?"管理画面の設定を保存しました。実際の自動一時停止にはRender環境変数 BOT_AUTO_SUSPEND=true も必要です。":"設定を保存しました。現在は検知のみで、一時停止は行いません。","success");
       renderPolicy();
     } catch(error) {
       const message="Bot設定を保存できませんでした: "+(error.message||"権限または通信状態を確認してください");
@@ -111,8 +111,10 @@
     if(value.length>1800 && links>=2) return "長文かつ複数URLを含みます";
     return null;
   }
-  async function safeRead(table, columns, limit=100) {
-    const {data,error}=await db.from(table).select(columns).order("created_at",{ascending:false}).limit(limit);
+  async function safeRead(table, columns, limit=100, filters={}) {
+    let query=db.from(table).select(columns).order("created_at",{ascending:false}).limit(limit);
+    for(const [column,value] of Object.entries(filters)) query=query.eq(column,value);
+    const {data,error}=await query;
     if(error) throw new Error(error.message || table+"の読み込みに失敗しました");
     return data||[];
   }
@@ -150,7 +152,7 @@
       }
     }catch(e){stats.errors.push("コメント: "+e.message);}})());
     if(config.articles) tasks.push((async()=>{try{
-      const rows=await safeRead("articles","id,title,excerpt,content,status,created_at",100);
+      const rows=await safeRead("articles","id,title,excerpt,content,status,created_at",100,{status:"visible"});
       for(const r of rows){
         const reasonText=inspectText([r.title,r.excerpt,r.content].filter(Boolean).join("\n"));
         if(reasonText){stats.suspiciousArticles++;addAlert(alerts,"review","記事","確認が必要な記事",reasonText+" · "+String(r.title||"タイトルなし").slice(0,120)+" · "+fmt(r.created_at),String(r.id));}
