@@ -564,3 +564,32 @@ button:focus-visible,a:focus-visible{outline:3px solid rgba(143,118,236,.65);out
   .admin-quick-actions .admin-panel-head{align-items:flex-start}
   .admin-quick-kicker{display:none}
 }
+
+
+/* 2026-10-14: compact inquiry workflow; reduce oversized cells and form gaps */
+#view-inquiries .admin-panel{padding:18px;margin-bottom:16px}
+#view-inquiries .admin-panel-head{margin-bottom:14px}
+#view-inquiries .admin-table{width:1120px;min-width:1120px;table-layout:fixed}
+#view-inquiries .admin-table th:nth-child(1),#view-inquiries .admin-table td:nth-child(1){width:135px}
+#view-inquiries .admin-table th:nth-child(2),#view-inquiries .admin-table td:nth-child(2){width:165px}
+#view-inquiries .admin-table th:nth-child(3),#view-inquiries .admin-table td:nth-child(3){width:270px}
+#view-inquiries .admin-table th:nth-child(4),#view-inquiries .admin-table td:nth-child(4){width:380px}
+#view-inquiries .admin-table th:nth-child(5),#view-inquiries .admin-table td:nth-child(5){width:170px}
+#view-inquiries .admin-table th,#view-inquiries .admin-table td{padding:11px 12px;line-height:1.45}
+#view-inquiries .admin-table td{font-size:12px}
+#view-inquiries .inquiry-message{line-height:1.5;max-height:180px;overflow:auto}
+#view-inquiries .inquiry-status,#view-inquiries .inquiry-note,#view-inquiries .inquiry-reply{
+  padding:8px 10px;margin:0 0 7px;border-radius:8px;font-size:12px;line-height:1.45
+}
+#view-inquiries .inquiry-status{min-height:36px}
+#view-inquiries .inquiry-note,#view-inquiries .inquiry-reply{min-height:62px;max-height:150px}
+#view-inquiries .inquiry-save,#view-inquiries .inquiry-reply-send{
+  min-height:34px;margin:0 0 7px;padding:8px 11px;font-size:12px
+}
+#view-inquiries .inquiry-save{margin-bottom:10px}
+#view-inquiries .admin-table tbody tr+tr td{border-top:1px solid #e8edf5}
+@media(max-width:700px){
+  #view-inquiries .admin-panel{padding:13px}
+  #view-inquiries .admin-table{width:1050px;min-width:1050px}
+  #view-inquiries .admin-table th,#view-inquiries .admin-table td{padding:10px}
+}
