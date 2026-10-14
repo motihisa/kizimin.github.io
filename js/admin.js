@@ -99,7 +99,7 @@
     };
     document.querySelectorAll(".admin-nav [data-view]").forEach(button => {
       const key = button.dataset.view;
-      const allowed = isStaffRole || (viewPermission[key] && currentEffectivePermissions.has(viewPermission[key]));
+      const allowed = isStaffRole || (key === "users" ? ["manage_roles","ban_users","delete_accounts"].some(permission => currentEffectivePermissions.has(permission)) : (viewPermission[key] && currentEffectivePermissions.has(viewPermission[key])));
       button.classList.toggle("hidden", !allowed);
       document.getElementById("view-" + key)?.classList.toggle("hidden", !allowed);
     });
@@ -416,6 +416,9 @@
     const { data: titleRows, error: titleError } = await supabase.from("profile_titles").select("user_id,title");
     if (titleError) console.warn("Official称号の読み込みに失敗しました:", titleError);
     const titleByUser = new Map((titleRows || []).map(row => [row.user_id, row.title]));
+    const canManageRoles = currentAdminRole === "owner" || currentEffectivePermissions.has("manage_roles");
+    const canBanUsers = currentAdminRole === "owner" || currentEffectivePermissions.has("ban_users");
+    const canDeleteAccounts = currentAdminRole === "owner" || currentEffectivePermissions.has("delete_accounts");
     $("users-body").innerHTML = data.length ? data.map(u => {
       const isOfficial = titleByUser.get(u.id) === "Official";
       return `
@@ -429,18 +432,18 @@
         </td>
         <td>${esc(date(u.created_at))}</td>
         <td class="admin-actions">
-          ${["admin","owner"].includes(currentAdminRole) && u.id !== "9589135e-4f75-4913-b13f-35407eeedf3b" && (currentAdminRole === "owner" || (u.id !== window.__kiziminCurrentUserId && ["user","moderator"].includes(u.role || "user"))) ? `<select class="user-role-select" data-id="${esc(u.id)}" data-current="${esc(u.role || "user")}" aria-label="ユーザー権限">${(currentAdminRole === "owner" ? ["user","moderator","admin"] : ["user","moderator"]).map(r => '<option value="'+r+'" '+(r===(u.role||"user")?"selected":"")+'>'+statusLabel(r)+'</option>').join("")}</select>` : `<span class="admin-muted">${esc(statusLabel(u.role || "user"))}</span>`}
-          <select class="account-status" data-id="${esc(u.id)}" data-current="${esc(u.account_status || "active")}" aria-label="アカウント状態" ${(u.id === "9589135e-4f75-4913-b13f-35407eeedf3b" || (u.role === "admin" && currentAdminRole !== "owner")) ? "disabled" : ""}>
+          ${canManageRoles && u.id !== "9589135e-4f75-4913-b13f-35407eeedf3b" && (currentAdminRole === "owner" || (u.id !== window.__kiziminCurrentUserId && ["user","moderator"].includes(u.role || "user"))) ? `<select class="user-role-select" data-id="${esc(u.id)}" data-current="${esc(u.role || "user")}" aria-label="ユーザー権限">${(currentAdminRole === "owner" ? ["user","moderator","admin"] : ["user","moderator"]).map(r => '<option value="'+r+'" '+(r===(u.role||"user")?"selected":"")+'>'+statusLabel(r)+'</option>').join("")}</select>` : `<span class="admin-muted">${esc(statusLabel(u.role || "user"))}</span>`}
+          ${canBanUsers ? `<select class="account-status" data-id="${esc(u.id)}" data-current="${esc(u.account_status || "active")}" aria-label="アカウント状態" ${(u.id === "9589135e-4f75-4913-b13f-35407eeedf3b" || (u.role === "admin" && currentAdminRole !== "owner")) ? "disabled" : ""}>
             ${["active","banned","suspended"].map(s => '<option value="'+s+'" '+(s===(u.account_status||"active")?"selected":"")+'>'+statusLabel(s)+'</option>').join("")}
           </select>
           <label class="ban-expiry-field" style="${(u.account_status || "active") === "banned" ? "" : "display:none"}">
             <span class="admin-muted">BAN解除日時（JST）</span>
             <input class="ban-expires" data-id="${esc(u.id)}" type="datetime-local" step="1" value="${esc(jstDateTimeValue(u.ban_expires_at))}" aria-label="BAN解除日時（JST）">
           </label>
-          <button type="button" class="account-status-save" data-id="${esc(u.id)}">状態を保存</button>
+          <button type="button" class="account-status-save" data-id="${esc(u.id)}">状態を保存</button>` : ""}
           ${u.id !== "9589135e-4f75-4913-b13f-35407eeedf3b" && ["admin","moderator","owner"].includes(currentAdminRole) ? `<button type="button" class="user-identity-edit" data-id="${esc(u.id)}" data-username="${esc(u.username || "")}" data-display-name="${esc(u.display_name || "")}">名前を変更</button>` : ""}
           ${currentAdminRole === "owner" && u.id !== "9589135e-4f75-4913-b13f-35407eeedf3b" ? `<button type="button" class="user-official-toggle" data-id="${esc(u.id)}" data-enabled="${isOfficial ? "true" : "false"}">${isOfficial ? "Official解除" : "Official付与"}</button>` : ""}
-          ${["admin","owner"].includes(currentAdminRole) && u.id !== "9589135e-4f75-4913-b13f-35407eeedf3b" && (u.role !== "admin" || currentAdminRole === "owner") ? `<button type="button" class="user-delete" data-id="${esc(u.id)}" data-name="${esc(u.display_name || u.username || u.id)}">強制削除</button>` : ""}
+          ${canDeleteAccounts && u.id !== "9589135e-4f75-4913-b13f-35407eeedf3b" && (u.role !== "admin" || currentAdminRole === "owner") ? `<button type="button" class="user-delete" data-id="${esc(u.id)}" data-name="${esc(u.display_name || u.username || u.id)}">強制削除</button>` : ""}
         </td>
       </tr>`}).join("") : '<tr><td colspan="6">ユーザーはいません。</td></tr>';
     window.KiziminUserTools?.refresh?.();
