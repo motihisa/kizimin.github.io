@@ -35,7 +35,7 @@ async function loadOrganizations(){
 }
 async function loadMembers(orgId){
  const box=$("members-"+orgId);if(!box)return;
- const {data,error}=await sb.from("organization_members").select("user_id,role,status,profiles(username,display_name)").eq("organization_id",orgId).eq("status","active").order("created_at");
+ const {data,error}=await sb.from("organization_members").select("user_id,role,status,profiles!organization_members_user_id_fkey(username,display_name)").eq("organization_id",orgId).eq("status","active").order("created_at");
  if(error){box.textContent="メンバーを読み込めませんでした。";console.error(error);return;}
  box.innerHTML=(data||[]).map(m=>'<div class="org-member"><span><strong>'+esc(m.profiles?.display_name||m.profiles?.username||"ユーザー")+'</strong><span class="org-muted"> @'+esc(m.profiles?.username||"unknown")+' · '+esc(m.role)+'</span></span>'+(m.user_id===user.id?'<span class="org-muted">自分</span>':'<button class="org-btn secondary member-remove" data-org="'+orgId+'" data-user="'+m.user_id+'" type="button">メンバーから外す</button>')+'</div>').join("")||'<p class="org-muted">メンバーはいません。</p>';
 }
