@@ -214,3 +214,31 @@
 #announcement-content{line-height:1.8;overflow-wrap:anywhere;}
 #announcement-content p{margin:0;white-space:pre-line;color:#4b5568;}
 @media(max-width:760px){.home-announcements{width:calc(100% - 28px);margin:14px auto 20px;padding:16px}.announcement-heading{align-items:flex-start;flex-direction:column;gap:7px;}}
+
+
+/* Homepage hierarchy refresh: primary action first, community shortcuts in the sidebar */
+.home-page .hero { padding-bottom: clamp(34px, 5vw, 58px); }
+.home-page .hero-actions { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin-top:26px; }
+.home-page .hero-actions .write-button { display:inline-flex; align-items:center; justify-content:center; min-height:48px; padding:0 20px; border:0; color:#fff; cursor:pointer; font:inherit; font-weight:800; }
+.home-page .hero-secondary { display:inline-flex; align-items:center; gap:8px; min-height:46px; padding:0 17px; border:1px solid #dcd8f4; border-radius:13px; background:rgba(255,255,255,.72); color:#5b50b8; font-size:14px; font-weight:800; text-decoration:none; transition:background .18s,border-color .18s,transform .18s; }
+.home-page .hero-secondary:hover { border-color:#c7c0ff; background:#fff; transform:translateY(-1px); }
+.home-page .community-shortcuts { display:grid; gap:8px; }
+.home-page .community-shortcuts h2 { margin-bottom:0; }
+.home-page .community-shortcuts p { margin:0 0 5px; }
+.home-page .community-shortcuts > a { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 11px; border:1px solid #eeecf8; border-radius:11px; background:#fff; color:#5c5878; font-size:13px; font-weight:750; text-decoration:none; transition:background .18s,border-color .18s,transform .18s; }
+.home-page .community-shortcuts > a span { color:#8b83df; font-size:20px; line-height:1; }
+.home-page .community-shortcuts > a:hover { border-color:#d2ccff; background:#f8f7ff; transform:translateX(2px); }
+.home-page .site-community-secondary { align-items:stretch; }
+.home-page .site-community-secondary > .qa-widget { order:1; }
+.home-page .site-community-secondary > .poll-widget { order:2; }
+.home-page .site-community-secondary > .challenge-widget { order:3; }
+.home-page .site-community-secondary > .library-widget { order:4; }
+.home-page .site-community-secondary .site-widget { height:100%; box-sizing:border-box; }
+@media(max-width:760px) {
+  .home-page .hero-actions { gap:9px; margin-top:21px; }
+  .home-page .hero-actions .write-button, .home-page .hero-secondary { min-height:44px; padding:0 14px; font-size:13px; }
+  .home-page .community-shortcuts > a { padding:12px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .home-page .hero-secondary, .home-page .community-shortcuts > a { transition:none; }
+}
