@@ -10,6 +10,8 @@
   const db = window.supabase.createClient(SUPABASE_URL, PUBLISHABLE_KEY);
   let userId = null, intervalId = null, running = false, scanInProgress = false, lastAlerts = [], lastRunAt = null;
   const defaults = { enabled:false, intervalMinutes:5, reports:true, inquiries:true, comments:true, articles:true, browserNotice:false };
+  const defaultPolicy = { mode:"detect_only", threshold:3, window_hours:24, suspend_minutes:60 };
+  let policy = {...defaultPolicy};
   const storageKey = () => STORAGE_PREFIX + (userId || "unknown");
   function readConfig() {
     try { return {...defaults, ...JSON.parse(localStorage.getItem(storageKey()) || "{}")}; }
@@ -22,6 +24,40 @@
   function setStatus(message, type="info") {
     const el=$("bot-status"); if(!el)return;
     el.textContent=message; el.dataset.state=type;
+  }
+  async function loadPolicy() {
+    const {data,error}=await db.from("kizimin_bot_settings").select("settings").eq("id",true).maybeSingle();
+    if(error) throw new Error("Bot設定の読み込みに失敗しました: "+error.message);
+    policy={...defaultPolicy,...(data?.settings||{})};
+    renderPolicy();
+  }
+  function renderPolicy() {
+    if($("bot-mode")) $("bot-mode").value=policy.mode==="auto_suspend"?"auto_suspend":"detect_only";
+    if($("bot-threshold")) $("bot-threshold").value=String(Math.max(2,Math.min(10,Number(policy.threshold)||3)));
+    if($("bot-window-hours")) $("bot-window-hours").value=String(Math.max(1,Math.min(168,Number(policy.window_hours)||24)));
+    if($("bot-suspend-minutes")) $("bot-suspend-minutes").value=String(Math.max(15,Math.min(1440,Number(policy.suspend_minutes)||60)));
+    if($("bot-policy-save")) $("bot-policy-save").disabled=false;
+  }
+  async function savePolicy() {
+    const button=$("bot-policy-save");
+    if(button) button.disabled=true;
+    try {
+      const mode=$("bot-mode")?.value==="auto_suspend"?"auto_suspend":"detect_only";
+      const next={
+        mode,
+        threshold:Math.max(2,Math.min(10,Number($("bot-threshold")?.value)||3)),
+        window_hours:Math.max(1,Math.min(168,Number($("bot-window-hours")?.value)||24)),
+        suspend_minutes:Math.max(15,Math.min(1440,Number($("bot-suspend-minutes")?.value)||60))
+      };
+      if(mode==="auto_suspend"&&!confirm("自動一時停止を有効にします。条件に該当する一般ユーザーは自動で一時停止されます。続行しますか？")) return;
+      const {error}=await db.from("kizimin_bot_settings").upsert({id:true,settings:next,updated_by:userId,updated_at:new Date().toISOString()},{onConflict:"id"});
+      if(error) throw error;
+      policy=next;
+      setStatus(mode==="auto_suspend"?"設定を保存しました。自動一時停止はバックグラウンドBotの次回実行から適用されます。":"設定を保存しました。現在は検知のみで、一時停止は行いません。","success");
+      renderPolicy();
+    } catch(error) {
+      setStatus("Bot設定を保存できませんでした: "+(error.message||"権限または通信状態を確認してください"),"error");
+    } finally { if(button) button.disabled=false; }
   }
   function renderConfig() {
     const c=readConfig();
@@ -145,6 +181,7 @@
   function bind() {
     const config=readConfig();
     $("bot-run-now")?.addEventListener("click",()=>scan("手動チェック"));
+    $("bot-policy-save")?.addEventListener("click",savePolicy);
     $("bot-stop")?.addEventListener("click",()=>{
       const c=readConfig();c.enabled=false;writeConfig(c);setRunning(false);renderConfig();
       setStatus("Botを停止しました。自動チェックは行いません。","success");
@@ -181,6 +218,7 @@
       $("view-bot")?.classList.remove("active");
     }));
     renderConfig();renderHistory();
+    loadPolicy().catch(error=>setStatus(error.message,"error"));
     if(config.enabled) { setRunning(true); scan("起動時チェック"); }
   }
   (async()=>{
