@@ -392,10 +392,15 @@
       .select("id,username,display_name,role,account_status,ban_reason,ban_expires_at,created_at")
       .order("created_at", { ascending:false });
     if (error) throw error;
-    $("users-body").innerHTML = data.length ? data.map(u => `
+    const { data: titleRows, error: titleError } = await supabase.from("profile_titles").select("user_id,title");
+    if (titleError) console.warn("Official称号の読み込みに失敗しました:", titleError);
+    const titleByUser = new Map((titleRows || []).map(row => [row.user_id, row.title]));
+    $("users-body").innerHTML = data.length ? data.map(u => {
+      const isOfficial = titleByUser.get(u.id) === "Official";
+      return `
       <tr>
         <td>${esc(u.username || u.id)}</td>
-        <td>${esc(u.display_name || "-")}</td>
+        <td>${esc(u.display_name || "-")}${isOfficial ? ' <span class="admin-badge" style="background:#111;color:#fff">Official</span>' : ''}</td>
         <td><span class="admin-badge">${u.id === "9589135e-4f75-4913-b13f-35407eeedf3b" ? "👑 オーナー" : esc(statusLabel(u.role))}</span></td>
         <td>
           <span class="admin-badge">${esc(statusLabel(u.account_status || "active"))}</span>
@@ -412,9 +417,11 @@
             <input class="ban-expires" data-id="${esc(u.id)}" type="datetime-local" step="1" value="${esc(jstDateTimeValue(u.ban_expires_at))}" aria-label="BAN解除日時（JST）">
           </label>
           <button type="button" class="account-status-save" data-id="${esc(u.id)}">状態を保存</button>
+          ${["admin","moderator","owner"].includes(currentAdminRole) ? `<button type="button" class="user-identity-edit" data-id="${esc(u.id)}" data-username="${esc(u.username || "")}" data-display-name="${esc(u.display_name || "")}">名前を変更</button>` : ""}
+          ${currentAdminRole === "owner" ? `<button type="button" class="user-official-toggle" data-id="${esc(u.id)}" data-enabled="${isOfficial ? "true" : "false"}">${isOfficial ? "Official解除" : "Official付与"}</button>` : ""}
           ${["admin","owner"].includes(currentAdminRole) && u.id !== "9589135e-4f75-4913-b13f-35407eeedf3b" && (u.role !== "admin" || currentAdminRole === "owner") ? `<button type="button" class="user-delete" data-id="${esc(u.id)}" data-name="${esc(u.display_name || u.username || u.id)}">強制削除</button>` : ""}
         </td>
-      </tr>`).join("") : '<tr><td colspan="6">ユーザーはいません。</td></tr>';
+      </tr>`}).join("") : '<tr><td colspan="6">ユーザーはいません。</td></tr>';
     window.KiziminUserTools?.refresh?.();
     document.querySelectorAll(".user-role-select").forEach(s => s.onchange = () => changeRole(s.dataset.id, s.dataset.current, s.value, s));
     document.querySelectorAll(".account-status").forEach(select => {
@@ -424,7 +431,76 @@
       });
     });
     document.querySelectorAll(".account-status-save").forEach(b => b.onclick = () => saveAccountStatus(b.dataset.id));
+    document.querySelectorAll(".user-identity-edit").forEach(b => b.onclick = () => editUserIdentity(b));
+    document.querySelectorAll(".user-official-toggle").forEach(b => b.onclick = () => toggleOfficial(b));
     document.querySelectorAll(".user-delete").forEach(b => b.onclick = () => forceDeleteUser(b.dataset.id, b.dataset.name));
+  }
+
+  async function editUserIdentity(button) {
+    const id = button.dataset.id;
+    const currentUsername = button.dataset.username || "";
+    const currentDisplayName = button.dataset.displayName || "";
+    const username = prompt("新しいユーザー名（3〜30文字、半角英数字と _ のみ）", currentUsername);
+    if (username === null) return;
+    const displayName = prompt("新しい表示名（1〜60文字）", currentDisplayName);
+    if (displayName === null) return;
+    if (!/^[A-Za-z0-9_]{3,30}$/.test(username.trim())) {
+      alert("ユーザー名は3〜30文字の半角英数字と _ で入力してください。");
+      return;
+    }
+    if (!displayName.trim() || displayName.trim().length > 60) {
+      alert("表示名は1〜60文字で入力してください。");
+      return;
+    }
+    if (!confirm("ユーザー名と表示名を変更しますか？\n\nユーザー名: " + username.trim() + "\n表示名: " + displayName.trim())) return;
+    button.disabled = true;
+    try {
+      const { data, error } = await supabase.rpc("admin_update_profile_identity", {
+        p_target_id: id,
+        p_username: username.trim(),
+        p_display_name: displayName.trim()
+      });
+      if (error) throw error;
+      if (data && data.ok === false) throw new Error(data.error || "更新できませんでした");
+      alert("ユーザー名と表示名を更新しました。");
+      await loadUsers();
+    } catch (e) {
+      console.error("ユーザー名・表示名の更新失敗", e);
+      const msg = String(e?.message || "");
+      alert(/USERNAME_TAKEN|duplicate key/i.test(msg) ? "そのユーザー名は既に使用されています。" :
+        /INVALID_USERNAME/i.test(msg) ? "ユーザー名の形式が正しくありません。" :
+        /INVALID_DISPLAY_NAME/i.test(msg) ? "表示名の形式が正しくありません。" :
+        /OWNER_TARGET_PROTECTED/i.test(msg) ? "オーナーのプロフィールはこの操作では変更できません。" :
+        "ユーザー名・表示名を更新できませんでした。権限または通信状態を確認してください。");
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function toggleOfficial(button) {
+    if (currentAdminRole !== "owner") {
+      alert("Official称号を付与できるのはオーナーだけです。");
+      return;
+    }
+    const id = button.dataset.id;
+    const enabled = button.dataset.enabled !== "true";
+    const label = enabled ? "Official称号を付与" : "Official称号を解除";
+    if (!confirm("このユーザーに" + label + "しますか？")) return;
+    button.disabled = true;
+    try {
+      const { data, error } = await supabase.rpc("owner_set_official_title", {
+        p_target_id: id,
+        p_enabled: enabled
+      });
+      if (error) throw error;
+      if (data && data.ok === false) throw new Error(data.error || "更新できませんでした");
+      await loadUsers();
+    } catch (e) {
+      console.error("Official称号の更新失敗", e);
+      alert("Official称号を変更できませんでした。オーナー権限とSupabase側の設定を確認してください。");
+    } finally {
+      button.disabled = false;
+    }
   }
 
   async function forceDeleteUser(id, name) {
