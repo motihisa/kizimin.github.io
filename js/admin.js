@@ -113,7 +113,7 @@
 
   // ネイティブselectの値・changeイベントは維持し、表示だけ管理画面独自のメニューにする。
   function enhanceAdminSelect(select) {
-    if (!(select instanceof HTMLSelectElement) || select.dataset.customized === "true") return;
+    if (!(select instanceof HTMLSelectElement) || select.id === "user-permission-target" || select.dataset.customized === "true") return;
     if (!select.options.length || select.closest(".custom-select")) return;
     select.dataset.customized = "true";
     const wrap = document.createElement("div");
