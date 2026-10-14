@@ -501,3 +501,66 @@ button:focus-visible,a:focus-visible{outline:3px solid rgba(143,118,236,.65);out
   .admin-view.active{animation:none}
   .admin-btn,.admin-nav button,.stat-card{transition:none}
 }
+
+
+/* 2026-10-14: structural admin workspace redesign (not just a color pass) */
+#view-dashboard{
+  display:none;
+}
+#view-dashboard.active{
+  display:grid;
+  grid-template-columns:minmax(0,1.08fr) minmax(300px,.92fr);
+  grid-template-areas:"overview overview" "quick quick" "maintenance chart" "audit audit";
+  align-items:start;
+  gap:0 22px;
+}
+#view-dashboard>.admin-panel{min-width:0;margin-bottom:22px}
+#view-dashboard>.admin-panel:nth-child(1){grid-area:overview}
+#view-dashboard>.admin-quick-actions{grid-area:quick}
+#view-dashboard>#maintenance-panel{grid-area:maintenance;align-self:stretch}
+#view-dashboard>.admin-panel:nth-child(4){grid-area:chart}
+#view-dashboard>.admin-panel:nth-child(5){grid-area:audit}
+.admin-quick-actions{position:relative;overflow:hidden}
+.admin-quick-actions .admin-panel-head{display:flex;align-items:center;justify-content:space-between}
+.admin-quick-kicker{font-size:10px;font-weight:900;letter-spacing:.16em;color:#7b8aa2;padding:7px 10px;border:1px solid #e2e9f3;border-radius:8px;background:#f8fafd}
+.admin-quick-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.admin-quick-card{
+  display:flex;align-items:center;gap:12px;min-width:0;padding:16px;
+  border:1px solid #e0e7f1;border-radius:14px;background:#fff;color:#24344c;
+  text-decoration:none;transition:transform .16s,border-color .16s,box-shadow .16s,background .16s;
+}
+.admin-quick-card:hover{transform:translateY(-2px);border-color:#9bbcf3;background:#fbfdff;box-shadow:0 10px 24px rgba(32,66,120,.09)}
+.admin-quick-card>span:nth-child(2){display:grid;gap:5px;min-width:0;flex:1}
+.admin-quick-card strong{font-size:13px;font-weight:850;line-height:1.35}
+.admin-quick-card small{font-size:11px;line-height:1.5;color:#748198}
+.admin-quick-card>b{align-self:flex-start;color:#91a0b7;font-size:16px}
+.admin-quick-icon{display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;border-radius:12px;background:#edf4ff;color:#2e67c9;font-size:19px;font-weight:800}
+.admin-quick-card:nth-child(3) .admin-quick-icon{background:#fff0f0;color:#c04452}
+.admin-quick-card:nth-child(5) .admin-quick-icon{background:#e8f8f3;color:#18856f}
+#view-dashboard #maintenance-panel{display:flex;flex-direction:column;justify-content:center}
+#view-dashboard #maintenance-panel .admin-panel-head{align-items:flex-start}
+#view-dashboard #maintenance-status{padding:12px 14px;border-radius:10px;background:#f5f8fc}
+#view-dashboard #access-chart{min-height:300px}
+#view-dashboard #role-audit-summary{padding:14px;border-radius:12px;background:#f7f9fc}
+.admin-nav button{position:relative}
+.admin-nav button.active:after{content:"";position:absolute;right:12px;width:5px;height:5px;border-radius:50%;background:#8ed9cb}
+.admin-sidebar-bottom a{padding-top:10px;padding-bottom:10px}
+#view-users .admin-panel-head{gap:18px}
+#view-users .admin-search{max-width:320px}
+#view-users #user-tools-controls{border:0;background:#f7f9fc!important;padding:16px!important;border-radius:14px}
+#view-users .user-tools-filters{background:#fff;border-color:#e3eaf4}
+#view-users .user-expiry-summary{background:#edf4ff;color:#344763}
+#view-users .admin-table td:first-child{font-weight:750}
+.admin-table tbody tr:hover td:first-child{color:#245fc1}
+#view-notifications textarea,#view-notifications input{font:inherit}
+@media(max-width:1150px){
+  .admin-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #view-dashboard.active{grid-template-columns:minmax(0,1fr);grid-template-areas:"overview" "quick" "maintenance" "chart" "audit"}
+}
+@media(max-width:650px){
+  .admin-quick-grid{grid-template-columns:minmax(0,1fr)}
+  .admin-quick-card{padding:13px}
+  .admin-quick-icon{flex-basis:36px;width:36px;height:36px}
+  .admin-quick-actions .admin-panel-head{align-items:flex-start}
+  .admin-quick-kicker{display:none}
+}
