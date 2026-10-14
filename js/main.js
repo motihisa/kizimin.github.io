@@ -65,7 +65,7 @@
     const query = state.searchQuery.trim().toLocaleLowerCase("ja-JP");
     const rows = state.articles.filter((article) => {
       if (!query) return true;
-      const haystack = [article.title,article.excerpt,article.content,article.profiles?.display_name,article.categories?.name].join(" ").toLocaleLowerCase("ja-JP");
+      const haystack = [article.title,article.excerpt,article.content,article.profiles?.display_name,article.organization?.name,article.categories?.name].join(" ").toLocaleLowerCase("ja-JP");
       return haystack.includes(query);
     });
     if (!rows.length) {
@@ -74,11 +74,11 @@
     }
     list.innerHTML = rows.map((article) => {
       const category = article.categories?.name || "その他";
-      const author = article.profiles?.display_name || article.profiles?.username || "ユーザー";
-      const authorTitle = article.profiles?.title || "";
-      const authorLink = article.author_id ? 'profile.html?id='+encodeURIComponent(article.author_id) : '#';
-      const badge = authorTitle ? '<span class="official-badge">'+escapeHtml(authorTitle)+'</span>' : "";
-      return '<a class="article'+(article.is_pinned?' article-pinned':'')+'" href="article.html?id='+encodeURIComponent(article.id)+'">'+(article.is_pinned?'<div class="pinned-label">📌 管理者固定記事</div>':'')+'<div class="article-meta">'+escapeHtml(formatDate(article.published_at || article.created_at))+' · '+escapeHtml(category)+'</div><h3>'+escapeHtml(article.title)+'</h3><p>'+escapeHtml(article.excerpt || String(article.content || "").slice(0,140))+'</p><div class="author" role="link" tabindex="0" onclick="event.preventDefault();event.stopPropagation();location.href=\''+authorLink+'\';" onkeydown="if(event.key===\'Enter\'){event.preventDefault();event.stopPropagation();location.href=\''+authorLink+'\';}">'+escapeHtml(author)+badge+'</div></a>';
+      const person = article.profiles?.display_name || article.profiles?.username || "ユーザー";
+      const author = article.organization?.name || person;
+      const badge = article.organization ? '<span class="official-badge">団体アカウント</span>' : (article.profiles?.title ? '<span class="official-badge">'+escapeHtml(article.profiles.title)+'</span>' : "");
+      const poster = article.organization ? '<small style="display:block;font-size:11px;opacity:.72;margin-top:3px">投稿者: '+escapeHtml(person)+'</small>' : "";
+      return '<a class="article'+(article.is_pinned?' article-pinned':'')+'" href="article.html?id='+encodeURIComponent(article.id)+'">'+(article.is_pinned?'<div class="pinned-label">📌 管理者固定記事</div>':'')+'<div class="article-meta">'+escapeHtml(formatDate(article.published_at || article.created_at))+' · '+escapeHtml(category)+'</div><h3>'+escapeHtml(article.title)+'</h3><p>'+escapeHtml(article.excerpt || String(article.content || "").slice(0,140))+'</p><div class="author">'+escapeHtml(author)+badge+poster+'</div></a>';
     }).join("");
   }
 
@@ -86,18 +86,21 @@
     const list = $("#article-list");
     if (list) list.innerHTML = '<div class="loading">記事を読み込んでいます…</div>';
     try {
-      const {data,error} = await supabase.from("articles").select("id,title,slug,excerpt,content,published_at,created_at,author_id,category_id,is_pinned").eq("status","published").order("is_pinned",{ascending:false}).order("published_at",{ascending:false,nullsFirst:false}).limit(50);
+      const {data,error} = await supabase.from("articles").select("id,title,slug,excerpt,content,published_at,created_at,author_id,category_id,is_pinned,organization_id,organization_posted_by").eq("status","published").order("is_pinned",{ascending:false}).order("published_at",{ascending:false,nullsFirst:false}).limit(50);
       if (error) throw error;
       const articles = data || [];
       const authorIds = [...new Set(articles.map(a=>a.author_id).filter(Boolean))];
+      const organizationIds = [...new Set(articles.map(a=>a.organization_id).filter(Boolean))];
       const categoryIds = [...new Set(articles.map(a=>a.category_id).filter(Boolean))];
-      const [profilesResult,categoriesResult] = await Promise.all([
+      const [profilesResult,categoriesResult,organizationsResult] = await Promise.all([
         authorIds.length ? supabase.from("profiles").select("id,display_name,username").in("id",authorIds) : Promise.resolve({data:[],error:null}),
-        categoryIds.length ? supabase.from("categories").select("id,name,slug").in("id",categoryIds) : Promise.resolve({data:[],error:null})
+        categoryIds.length ? supabase.from("categories").select("id,name,slug").in("id",categoryIds) : Promise.resolve({data:[],error:null}),
+        organizationIds.length ? supabase.from("organizations").select("id,name").in("id",organizationIds) : Promise.resolve({data:[],error:null})
       ]);
       const profiles = new Map((profilesResult.data || []).map(p=>[p.id,p]));
       const categories = new Map((categoriesResult.data || []).map(c=>[c.id,c]));
-      state.articles = articles.map(article=>({...article,profiles:profiles.get(article.author_id)||null,categories:categories.get(article.category_id)||null}));
+      const organizations = new Map((organizationsResult.data || []).map(o=>[o.id,o]));
+      state.articles = articles.map(article=>({...article,profiles:profiles.get(article.author_id)||null,categories:categories.get(article.category_id)||null,organization:organizations.get(article.organization_id)||null}));
       if (authorIds.length) {
         const {data:titlesData}=await supabase.from("profile_titles").select("user_id,title").in("user_id",authorIds);
         const titles=new Map((titlesData||[]).map(t=>[t.user_id,t.title]));
