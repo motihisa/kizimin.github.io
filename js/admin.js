@@ -794,13 +794,24 @@
     const button = document.querySelector('.inquiry-save[data-id="' + CSS.escape(id) + '"]');
     if (button) { button.disabled = true; button.textContent = "保存中..."; }
     try {
-      const { data, error } = await supabase.rpc("admin_update_inquiry", {
-        p_inquiry_id: id, p_status: status, p_admin_note: note
+      const { data, error } = await supabase.rpc("admin_update_inquiry_by_id", {
+        p_inquiry_id: Number(id), p_status: status, p_admin_note: note
       });
       if (error) throw error;
       if (data && data.ok === false) throw new Error(data.error || "保存できませんでした。");
       if (button) button.textContent = "保存しました";
-      await loadInquiries(); await loadDashboard();
+      // 保存成功後の一覧再読み込み失敗を、保存そのものの失敗と誤表示しない。
+      try {
+        await loadInquiries();
+        await loadDashboard();
+      } catch (refreshError) {
+        console.error("問い合わせ保存後の再読み込みに失敗:", refreshError);
+        if (button) {
+          button.disabled = false;
+          button.textContent = "保存済み（再読み込み失敗）";
+        }
+        alert("問い合わせは保存されましたが、一覧の更新に失敗しました。ページを更新して確認してください。");
+      }
     } catch (error) {
       console.error("問い合わせの状態・メモ保存に失敗:", error);
       const raw = String(error?.message || error || "");
