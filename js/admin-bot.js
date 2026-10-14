@@ -11,7 +11,7 @@
   let userId = null, intervalId = null, running = false, scanInProgress = false, lastAlerts = [], lastRunAt = null;
   const defaults = { enabled:false, intervalMinutes:5, reports:true, inquiries:true, comments:true, articles:true, browserNotice:false };
   const defaultPolicy = { mode:"detect_only", threshold:3, window_hours:24, suspend_minutes:60 };
-  let policy = {...defaultPolicy};
+  let policy = {...defaultPolicy}, policyLoaded = false;
   const storageKey = () => STORAGE_PREFIX + (userId || "unknown");
   function readConfig() {
     try { return {...defaults, ...JSON.parse(localStorage.getItem(storageKey()) || "{}")}; }
@@ -26,17 +26,24 @@
     el.textContent=message; el.dataset.state=type;
   }
   async function loadPolicy() {
-    const {data,error}=await db.from("kizimin_bot_settings").select("settings").eq("id",true).maybeSingle();
+    setStatus("SupabaseからバックグラウンドBot設定を読み込んでいます…");
+    const {data,error}=await db.from("kizimin_bot_settings").select("settings,updated_at").eq("id",true).maybeSingle();
     if(error) throw new Error("Bot設定の読み込みに失敗しました: "+error.message);
-    policy={...defaultPolicy,...(data?.settings||{})};
+    if(!data?.settings || typeof data.settings !== "object") throw new Error("SupabaseのBot設定行が見つかりません。初期値で上書きせず、保存を停止しました。");
+    policy={...defaultPolicy,...data.settings};
+    policyLoaded=true;
     renderPolicy();
+    setStatus("Supabaseから保存済みのバックグラウンドBot設定を読み込みました。","success");
   }
   function renderPolicy() {
-    if($("bot-mode")) $("bot-mode").value=policy.mode==="auto_suspend"?"auto_suspend":"detect_only";
-    if($("bot-threshold")) $("bot-threshold").value=String(Math.max(2,Math.min(10,Number(policy.threshold)||3)));
-    if($("bot-window-hours")) $("bot-window-hours").value=String(Math.max(1,Math.min(168,Number(policy.window_hours)||24)));
-    if($("bot-suspend-minutes")) $("bot-suspend-minutes").value=String(Math.max(15,Math.min(1440,Number(policy.suspend_minutes)||60)));
-    if($("bot-policy-save")) $("bot-policy-save").disabled=false;
+    if(policyLoaded) {
+      if($("bot-mode")) $("bot-mode").value=policy.mode==="auto_suspend"?"auto_suspend":"detect_only";
+      if($("bot-threshold")) $("bot-threshold").value=String(Math.max(2,Math.min(10,Number(policy.threshold)||3)));
+      if($("bot-window-hours")) $("bot-window-hours").value=String(Math.max(1,Math.min(168,Number(policy.window_hours)||24)));
+      if($("bot-suspend-minutes")) $("bot-suspend-minutes").value=String(Math.max(15,Math.min(1440,Number(policy.suspend_minutes)||60)));
+    }
+    for(const id of ["bot-mode","bot-threshold","bot-window-hours","bot-suspend-minutes"]) if($(id)) $(id).disabled=!policyLoaded;
+    if($("bot-policy-save")) $("bot-policy-save").disabled=!policyLoaded;
   }
   async function savePolicy() {
     const button=$("bot-policy-save");
@@ -230,7 +237,8 @@
       $("view-bot")?.classList.remove("active");
     }));
     renderConfig();renderHistory();
-    loadPolicy().catch(error=>setStatus(error.message,"error"));
+    renderPolicy();
+    loadPolicy().catch(error=>{policyLoaded=false;renderPolicy();setStatus(error.message+" 保存済み設定を確認できないため、設定変更を無効にしました。","error");});
     if(config.enabled) { setRunning(true); scan("起動時チェック"); }
   }
   (async()=>{
