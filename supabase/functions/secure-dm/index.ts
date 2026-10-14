@@ -63,6 +63,22 @@ async function main(req: Request) {
   if (authError || !authData.user) return json({ error: "INVALID_SESSION" }, 401);
 
   const userId = authData.user.id;
+
+  // Enforce account restrictions server-side; UI-only BAN screens are not sufficient.
+  const { data: profile, error: profileError } = await admin
+    .from("profiles")
+    .select("account_status")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (profileError) {
+    console.error("secure-dm account status lookup failed:", profileError.message);
+    return json({ error: "ACCOUNT_STATUS_CHECK_FAILED" }, 500);
+  }
+
+  if (!profile || (profile.account_status || "active") !== "active") {
+    return json({ error: "ACCOUNT_RESTRICTED" }, 403);
+  }
   const body = await req.json().catch(() => ({}));
   const action = String(body.action || "");
   const { data: encryptionSecret, error: encryptionKeyError } = await admin.rpc("get_kizimin_content_encryption_key");
