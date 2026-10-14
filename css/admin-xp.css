@@ -297,3 +297,46 @@ button:focus-visible,a:focus-visible{outline:1px dotted #222;outline-offset:2px}
 @media(forced-colors:active){
   .admin-page select{appearance:auto;-webkit-appearance:auto;background-image:none}
 }
+
+
+/* Final override: keep every control inside the admin page in the XP theme,
+   including controls styled by feature-specific stylesheets. */
+body.admin-page select,
+body.admin-page input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+body.admin-page textarea {
+  color: #222 !important;
+  font: 12px Tahoma, "MS UI Gothic", "Yu Gothic UI", sans-serif !important;
+  background-color: #fff !important;
+  border: 1px solid #7f9db9 !important;
+  border-radius: 0 !important;
+  box-shadow: inset 1px 1px 2px rgba(0,0,0,.13) !important;
+}
+body.admin-page select {
+  min-height: 25px !important;
+  padding: 3px 26px 3px 6px !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #173d71 50%),
+    linear-gradient(135deg, #173d71 50%, transparent 50%),
+    linear-gradient(to right, #d5e4f5, #eef5fd) !important;
+  background-position: calc(100% - 11px) 10px, calc(100% - 7px) 10px, calc(100% - 22px) 0 !important;
+  background-size: 4px 4px, 4px 4px, 1px 100% !important;
+  background-repeat: no-repeat !important;
+}
+body.admin-page select:focus,
+body.admin-page input:focus,
+body.admin-page textarea:focus {
+  outline: 1px dotted #222 !important;
+  outline-offset: 1px;
+  border-color: #245edb !important;
+}
+body.admin-page option, body.admin-page optgroup {
+  color: #222 !important;
+  background: #fff !important;
+  font: 12px Tahoma, "MS UI Gothic", sans-serif !important;
+}
+body.admin-page button:not(.admin-nav button) {
+  border-radius: 3px;
+}
