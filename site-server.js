@@ -1,4 +1,5 @@
 import express from "express";
+import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -55,6 +56,32 @@ app.use(express.static(root, {
 
 app.use((_req, res) => res.status(404).send("ページが見つかりません。"));
 
+// Best-effort bot runner on this existing free web service.
+ // Render Cron Jobs require a paid plan, so run the worker only while this
+ // service instance is awake. It remains fail-closed if the service key is absent.
+let botChild = null;
+function runBotWorker() {
+  if (String(process.env.BOT_ENABLED || "true").toLowerCase() !== "true") return;
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.log("Kizimin bot worker skipped: SUPABASE_SERVICE_ROLE_KEY is not configured.");
+    return;
+  }
+  if (botChild) {
+    console.log("Kizimin bot worker skipped: previous run is still active.");
+    return;
+  }
+  botChild = spawn(process.execPath, [path.join(root, "scripts/kizimin-bot-worker.mjs")], {
+    env: process.env,
+    stdio: ["ignore", "inherit", "inherit"]
+  });
+  botChild.on("error", (error) => console.error("Kizimin bot worker launch failed:", error.message));
+  botChild.on("close", (code) => {
+    console.log(`Kizimin bot worker finished with code ${code}`);
+    botChild = null;
+  });
+}
 app.listen(port, "0.0.0.0", () => {
   console.log(`Kizimin site server listening on port ${port}`);
+  runBotWorker();
+  setInterval(runBotWorker, 15 * 60 * 1000);
 });
