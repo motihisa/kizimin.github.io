@@ -1,0 +1,203 @@
+/* Kizimin Admin: Windows XP Luna-inspired skin. CSS-only; keeps existing markup and behavior. */
+.admin-page{
+  --ad-bg:#ece9d8;--ad-panel:#f5f4ed;--ad-text:#222;--ad-muted:#555;
+  --ad-line:#9a9a9a;--ad-accent:#245edb;--ad-soft:#e7e3d3;
+  margin:0;color:#222;background:#3a6ea5;
+  font-family:Tahoma,"MS UI Gothic","Yu Gothic UI",sans-serif;font-size:12px;
+}
+.admin-shell{grid-template-columns:226px minmax(0,1fr);gap:0;background:#ece9d8;min-height:100vh}
+.admin-sidebar{
+  background:linear-gradient(180deg,#3d83d8 0%,#245edb 48%,#1548a0 100%);
+  border-right:2px solid #fff;box-shadow:inset -1px 0 #6a9de0;
+  padding:10px 8px 12px;gap:8px;color:#fff;
+}
+.admin-brand{
+  padding:11px 10px 13px;font-size:22px;font-weight:700;letter-spacing:-.5px;
+  color:#fff;text-shadow:1px 1px 2px #123b78;border:1px solid rgba(255,255,255,.45);
+  border-radius:7px 7px 2px 2px;background:linear-gradient(180deg,#78b8f4 0%,#3679d1 42%,#1753a7 100%);
+  box-shadow:inset 1px 1px rgba(255,255,255,.75),inset -1px -1px rgba(0,35,100,.4);
+}
+.admin-brand:before{
+  content:"K";display:inline-grid;place-items:center;width:30px;height:30px;margin-right:8px;
+  vertical-align:-3px;border:1px solid #fff;border-radius:4px;color:#fff;
+  background:linear-gradient(135deg,#71d4ff,#1458c4);box-shadow:inset 1px 1px #c8f0ff;
+  font-family:Tahoma,sans-serif;font-size:18px;font-weight:900;text-shadow:1px 1px #17468c;
+}
+.admin-brand small{margin:5px 0 0 39px;color:#e7f2ff;letter-spacing:1.5px;font-size:9px;text-shadow:none}
+.admin-nav{gap:3px}
+.admin-nav-label{
+  padding:11px 9px 4px;color:#dcecff;font-size:10px;font-weight:bold;
+  letter-spacing:.4px;text-transform:none;text-shadow:1px 1px #16458e
+}
+.admin-nav-label:first-child{padding-top:3px}
+.admin-nav button,.admin-sidebar a{
+  display:flex;align-items:center;gap:8px;min-height:33px;padding:7px 9px;
+  border:1px solid transparent;border-radius:3px;background:transparent;color:#fff;
+  font:12px Tahoma,"MS UI Gothic",sans-serif;text-decoration:none;text-align:left;
+  box-shadow:none;transition:none;cursor:pointer
+}
+.admin-nav button span{min-width:17px;margin:0;text-align:center;color:#fff}
+.admin-nav button:hover,.admin-sidebar a:hover{
+  color:#122d55;background:linear-gradient(#fff6d9,#ffdf85);
+  border:1px solid #e5a000;box-shadow:inset 1px 1px #fff7d8;transform:none
+}
+.admin-nav button.active,.admin-nav .nav-users.active{
+  color:#183a69;background:linear-gradient(#fff8dc,#ffe18a);
+  border:1px solid #e4a000;box-shadow:inset 1px 1px #fff, inset -1px -1px #f6c94c;
+  font-weight:bold;padding-left:9px
+}
+.admin-nav button.active span{color:#2454a6}
+.admin-nav button.active:after{display:none}
+.admin-nav .nav-users .nav-icon{display:inline-grid;place-items:center;background:#dbeaff;color:#2055a5;border:1px solid #8cb6e8;border-radius:2px;width:17px;height:17px}
+.admin-nav .nav-users.active .nav-icon{background:#fff;color:#2055a5}
+.admin-sidebar-bottom{
+  margin-top:12px;padding-top:9px;gap:3px;border-top:1px solid rgba(255,255,255,.55)
+}
+.admin-sidebar-bottom a{font-size:11px;min-height:29px}
+.admin-main{
+  min-width:0;max-width:none;width:auto;margin:0;padding:14px 16px 35px;
+  box-sizing:border-box;background:#ece9d8
+}
+.admin-topbar{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:10px 12px;margin:0 0 14px;border:1px solid #003c74;border-radius:7px 7px 2px 2px;
+  background:linear-gradient(180deg,#4ba0f2 0%,#2674d8 48%,#1553b5 100%);
+  box-shadow:inset 1px 1px rgba(255,255,255,.8),inset -1px -1px rgba(0,43,120,.55);
+}
+.admin-topbar h1{font-size:22px;font-weight:bold;letter-spacing:0;color:#fff;text-shadow:1px 1px #174b92}
+.admin-topbar h1:before{content:"KIZIMIN ADMINISTRATION";display:block;margin-bottom:5px;color:#e0f0ff;font-size:9px;letter-spacing:1.2px;font-weight:bold}
+.admin-topbar p{margin-top:5px;color:#e8f3ff;font-size:11px}
+.admin-top-actions{align-items:center}
+.admin-btn{
+  appearance:none;min-height:27px;padding:5px 13px;border:1px solid #003c74;border-radius:3px;
+  background:linear-gradient(#fff,#e4e9f1 48%,#cbd4e0 50%,#e8edf4);
+  color:#111;font:12px Tahoma,"MS UI Gothic",sans-serif;box-shadow:inset 1px 1px #fff,inset -1px -1px #aeb8c6;
+  transition:none;cursor:pointer
+}
+.admin-btn:hover{background:linear-gradient(#fff7d7,#ffe28c 48%,#ffd45e 50%,#fff0b8);border-color:#d49a00;box-shadow:inset 1px 1px #fff}
+.admin-btn:active{padding-top:6px;padding-bottom:4px;box-shadow:inset 1px 1px #9ca8b7,inset -1px -1px #fff;transform:none}
+.admin-btn.primary{
+  color:#fff;background:linear-gradient(#75baff,#3488e7 48%,#1760c4 50%,#367dd1);
+  border-color:#124e9a;box-shadow:inset 1px 1px #bfe4ff,inset -1px -1px #164a91;text-shadow:1px 1px #174b92
+}
+.admin-btn.primary:hover{background:linear-gradient(#b0dcff,#69adf7 48%,#347bd6 50%,#77b5f1);border-color:#0b3d82}
+.admin-btn.danger{background:linear-gradient(#fff,#ffe3e3 50%,#ffc5c5);color:#8a1010;border-color:#bd5b5b}
+.admin-btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.admin-view.active{animation:none}
+.admin-panel{
+  margin:0 0 14px;padding:16px;border:1px solid #aca899;border-radius:2px;
+  background:#f7f6f0;box-shadow:inset 1px 1px #fff,inset -1px -1px #e1dfd3;
+  backdrop-filter:none
+}
+.admin-panel-head{align-items:center;margin-bottom:13px;gap:10px}
+.admin-panel h2{font-size:15px;font-weight:bold;letter-spacing:0;color:#173d71}
+.admin-panel h3{color:#173d71}
+.admin-muted{color:#555;font-size:11px;line-height:1.5}
+#view-dashboard .admin-panel:first-child{
+  border:1px solid #164e93;border-radius:4px;color:#fff;
+  background:linear-gradient(180deg,#6eb3f1 0%,#347fd1 100%);
+  box-shadow:inset 1px 1px #c6e7ff,inset -1px -1px #1a5ba5
+}
+#view-dashboard .admin-panel:first-child:after{border-color:rgba(255,255,255,.2);box-shadow:0 0 0 28px rgba(255,255,255,.04),0 0 0 58px rgba(255,255,255,.025)}
+#view-dashboard .admin-panel:first-child h2{color:#fff;font-size:17px}
+#view-dashboard .admin-panel:first-child .admin-muted{color:#f0f7ff}
+.dashboard-stats{gap:8px}
+.stat-card{
+  min-width:0;padding:12px;border:1px solid #b3d3f4;border-radius:2px;
+  background:linear-gradient(#fafdff,#d9eaff);color:#12345a;box-shadow:inset 1px 1px #fff;
+  transition:none
+}
+.stat-card:hover{transform:none;background:linear-gradient(#fff,#e3f0ff)}
+.stat-number{font-size:25px;letter-spacing:0;color:#154e94}
+.stat-label{color:#385a80;font-size:11px;font-weight:bold}
+#maintenance-panel{border-left:3px solid #2b74c7}
+#maintenance-toggle{accent-color:#276dcc}
+#view-dashboard #maintenance-panel .admin-panel-head label{border:1px solid #b9b6a8;border-radius:2px;background:#eeede5;padding:8px}
+#view-dashboard #maintenance-status{background:#eeede5;border:1px solid #c8c5b7;border-radius:2px;padding:10px}
+#view-dashboard #role-audit-summary{background:#eeede5;border:1px solid #d0cdbf;padding:10px}
+#view-dashboard #access-chart{min-height:250px}
+.chart-head strong{color:#173d71;font-size:14px}
+.chart-total{color:#155bb2;font-size:22px}
+.chart-grid{stroke:#d7d4c7}
+.chart-y-label,.chart-x-label{fill:#555}
+.chart-bar{fill:#347fd1}
+.chart-bar-group:hover .chart-bar,.chart-bar-group:focus .chart-bar{fill:#155bb2;opacity:1}
+.chart-tooltip{border:1px solid #7f9db9;border-radius:2px;background:#fffde9;box-shadow:2px 2px 0 rgba(0,0,0,.18);color:#222}
+.admin-table-wrap{border:1px solid #9b9b91;border-radius:2px;background:#fff;box-shadow:inset 1px 1px #fff}
+.admin-table{border-collapse:separate;border-spacing:0;min-width:780px}
+.admin-table th,.admin-table td{padding:9px 10px;border-bottom:1px solid #d4d2c7;line-height:1.45;font-size:12px}
+.admin-table th{background:linear-gradient(#fefefe,#e2e8f0);color:#263e5c;font-size:11px;font-weight:bold;letter-spacing:0;border-bottom:1px solid #a7a79b}
+.admin-table tbody tr{transition:none}
+.admin-table tbody tr:hover{background:#fff4ce}
+.admin-table tbody tr:hover td:first-child{color:#164f99}
+.admin-badge{padding:3px 7px;border:1px solid #b7cbe1;border-radius:2px;background:#e2efff;color:#1b4c85;font-weight:bold}
+.admin-search,.admin-table select,.admin-table textarea,.admin-table input,
+#view-notifications textarea,#view-notifications input{
+  border:1px solid #7f9db9;border-radius:2px;background:#fff;color:#222;
+  font:12px Tahoma,"MS UI Gothic",sans-serif;box-shadow:inset 1px 1px 2px rgba(0,0,0,.12)
+}
+.admin-search{padding:6px 8px;min-height:27px}
+.admin-search:focus,.admin-table select:focus,.admin-table textarea:focus,.admin-table input:focus,
+#view-notifications textarea:focus,#view-notifications input:focus{
+  outline:1px dotted #222;outline-offset:1px;border-color:#245edb;box-shadow:inset 1px 1px 2px rgba(0,0,0,.12)
+}
+.admin-table .user-role,.admin-table .account-status-save,.admin-table .account-status,.admin-table .ban-expires{
+  border:1px solid #7f9db9;border-radius:2px;background:#fff;box-shadow:inset 1px 1px 2px rgba(0,0,0,.08);color:#222
+}
+.admin-table .account-status-save{background:linear-gradient(#75baff,#1760c4);color:#fff;border-color:#124e9a;box-shadow:inset 1px 1px #bfe4ff}
+.admin-table .user-delete{border:1px solid #bd5b5b;border-radius:2px;background:linear-gradient(#fff,#ffe3e3 50%,#ffc5c5);color:#8a1010}
+.admin-alert{padding:10px 12px;border:1px solid #c75b5b;border-radius:2px;background:#fff0f0;color:#8b1717}
+.admin-ok{padding:10px 12px;border:1px solid #68a77e;border-radius:2px;background:#edfff1;color:#165c2d}
+.admin-forbidden-wrap,.admin-loading{border:1px solid #7f9db9;border-radius:3px;background:#f7f6f0;box-shadow:2px 2px 0 rgba(0,0,0,.15);padding:20px}
+.admin-table-wrap,.bot-settings-grid,.bot-kpis{border-radius:2px}
+.bot-intro,.bot-kpi,.bot-setting,.bot-alert,.bot-empty,.bot-status,.bot-warning{
+  border-radius:2px;box-shadow:inset 1px 1px rgba(255,255,255,.8)
+}
+.bot-intro{background:linear-gradient(#fff,#e5effb);border:1px solid #9bb8d6}
+.bot-intro p,.bot-setting small,.bot-alert p{color:#4b5563}
+.bot-kpi{border:1px solid #b7c5d5;background:#fff}
+.bot-kpi strong{color:#174f94}
+.bot-setting{border:1px solid #b7b5aa;background:#f1f0e8;padding:10px}
+.bot-setting select{border:1px solid #7f9db9;border-radius:2px;background:#fff;color:#222;font:12px Tahoma,sans-serif;padding:6px}
+.bot-status{border:1px solid #b7b5aa;border-radius:2px;background:#eeede5;color:#333}
+.bot-status[data-state="success"]{background:#e5f4df;color:#245d1d;border-color:#7ea96d}
+.bot-status[data-state="error"]{background:#fff0f0;color:#8b1717;border-color:#c75b5b}
+.bot-alert{border:1px solid #b7c5d5;border-left:4px solid #347fd1;background:#fff}
+.bot-alert.high{border-left-color:#c52b2b}.bot-alert.medium{border-left-color:#c17a00}.bot-alert.review{border-left-color:#5b65b8}
+.bot-alert-source{border:1px solid #a8c2df;border-radius:2px;background:#e2efff;color:#1b4c85}
+.bot-empty{border:1px dashed #9b9b91;background:#f7f6f0}
+.bot-warning{border:1px solid #d4b45b;background:#fff8d9;color:#77530a}
+.user-permission-panel{background:#f7f6f0;border:1px solid #aaa899}
+.user-permission-target-label{color:#333}
+.user-permission-target-label select,.user-permission-table select{border:1px solid #7f9db9;border-radius:2px;background:#fff;color:#222;font:12px Tahoma,sans-serif;padding:7px}
+.user-permission-empty{border:1px dashed #9b9b91;border-radius:2px;background:#fff}
+.admin-quick-card{border:1px solid #9bb8d6;border-radius:3px;background:linear-gradient(#fff,#e7f1fd);box-shadow:inset 1px 1px #fff;color:#203a59;transition:none}
+.admin-quick-card:hover{transform:none;border-color:#d49a00;background:linear-gradient(#fff7d7,#ffe28c);box-shadow:inset 1px 1px #fff}
+.admin-quick-icon{border:1px solid #a5bfdc;border-radius:3px;background:#dcecff;color:#1f5ea9}
+#view-users #user-tools-controls{border:1px solid #b7b5aa!important;border-radius:2px;background:#eeede5!important}
+#view-users .user-tools-filters{border-color:#b7b5aa;background:#f7f6f0}
+#view-users .user-expiry-summary{border:1px solid #b5cde6;border-radius:2px;background:#e2efff;color:#1b4c85}
+#view-inquiries .inquiry-status,#view-inquiries .inquiry-note,#view-inquiries .inquiry-reply{border:1px solid #7f9db9;border-radius:2px}
+#view-inquiries .inquiry-save,#view-inquiries .inquiry-reply-send{border-radius:2px}
+button:focus-visible,a:focus-visible{outline:1px dotted #222;outline-offset:2px}
+@media(max-width:900px){
+  .admin-shell{grid-template-columns:minmax(0,1fr)}
+  .admin-sidebar{position:relative;top:auto;height:auto;min-height:0;max-height:none;overflow:visible;padding:10px;background:linear-gradient(180deg,#3d83d8,#1548a0);border-right:0;border-bottom:2px solid #fff}
+  .admin-nav{display:flex;flex-wrap:wrap;gap:3px;overflow:visible}
+  .admin-nav-label{width:100%;padding:8px 5px 2px}
+  .admin-nav-label:first-child{padding-top:0}
+  .admin-nav button{flex:1 1 auto;white-space:nowrap;min-height:30px;padding:6px 8px}
+  .admin-sidebar-bottom{display:flex;flex-wrap:wrap;margin-top:8px;padding-top:6px}
+  .admin-main{padding:10px}
+  .admin-topbar{align-items:flex-start}
+}
+@media(max-width:560px){
+  .admin-topbar{flex-direction:column;align-items:stretch}
+  .admin-topbar h1{font-size:20px}
+  .admin-top-actions .admin-btn{width:100%}
+  .admin-panel{padding:12px}
+  .admin-panel-head{align-items:flex-start;flex-direction:column}
+  .dashboard-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #view-dashboard.active{grid-template-columns:minmax(0,1fr);grid-template-areas:"overview" "maintenance" "chart" "audit"}
+}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
