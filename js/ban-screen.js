@@ -251,7 +251,7 @@
     ));
 
     const actions = el("div", "display:flex;flex-wrap:wrap;gap:8px;margin-top:24px;");
-    actions.appendChild(button("ログアウト", logout));
+    actions.appendChild(button("お問い合わせ", function () { location.href = "contact.html"; }));
     card.appendChild(actions);
 
     overlay.appendChild(card);
