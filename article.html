@@ -363,15 +363,20 @@ document.getElementById("comment-form").addEventListener("submit",async event=>{
 (async()=>{
   if(!id){article.innerHTML='<div class="empty-state">記事が指定されていません。</div>';commentsList.innerHTML='<div class="empty-state">記事が指定されていません。</div>';return;}
   try{
-    const {data,error}=await sb.from("articles").select("id,title,content,excerpt,published_at,created_at,author_id,category_id").eq("id",id).eq("status","published").single();
+    const {data,error}=await sb.from("articles").select("id,title,content,excerpt,published_at,created_at,author_id,category_id,organization_id,organization_posted_by").eq("id",id).eq("status","published").single();
     if(error||!data){article.innerHTML='<div class="empty-state">記事が見つかりません。</div>';commentsList.innerHTML='<div class="empty-state">記事が見つかりません。</div>';return;}const currentArticleSelect=document.getElementById("save-article-select");if(currentArticleSelect)currentArticleSelect.innerHTML='<option value="'+escapeHtml(data.id)+'">'+escapeHtml(data.title)+'</option>';
-    let author="ユーザー",category="その他",authorTitle="",authorAvatarUrl="";
+    let author="ユーザー",category="その他",authorTitle="",authorAvatarUrl="",organizationName="";
     if(data.author_id){
       const {data:profile,error:profileError}=await sb.from("profiles").select("display_name,username,avatar_url").eq("id",data.author_id).maybeSingle();
       if(profileError) console.warn("記事著者情報の取得に失敗しました:",profileError);
       if(profile){author=profile.display_name||profile.username||author;authorAvatarUrl=profile.avatar_url||"";}
       const {data:titleRow}=await sb.from("profile_titles").select("title").eq("user_id",data.author_id).maybeSingle();
       authorTitle=titleRow?.title||"";
+    }
+    if(data.organization_id){
+      const {data:organization,error:organizationError}=await sb.from("organizations").select("name").eq("id",data.organization_id).maybeSingle();
+      if(organizationError) console.warn("団体情報の取得に失敗しました:",organizationError);
+      organizationName=organization?.name||"";
     }
     if(data.category_id){
       const {data:categoryRow,error:categoryError}=await sb.from("categories").select("name").eq("id",data.category_id).maybeSingle();
@@ -381,7 +386,8 @@ document.getElementById("comment-form").addEventListener("submit",async event=>{
     const publishedDate=escapeHtml(new Intl.DateTimeFormat("ja-JP",{year:"numeric",month:"long",day:"numeric"}).format(new Date(data.published_at||data.created_at)));
     const authorInitial=escapeHtml((author||"K").trim().slice(0,1).toUpperCase());
     const authorAvatar=authorAvatarUrl?'<img src="'+escapeHtml(authorAvatarUrl)+'" alt="" loading="lazy">':authorInitial;
-    article.innerHTML='<div class="article-cover"><div class="article-kicker"><span class="article-dot"></span> KIZIMIN JOURNAL</div><div class="article-meta"><span class="article-category">'+escapeHtml(category)+'</span><span>'+publishedDate+'</span><span>·</span><span>読む時間のひととき</span></div><h1 class="article-title">'+escapeHtml(data.title)+'</h1><div class="article-author-row"><span class="author-avatar" aria-hidden="true">'+authorAvatar+'</span><div class="article-author-details"><span class="author-label">この記事を書いた人</span><div><a class="author-name" href="profile.html?id='+encodeURIComponent(data.author_id||"")+'">'+escapeHtml(author)+'</a>'+badge(authorTitle)+(data.author_id?'<button type="button" class="inline-follow-button" data-follow-user="'+escapeHtml(data.author_id)+'">フォロー</button>':'')+'</div></div></div></div><div class="article-divider"></div><div class="article-body markdown-rendered">'+renderArticleContent(data.content)+'</div><div class="article-endnote">最後まで読んでくれてありがとう</div>';
+    const authorIdentity=organizationName?'<span class="author-name">'+escapeHtml(organizationName)+'</span><span class="official-badge">団体アカウント</span><small style="display:block;font-size:12px;color:#777;margin-top:4px">実際の投稿者: '+escapeHtml(author)+'</small>':'<a class="author-name" href="profile.html?id='+encodeURIComponent(data.author_id||"")+'">'+escapeHtml(author)+'</a>'+badge(authorTitle)+(data.author_id?'<button type="button" class="inline-follow-button" data-follow-user="'+escapeHtml(data.author_id)+'">フォロー</button>':"");
+    article.innerHTML='<div class="article-cover"><div class="article-kicker"><span class="article-dot"></span> KIZIMIN JOURNAL</div><div class="article-meta"><span class="article-category">'+escapeHtml(category)+'</span><span>'+publishedDate+'</span><span>·</span><span>読む時間のひととき</span></div><h1 class="article-title">'+escapeHtml(data.title)+'</h1><div class="article-author-row"><span class="author-avatar" aria-hidden="true">'+authorAvatar+'</span><div class="article-author-details"><span class="author-label">'+(organizationName?"団体名義の記事":"この記事を書いた人")+'</span><div>'+authorIdentity+'</div></div></div></div><div class="article-divider"></div><div class="article-body markdown-rendered">'+renderArticleContent(data.content)+'</div><div class="article-endnote">最後まで読んでくれてありがとう</div>';
     const {data:{session:editSession}}=await sb.auth.getSession();
     if(editSession?.user?.id){
       let canEdit=data.author_id===editSession.user.id;
