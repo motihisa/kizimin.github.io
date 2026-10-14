@@ -18,8 +18,8 @@
         <a href="#latest">新着</a>
         <a href="#popular">人気</a>
         <a href="#categories">カテゴリ</a>
-        <a href="#community-daily">今日のお題</a>
-        <a id="qa-link" href="#community-qa">🧩 質問・回答</a>
+        <a href="#community-daily" data-home-community-link="daily">今日のお題</a>
+        <a id="qa-link" href="#community-qa" data-home-community-link="qa">🧩 質問・回答</a>
       </nav>
       <div class="header-actions">
         <input id="article-search" class="search" type="search" placeholder="記事を検索" aria-label="記事を検索">
@@ -27,7 +27,7 @@
       </div>
     </div>
   </header>
-  <nav class="mobile-shortcuts" aria-label="コミュニティへのショートカット"><a href="#community-qa">🧩 質問・回答</a><a href="#community-polls">📊 投票</a><a href="#community-challenges">🎯 チャレンジ</a></nav>
+  <nav class="mobile-shortcuts" aria-label="コミュニティへのショートカット"><a href="#community-qa" data-home-community-link="qa">🧩 質問・回答</a><a href="#community-polls" data-home-community-link="polls">📊 投票</a><a href="#community-challenges" data-home-community-link="challenges">🎯 チャレンジ</a></nav>
 
   <main>
     <section class="hero">
@@ -44,11 +44,63 @@
       <div id="announcement-content" aria-live="polite"><p>現在、お知らせはありません。</p></div>
     </section>
 
-    <section class="site-community site-community-top" aria-label="今日のお題">
-      <section class="site-widget daily-widget" id="community-daily">
+    <section class="home-community-hub" aria-label="コミュニティ">
+      <div class="home-community-heading">
+        <div><p class="home-community-eyebrow">KIZIMIN COMMUNITY</p><h2>コミュニティを楽しもう</h2><p>使いたい機能を選んでください。選んだ機能だけがここに表示されます。</p></div>
+      </div>
+      <div class="home-community-cards" role="group" aria-label="コミュニティ機能を選択">
+        <button class="home-community-card" type="button" data-home-community="daily" aria-controls="home-community-panel-daily" aria-expanded="false"><span class="home-community-card-icon" aria-hidden="true">💡</span><span class="home-community-card-title">今日のお題</span><span class="home-community-card-desc">お題から記事を書き始める</span><span class="home-community-card-action">開く <span aria-hidden="true">↗</span></span></button>
+        <button class="home-community-card" type="button" data-home-community="qa" aria-controls="home-community-panel-qa" aria-expanded="false"><span class="home-community-card-icon" aria-hidden="true">🧩</span><span class="home-community-card-title">質問・回答</span><span class="home-community-card-desc">質問を投稿したり、回答したりする</span><span class="home-community-card-action">開く <span aria-hidden="true">↗</span></span></button>
+        <button class="home-community-card" type="button" data-home-community="polls" aria-controls="home-community-panel-polls" aria-expanded="false"><span class="home-community-card-icon" aria-hidden="true">📊</span><span class="home-community-card-title">みんなの投票</span><span class="home-community-card-desc">投票を見て、アンケートに参加する</span><span class="home-community-card-action">開く <span aria-hidden="true">↗</span></span></button>
+        <button class="home-community-card" type="button" data-home-community="challenges" aria-controls="home-community-panel-challenges" aria-expanded="false"><span class="home-community-card-icon" aria-hidden="true">🎯</span><span class="home-community-card-title">チャレンジ</span><span class="home-community-card-desc">テーマに沿って投稿に参加する</span><span class="home-community-card-action">開く <span aria-hidden="true">↗</span></span></button>
+        <button class="home-community-card" type="button" data-home-community="library" aria-controls="home-community-panel-library" aria-expanded="false"><span class="home-community-card-icon" aria-hidden="true">📚</span><span class="home-community-card-title">情報ライブラリ</span><span class="home-community-card-desc">役立つ知識や手順を共有する</span><span class="home-community-card-action">開く <span aria-hidden="true">↗</span></span></button>
+      </div>
+      <div class="home-community-panels" aria-live="polite">
+        <div class="home-community-panel" id="home-community-panel-daily" data-home-community-panel="daily" hidden>
+<section class="site-widget daily-widget" id="community-daily">
         <div><h2>💡 今日のお題</h2><p class="site-widget-hint">お題から記事を書き始められます。</p></div>
         <div id="daily-topic"><p>お題を読み込んでいます…</p></div>
       </section>
+        </div>
+        <div class="home-community-panel" id="home-community-panel-qa" data-home-community-panel="qa" hidden>
+<section class="site-widget qa-widget" id="community-qa">
+        <h2>🧩 質問・回答</h2>
+        <p class="site-widget-hint">困ったことを質問したり、知っていることに回答したりできます。</p>
+        <details class="compact-create"><summary>質問を投稿</summary>
+          <form id="qa-create" class="feature-form"><label>質問タイトル<input id="qa-title" required minlength="5" maxlength="180"></label><label>質問内容<textarea id="qa-body" required maxlength="8000"></textarea></label><button class="feature-primary">質問を投稿</button></form>
+        </details>
+        <div id="qa-list"><p>質問を読み込んでいます…</p></div>
+      </section>
+        </div>
+        <div class="home-community-panel" id="home-community-panel-polls" data-home-community-panel="polls" hidden>
+<section class="site-widget poll-widget" id="community-polls">
+        <h2>📊 みんなの投票</h2>
+        <p class="site-widget-hint">記事を書く画面からアンケートを作成できます。</p>
+        <div id="poll-list"><p>投票を読み込んでいます…</p></div>
+        <a class="feature-secondary poll-create-link" href="write.html#article-poll">記事を書くときに投票を作成 →</a>
+      </section>
+        </div>
+        <div class="home-community-panel" id="home-community-panel-challenges" data-home-community-panel="challenges" hidden>
+<section class="site-widget challenge-widget" id="community-challenges">
+        <h2>🎯 コミュニティチャレンジ</h2>
+        <p class="site-widget-hint">テーマに沿って投稿し、みんなで参加しよう。</p>
+        <details class="compact-create"><summary>チャレンジを作成</summary>
+          <form id="challenge-create" class="feature-form"><label>企画名<input id="challenge-title" required maxlength="160" placeholder="今週のおすすめ紹介"></label><label>説明<textarea id="challenge-description" maxlength="2000"></textarea></label><label>終了日時<input id="challenge-ends" type="datetime-local" required></label><button class="feature-primary">企画を作成</button></form>
+        </details>
+        <div id="challenge-list"><p>企画を読み込んでいます…</p></div>
+      </section>
+        </div>
+        <div class="home-community-panel" id="home-community-panel-library" data-home-community-panel="library" hidden>
+<section class="site-widget library-widget" id="community-library">
+        <h2>📚 みんなの情報ライブラリ</h2>
+        <p class="site-widget-hint">役立つ知識や手順を、あとから探せる形で共有。</p>
+        <details class="compact-create"><summary>知識を追加・編集</summary>
+          <form id="library-create" class="feature-form"><input type="hidden" id="library-id"><label>知識のタイトル<input id="library-title" required minlength="3" maxlength="180"></label><label>内容<textarea id="library-body" required maxlength="12000"></textarea></label><label>タグ<input id="library-tags" placeholder="勉強, 初心者向け"></label><button class="feature-primary" id="library-submit">知識を追加</button></form>
+        </details>
+        <div id="library-list"><p>情報を読み込んでいます…</p></div>
+      </section>
+        </div>
+      </div>
     </section>
 
     <div class="content">
@@ -69,10 +121,10 @@
         <div class="side-card community-shortcuts">
           <h2>コミュニティ</h2>
           <p>読むだけでも、参加してもOK。</p>
-          <a href="#community-qa">🧩 質問・回答 <span>›</span></a>
-          <a href="#community-polls">📊 みんなの投票 <span>›</span></a>
-          <a href="#community-challenges">🎯 チャレンジ <span>›</span></a>
-          <a href="#community-library">📚 情報ライブラリ <span>›</span></a>
+          <a href="#community-qa" data-home-community-link="qa">🧩 質問・回答 <span>›</span></a>
+          <a href="#community-polls" data-home-community-link="polls">📊 みんなの投票 <span>›</span></a>
+          <a href="#community-challenges" data-home-community-link="challenges">🎯 チャレンジ <span>›</span></a>
+          <a href="#community-library" data-home-community-link="library">📚 情報ライブラリ <span>›</span></a>
         </div>
 
         <div class="categories" id="categories">
@@ -101,41 +153,7 @@
       </aside>
     </div>
 
-    <section class="site-community-secondary" aria-label="コミュニティ機能">
-      <section class="site-widget poll-widget" id="community-polls">
-        <h2>📊 みんなの投票</h2>
-        <p class="site-widget-hint">記事を書く画面からアンケートを作成できます。</p>
-        <div id="poll-list"><p>投票を読み込んでいます…</p></div>
-        <a class="feature-secondary poll-create-link" href="write.html#article-poll">記事を書くときに投票を作成 →</a>
-      </section>
 
-      <section class="site-widget challenge-widget" id="community-challenges">
-        <h2>🎯 コミュニティチャレンジ</h2>
-        <p class="site-widget-hint">テーマに沿って投稿し、みんなで参加しよう。</p>
-        <details class="compact-create"><summary>チャレンジを作成</summary>
-          <form id="challenge-create" class="feature-form"><label>企画名<input id="challenge-title" required maxlength="160" placeholder="今週のおすすめ紹介"></label><label>説明<textarea id="challenge-description" maxlength="2000"></textarea></label><label>終了日時<input id="challenge-ends" type="datetime-local" required></label><button class="feature-primary">企画を作成</button></form>
-        </details>
-        <div id="challenge-list"><p>企画を読み込んでいます…</p></div>
-      </section>
-
-      <section class="site-widget qa-widget" id="community-qa">
-        <h2>🧩 質問・回答</h2>
-        <p class="site-widget-hint">困ったことを質問したり、知っていることに回答したりできます。</p>
-        <details class="compact-create"><summary>質問を投稿</summary>
-          <form id="qa-create" class="feature-form"><label>質問タイトル<input id="qa-title" required minlength="5" maxlength="180"></label><label>質問内容<textarea id="qa-body" required maxlength="8000"></textarea></label><button class="feature-primary">質問を投稿</button></form>
-        </details>
-        <div id="qa-list"><p>質問を読み込んでいます…</p></div>
-      </section>
-
-      <section class="site-widget library-widget" id="community-library">
-        <h2>📚 みんなの情報ライブラリ</h2>
-        <p class="site-widget-hint">役立つ知識や手順を、あとから探せる形で共有。</p>
-        <details class="compact-create"><summary>知識を追加・編集</summary>
-          <form id="library-create" class="feature-form"><input type="hidden" id="library-id"><label>知識のタイトル<input id="library-title" required minlength="3" maxlength="180"></label><label>内容<textarea id="library-body" required maxlength="12000"></textarea></label><label>タグ<input id="library-tags" placeholder="勉強, 初心者向け"></label><button class="feature-primary" id="library-submit">知識を追加</button></form>
-        </details>
-        <div id="library-list"><p>情報を読み込んでいます…</p></div>
-      </section>
-    </section>
 
   </main>
 
@@ -154,5 +172,43 @@
   <script src="js/features-app.js?v=20261012-xss-guard3"></script>
   <script src="js/access.js"></script>
   <script src="js/site-editor-settings.js?v=20261012-head-guard1"></script>
+  <script>
+  (() => {
+    const cards = Array.from(document.querySelectorAll("[data-home-community]"));
+    const panels = Array.from(document.querySelectorAll("[data-home-community-panel]"));
+    const aliases = { "community-daily":"daily", "community-qa":"qa", "community-polls":"polls", "community-challenges":"challenges", "community-library":"library" };
+    function openCommunity(key, updateHash = true) {
+      const panel = panels.find(item => item.dataset.homeCommunityPanel === key);
+      if (!panel) return;
+      panels.forEach(item => { item.hidden = item !== panel; });
+      cards.forEach(card => {
+        const active = card.dataset.homeCommunity === key;
+        card.classList.toggle("is-active", active);
+        card.setAttribute("aria-expanded", String(active));
+      });
+      if (updateHash) history.replaceState(null, "", "#" + ({daily:"community-daily",qa:"community-qa",polls:"community-polls",challenges:"community-challenges",library:"community-library"}[key]));
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      panel.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "nearest" });
+    }
+    cards.forEach(card => card.addEventListener("click", () => openCommunity(card.dataset.homeCommunity)));
+    document.querySelectorAll("[data-home-community-link]").forEach(link => link.addEventListener("click", event => {
+      const key = link.dataset.homeCommunityLink;
+      if (!panels.some(panel => panel.dataset.homeCommunityPanel === key)) return;
+      event.preventDefault();
+      openCommunity(key);
+    }));
+    const initial = aliases[location.hash.slice(1)];
+    if (initial) openCommunity(initial, false);
+    else {
+      panels.forEach(panel => panel.hidden = true);
+      cards.forEach(card => { card.classList.remove("is-active"); card.setAttribute("aria-expanded", "false"); });
+    }
+    window.addEventListener("hashchange", () => {
+      const key = aliases[location.hash.slice(1)];
+      if (key) openCommunity(key, false);
+    });
+  })();
+  </script>
+
 </body>
 </html>
