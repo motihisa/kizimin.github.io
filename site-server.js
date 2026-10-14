@@ -62,8 +62,8 @@ app.use((_req, res) => res.status(404).send("ページが見つかりません�
 let botChild = null;
 function runBotWorker() {
   if (String(process.env.BOT_ENABLED || "true").toLowerCase() !== "true") return;
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    console.log("Kizimin bot worker skipped: SUPABASE_SERVICE_ROLE_KEY is not configured.");
+  if (!process.env.SUPABASE_SECRET_KEY && !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.log("Kizimin bot worker skipped: SUPABASE_SECRET_KEY (or legacy SUPABASE_SERVICE_ROLE_KEY) is not configured.");
     return;
   }
   if (botChild) {
