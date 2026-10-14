@@ -3,7 +3,8 @@
  *
  * Required Render environment variables:
  *   SUPABASE_URL
- *   SUPABASE_SERVICE_ROLE_KEY  (secret; Render environment only, never commit)
+ *   SUPABASE_SECRET_KEY        (new sb_secret_... key; Render environment only, never commit)
+ *   SUPABASE_SERVICE_ROLE_KEY  (temporary legacy fallback during migration)
  * Optional:
  *   BOT_ENABLED=true
  *   BOT_BATCH_LIMIT=100
@@ -17,7 +18,7 @@
  * or overrides an existing ban/suspension.
  */
 const baseUrl = String(process.env.SUPABASE_URL || "").replace(/\/$/, "");
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const serviceKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 const enabled = String(process.env.BOT_ENABLED || "true").toLowerCase() === "true";
 let autoSuspend = false; // Enabled only by the admin-saved Supabase policy.
 const batchLimit = Math.max(10, Math.min(500, Number(process.env.BOT_BATCH_LIMIT) || 100));
@@ -33,7 +34,7 @@ if (!enabled) {
   process.exit(0);
 }
 if (!baseUrl || !serviceKey) {
-  console.error("Bot configuration error: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be configured in Render environment variables.");
+  console.error("Bot configuration error: SUPABASE_URL and SUPABASE_SECRET_KEY (or temporary legacy SUPABASE_SERVICE_ROLE_KEY) must be configured in Render environment variables.");
   process.exit(1);
 }
 if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(baseUrl)) {
