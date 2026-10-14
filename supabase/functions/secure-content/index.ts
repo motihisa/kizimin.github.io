@@ -359,7 +359,7 @@ async function main(req: Request) {
 
   if (action === "admin_user_activity") {
     const { data: ownerRow } = await admin.from("site_owners").select("user_id").eq("user_id", userId).maybeSingle();
-    if (!isStaff && !ownerRow) return json({ error: "ADMIN_REQUIRED" }, 403);
+    if (!isStaff && !ownerRow && !(await hasPermission("ban_users")) && !(await hasPermission("manage_roles")) && !(await hasPermission("delete_accounts"))) return json({ error: "ADMIN_REQUIRED" }, 403);
     const targetId = String(body.user_id || "");
     if (!targetId) return json({ error: "INVALID_USER" }, 400);
     const [{ data: reports, error: reportsError }, { data: notifications, error: notificationsError }] = await Promise.all([
