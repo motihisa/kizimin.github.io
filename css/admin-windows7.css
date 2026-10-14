@@ -1,4 +1,6 @@
 /* Kizimin Admin: Windows 7 Aero-inspired theme. CSS-only; existing app behavior is unchanged. */
+.admin-theme-picker{display:flex;align-items:center;gap:7px;padding:5px 8px;border:1px solid #7f9db9;border-radius:3px;background:linear-gradient(#fff,#e4e9f1 48%,#cbd4e0 50%,#e8edf4);color:#222;font:12px Tahoma,"MS UI Gothic",sans-serif}
+.admin-theme-picker select{min-height:25px;padding:3px 7px;border:1px solid #7f9db9;border-radius:0;background:#fff;color:#222;font:12px Tahoma,"MS UI Gothic",sans-serif}
 body.admin-page[data-admin-theme="win7"]{
   --ad-bg:#e8f1f8;--ad-panel:rgba(255,255,255,.92);--ad-text:#1d2b3a;--ad-muted:#526577;
   --ad-line:#b6cbdc;--ad-accent:#2674b8;--ad-soft:#e5f1fa;
@@ -91,7 +93,7 @@ body.admin-page[data-admin-theme="win7"] .admin-table th,
 body.admin-page[data-admin-theme="win7"] .admin-table td{border-bottom-color:#d6e3ec}
 body.admin-page[data-admin-theme="win7"] .admin-table tbody tr:hover{background:#edf8ff}
 body.admin-page[data-admin-theme="win7"] .admin-search,
-body.admin-page[data-admin-theme="win7"] .admin-page input,
+body.admin-page[data-admin-theme="win7"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
 body.admin-page[data-admin-theme="win7"] select,
 body.admin-page[data-admin-theme="win7"] textarea{
   border-color:#9db8ca;border-radius:3px;background-color:#fff;color:#203c50;
