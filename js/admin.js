@@ -996,6 +996,7 @@
     ["broadcast_notifications","全員への通知送信"],
     ["manage_inquiries","問い合わせの管理"]
   ];
+  const rolePermissionMeta = permissionMeta.filter(([key]) => key !== "manage_inquiries");
   async function loadPermissions() {
     const notice = $("permissions-notice");
     const grid = $("permissions-grid");
@@ -1009,7 +1010,7 @@
     if (error) throw error;
     const values = new Map((data || []).map(row => [row.role + ":" + row.permission_key, !!row.allowed]));
     grid.innerHTML = '<table class="admin-table"><thead><tr><th>権限</th><th>user</th><th>moderator</th><th>admin</th><th>owner</th></tr></thead><tbody>' +
-      permissionMeta.map(([key,label]) => '<tr><td>' + esc(label) + '</td>' +
+      rolePermissionMeta.map(([key,label]) => '<tr><td>' + esc(label) + '</td>' +
         ["user","moderator","admin","owner"].map(role => {
           if (currentAdminRole !== "owner" && (role === "admin" || role === "owner")) {
             return '<td><span class="admin-muted">オーナー専用</span></td>';
@@ -1026,7 +1027,7 @@
           alert("権限設定を変更できるのはサイトオーナーのみです。");
           return;
         }
-        const permissionLabel = permissionMeta.find(x => x[0] === input.dataset.permission)?.[1] || input.dataset.permission;
+        const permissionLabel = rolePermissionMeta.find(x => x[0] === input.dataset.permission)?.[1] || input.dataset.permission;
         const previousAllowed = !input.checked;
         const nextState = input.checked ? "許可する" : "禁止する";
         if (!confirm("権限変更を実行しますか？\n\n対象ロール: " + input.dataset.role + "\n権限: " + permissionLabel + "\n変更: " + (previousAllowed ? "許可" : "禁止") + " → " + (input.checked ? "許可" : "禁止") + "\n\nサイトオーナーとして変更を確定します。")) {
@@ -1043,7 +1044,7 @@
           input.checked = !input.checked;
           alert("権限設定を保存できませんでした: " + errorMessage(saveError));
         } else if (notice) {
-          notice.textContent = input.dataset.role + " / " + (permissionMeta.find(x => x[0] === input.dataset.permission)?.[1] || input.dataset.permission) + " を保存しました。";
+          notice.textContent = input.dataset.role + " / " + (rolePermissionMeta.find(x => x[0] === input.dataset.permission)?.[1] || input.dataset.permission) + " を保存しました。";
         }
         input.disabled = false;
       });
