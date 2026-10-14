@@ -12,9 +12,20 @@ const blocked = [
   /^\/(?:package(?:-lock)?\.json|yarn\.lock|pnpm-lock\.yaml|render\.yaml)$/i,
   /^\/(?:supabase|workers|\.github|\.git)(?:\/|$)/i,
   /^\/\.env(?:\.|$)/i,
+  /\.(?:md|sql|ya?ml|toml|lock|map|ts|sh|log)$/i,
 ];
 
 app.disable("x-powered-by");
+
+// Apply baseline browser security headers to pages, errors, and health checks.
+app.use((_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  next();
+});
+
 app.get("/healthz", (_req, res) => res.status(200).json({ ok: true }));
 
 app.use((req, res, next) => {
@@ -35,9 +46,9 @@ app.use(express.static(root, {
   index: "index.html",
   fallthrough: true,
   setHeaders(res, filePath) {
-    if (/\.(?:html|js|css|svg)$/i.test(filePath)) {
-      res.setHeader("X-Content-Type-Options", "nosniff");
-      res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    if (/\.html$/i.test(filePath)) {
+      // Avoid caching HTML pages that may reflect changing account/session state.
+      res.setHeader("Cache-Control", "no-store");
     }
   }
 }));
