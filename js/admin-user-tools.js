@@ -30,7 +30,7 @@ function decorate(){
  const b=$("users-body");if(!b)return;rows=[...b.querySelectorAll("tr")].filter(r=>r.querySelector(".account-status")||r.querySelector(".user-role-select")).map(read);
  rows.forEach(x=>{const a=x.row.querySelector(".admin-actions");if(!a)return;
  if(!a.querySelector(".user-detail-open")){const btn=document.createElement("button");btn.type="button";btn.className="admin-btn user-detail-open";btn.textContent="詳細";btn.onclick=()=>details(x.id);a.appendChild(btn)}
- if(!a.querySelector(".user-warning-open")&&!x.row.querySelector(".account-status")?.disabled){const btn=document.createElement("button");btn.type="button";btn.className="admin-btn user-warning-open";btn.textContent="警告";btn.onclick=()=>warn(x.id);a.appendChild(btn)}
+ if(!a.querySelector(".user-warning-open")&&!x.row.querySelector(".account-status")?.disabled&&["admin","moderator","owner"].includes(window.__kiziminCurrentUserRole)){const btn=document.createElement("button");btn.type="button";btn.className="admin-btn user-warning-open";btn.textContent="警告";btn.onclick=()=>warn(x.id);a.appendChild(btn)}
  });
  const total=rows.length,ban=rows.filter(x=>x.status==="banned").length,sus=rows.filter(x=>x.status==="suspended").length,admins=rows.filter(x=>["admin","owner"].includes(x.role)).length,soon=rows.filter(x=>x.status==="banned"&&x.expiry&&new Date(x.expiry)>new Date()&&new Date(x.expiry)<new Date(Date.now()+604800000)).length;
  if($("user-tools-stats"))$("user-tools-stats").innerHTML=[["登録ユーザー",total],["BAN中",ban],["一時停止",sus],["管理者・オーナー",admins],["7日以内に解除",soon]].map(a=>'<div class="user-stat-card"><span>'+esc(a[0])+'</span><strong>'+a[1]+'</strong></div>').join("");
