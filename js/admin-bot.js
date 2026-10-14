@@ -49,14 +49,17 @@
         window_hours:Math.max(1,Math.min(168,Number($("bot-window-hours")?.value)||24)),
         suspend_minutes:Math.max(15,Math.min(1440,Number($("bot-suspend-minutes")?.value)||60))
       };
-      if(mode==="auto_suspend"&&!confirm("自動一時停止を有効にします。条件に該当する一般ユーザーは自動で一時停止されます。続行しますか？")) return;
+      if(mode==="auto_suspend"&&!confirm("自動一時停止を有効にします。条件に該当する一般ユーザーは自動で一時停止されます。続行しますか？")) { setStatus("保存をキャンセルしました。設定は変更されていません。"); return; }
       const {error}=await db.from("kizimin_bot_settings").upsert({id:true,settings:next,updated_by:userId,updated_at:new Date().toISOString()},{onConflict:"id"});
       if(error) throw error;
       policy=next;
       setStatus(mode==="auto_suspend"?"設定を保存しました。自動一時停止はバックグラウンドBotの次回実行から適用されます。":"設定を保存しました。現在は検知のみで、一時停止は行いません。","success");
       renderPolicy();
     } catch(error) {
-      setStatus("Bot設定を保存できませんでした: "+(error.message||"権限または通信状態を確認してください"),"error");
+      const message="Bot設定を保存できませんでした: "+(error.message||"権限または通信状態を確認してください");
+      setStatus(message,"error");
+      console.error("[Kizimin Bot] settings save failed", error);
+      $("bot-status")?.scrollIntoView({behavior:"smooth",block:"center"});
     } finally { if(button) button.disabled=false; }
   }
   function renderConfig() {
