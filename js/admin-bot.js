@@ -9,7 +9,7 @@
   if (!$("view-bot") || !window.supabase?.createClient) return;
   const db = window.supabase.createClient(SUPABASE_URL, PUBLISHABLE_KEY);
   let userId = null, intervalId = null, running = false, scanInProgress = false, lastAlerts = [], lastRunAt = null;
-  const defaults = { enabled:false, intervalMinutes:5, reports:true, inquiries:true, comments:true, articles:true, browserNotice:false };
+  const defaults = { enabled:false, intervalMinutes:5, reports:true, inquiries:true, comments:true, articles:true };
   const defaultPolicy = { mode:"detect_only", threshold:3, window_hours:24, suspend_minutes:60 };
   let policy = {...defaultPolicy}, policyLoaded = false;
   const storageKey = () => STORAGE_PREFIX + (userId || "unknown");
@@ -120,6 +120,7 @@
     if(scanInProgress) { setStatus("前回のチェックがまだ実行中です。完了を待っています。"); return; }
     scanInProgress=true;
     const button=$("bot-run-now"); if(button) button.disabled=true;
+    try {
     setStatus(reason+"を実行しています…");
     const config=readConfig(), alerts=[], stats={reports:0,inquiries:0,suspiciousComments:0,suspiciousArticles:0,errors:[]};
     const tasks=[];
@@ -164,7 +165,13 @@
     writeHistory(history.slice(0,30));
     if(stats.errors.length) setStatus("チェックは終了しました。一部の項目を取得できませんでした: "+stats.errors.join(" / "),"error");
     else setStatus("チェック完了 · "+fmt(lastRunAt),"success");
-    scanInProgress=false; if(button) button.disabled=false;
+    } catch(error) {
+      console.error("[Kizimin Bot] scan failed", error);
+      setStatus("チェック中に予期しないエラーが発生しました。履歴と結果の表示を確認してください。","error");
+    } finally {
+      scanInProgress=false;
+      if(button) button.disabled=false;
+    }
   }
   function renderResults(stats,alerts,reason) {
     const kpis=[
@@ -192,10 +199,11 @@
       db.from("profiles").select("role,account_status").eq("id",userId).maybeSingle(),
       db.rpc("is_site_owner")
     ]);
-    if(profileError||(!profile&&!(!ownerError&&ownerFlag===true))) return false;
-    const isOwner=!ownerError&&ownerFlag===true;
-    if(profile?.account_status&&profile.account_status!=="active") return false;
-    return isOwner||profile?.role==="admin";
+    const isOwner=!ownerError && ownerFlag===true;
+    if(profileError) return false;
+    if(!profile && !isOwner) return false;
+    if(profile?.account_status && profile.account_status!=="active") return false;
+    return isOwner || profile?.role==="admin";
   }
   function bind() {
     const config=readConfig();
