@@ -993,7 +993,8 @@
     ["manage_settings","サイト設定の変更"],
     ["view_logs","監査ログの閲覧"],
     ["manage_reports","通報の管理"],
-    ["broadcast_notifications","全員への通知送信"]
+    ["broadcast_notifications","全員への通知送信"],
+    ["manage_inquiries","問い合わせの管理"]
   ];
   async function loadPermissions() {
     const notice = $("permissions-notice");
@@ -1047,6 +1048,89 @@
         input.disabled = false;
       });
     });
+    await loadUserPermissionOverrides();
+  }
+
+  async function loadUserPermissionOverrides() {
+    const target = $("user-permission-target");
+    const notice = $("user-permission-notice");
+    const grid = $("user-permission-grid");
+    if (!target || !grid) return;
+    if (currentAdminRole !== "owner") {
+      if (notice) notice.textContent = "ユーザー別権限を変更できるのはサイトオーナーのみです。";
+      grid.innerHTML = "";
+      return;
+    }
+    if (notice) notice.textContent = "ユーザー一覧を読み込んでいます...";
+    const {data: targets, error: targetError} = await supabase.rpc("admin_list_permission_targets");
+    if (targetError) throw targetError;
+    const selectedId = target.value;
+    target.innerHTML = '<option value="">ユーザーを選択してください</option>' +
+      (targets || []).map(user => '<option value="' + esc(user.user_id) + '">' +
+        esc(user.display_name || user.username || "名前未設定") + '（@' + esc(user.username || "unknown") +
+        '・' + esc(user.role) + '）</option>').join("");
+    if ((targets || []).some(user => user.user_id === selectedId)) target.value = selectedId;
+    target.onchange = () => loadSelectedUserPermissions().catch(error => {
+      console.error("ユーザー別権限の読み込み失敗", error);
+      if (notice) notice.textContent = "権限を読み込めませんでした。";
+      grid.innerHTML = '<div class="admin-alert">ユーザー別権限を読み込めませんでした。</div>';
+    });
+    grid.onchange = async event => {
+      const input = event.target.closest(".user-permission-value");
+      if (!input || !target.value) return;
+      const previous = input.dataset.previous || "inherit";
+      const next = input.value;
+      const label = permissionMeta.find(item => item[0] === input.dataset.permission)?.[1] || input.dataset.permission;
+      const meaning = value => value === "inherit" ? "ロール設定を継承" : value === "allow" ? "個別に許可" : "個別に禁止";
+      if (!confirm("ユーザー別の権限を変更しますか？\n\n対象: " + target.selectedOptions[0]?.textContent +
+          "\n権限: " + label + "\n変更: " + meaning(previous) + " → " + meaning(next))) {
+        input.value = previous;
+        return;
+      }
+      input.disabled = true;
+      if (notice) notice.textContent = "保存しています...";
+      const {error} = await supabase.rpc("admin_set_user_permission", {
+        p_target_id: target.value,
+        p_permission_key: input.dataset.permission,
+        p_value: next
+      });
+      if (error) {
+        input.value = previous;
+        input.disabled = false;
+        if (notice) notice.textContent = "保存できませんでした: " + errorMessage(error);
+        return;
+      }
+      if (notice) notice.textContent = "個別権限を保存しました。";
+      await loadSelectedUserPermissions();
+    };
+
+    async function loadSelectedUserPermissions() {
+      const userId = target.value;
+      if (!userId) {
+        grid.innerHTML = '<div class="admin-muted user-permission-empty">ユーザーを選択すると、個別権限を設定できます。</div>';
+        if (notice) notice.textContent = "対象ユーザーを選択してください。";
+        return;
+      }
+      if (notice) notice.textContent = "個別権限を読み込んでいます...";
+      const {data, error} = await supabase.rpc("admin_get_user_permission_overrides", {p_target_id:userId});
+      if (error) throw error;
+      const values = new Map((data || []).map(row => [row.permission_key,row]));
+      grid.innerHTML = '<div class="admin-table-wrap"><table class="admin-table user-permission-table"><thead><tr><th>機能</th><th>このユーザーの設定</th><th>現在の実効権限</th></tr></thead><tbody>' +
+        permissionMeta.map(([key,label]) => {
+          const row = values.get(key) || {};
+          const value = row.allowed === null || row.allowed === undefined ? "inherit" : row.allowed ? "allow" : "deny";
+          const effective = row.effective_allowed === true;
+          const source = value === "inherit" ? "ロール設定から継承" : "ユーザー個別設定";
+          return '<tr><td><strong>' + esc(label) + '</strong></td><td><select class="user-permission-value" data-permission="' + esc(key) + '" data-previous="' + value + '">' +
+            '<option value="inherit"' + (value==="inherit"?" selected":"") + '>ロール設定を継承</option>' +
+            '<option value="allow"' + (value==="allow"?" selected":"") + '>このユーザーに許可</option>' +
+            '<option value="deny"' + (value==="deny"?" selected":"") + '>このユーザーは禁止</option>' +
+            '</select></td><td><span class="user-permission-effective ' + (effective?"is-allowed":"is-denied") + '">' +
+            (effective?"許可":"禁止") + '</span><small class="user-permission-source">' + esc(source) + '</small></td></tr>';
+        }).join("") + '</tbody></table></div>';
+      if (notice) notice.textContent = "個別設定はロール設定より優先されます。「ロール設定を継承」に戻すと、そのユーザーの個別設定だけを解除します。";
+    }
+    await loadSelectedUserPermissions();
   }
 
   const viewMeta = {
