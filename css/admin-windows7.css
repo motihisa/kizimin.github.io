@@ -260,3 +260,39 @@ body.admin-page[data-admin-theme="future"] .admin-topbar .kz-emoji{width:1.3em;h
  body.admin-page[data-admin-theme="future"] .admin-shell{grid-template-columns:1fr}
  body.admin-page[data-admin-theme="future"] .admin-sidebar{position:relative;height:auto}
 }
+
+
+/* Contrast fix: light surfaces in the futuristic theme always use dark text. */
+body.admin-page[data-admin-theme="future"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+body.admin-page[data-admin-theme="future"] select,
+body.admin-page[data-admin-theme="future"] textarea,
+body.admin-page[data-admin-theme="future"] .admin-search,
+body.admin-page[data-admin-theme="future"] .admin-theme-picker select,
+body.admin-page[data-admin-theme="future"] option,
+body.admin-page[data-admin-theme="future"] optgroup{
+  color:#111827!important;
+  background-color:#ffffff!important;
+  -webkit-text-fill-color:#111827;
+}
+body.admin-page[data-admin-theme="future"] input::placeholder,
+body.admin-page[data-admin-theme="future"] textarea::placeholder{
+  color:#596579!important;-webkit-text-fill-color:#596579;
+}
+body.admin-page[data-admin-theme="future"] .admin-theme-picker select option{color:#111827!important;background:#fff!important}
+body.admin-page[data-admin-theme="future"] .admin-panel[style*="background:#fff"],
+body.admin-page[data-admin-theme="future"] .admin-panel[style*="background: #fff"],
+body.admin-page[data-admin-theme="future"] .admin-panel[style*="background-color: white"],
+body.admin-page[data-admin-theme="future"] .admin-panel[style*="background-color: rgb(255, 255, 255)"],
+body.admin-page[data-admin-theme="future"] .admin-quick-card[style*="background:#fff"],
+body.admin-page[data-admin-theme="future"] .admin-quick-card[style*="background: #fff"]{
+  color:#111827!important;
+}
+body.admin-page[data-admin-theme="future"] .admin-panel :is(label,small,.admin-muted):has(+ input),
+body.admin-page[data-admin-theme="future"] .admin-panel label:has(input[type="checkbox"]),
+body.admin-page[data-admin-theme="future"] .admin-panel label:has(input[type="radio"]){
+  color:inherit;
+}
+body.admin-page[data-admin-theme="future"] .admin-table td a{color:#00749a}
+body.admin-page[data-admin-theme="future"] :is(.admin-panel,.admin-quick-card,.stat-card) :is(input,select,textarea):focus{
+  outline:2px solid #19a9d1!important;outline-offset:1px;
+}
