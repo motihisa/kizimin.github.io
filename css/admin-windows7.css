@@ -296,3 +296,45 @@ body.admin-page[data-admin-theme="future"] .admin-table td a{color:#00749a}
 body.admin-page[data-admin-theme="future"] :is(.admin-panel,.admin-quick-card,.stat-card) :is(input,select,textarea):focus{
   outline:2px solid #19a9d1!important;outline-offset:1px;
 }
+
+
+/* Futuristic theme: enforce readable foreground colors across every surface. */
+body.admin-page[data-admin-theme="future"]{
+  color:#eaf7ff;
+}
+body.admin-page[data-admin-theme="future"] :is(.admin-panel,.admin-quick-card,.stat-card,.bot-intro,.bot-kpi,.bot-setting,.bot-alert,.bot-status) {
+  color:#eaf7ff;
+}
+/* Light cards and inline light surfaces need dark text, not the theme's global white. */
+body.admin-page[data-admin-theme="future"] :is(.admin-panel,.admin-quick-card,.stat-card,.bot-intro,.bot-kpi,.bot-setting,.bot-alert,.bot-status)[style*="background:#fff"],
+body.admin-page[data-admin-theme="future"] :is(.admin-panel,.admin-quick-card,.stat-card,.bot-intro,.bot-kpi,.bot-setting,.bot-alert,.bot-status)[style*="background: #fff"],
+body.admin-page[data-admin-theme="future"] :is(.admin-panel,.admin-quick-card,.stat-card,.bot-intro,.bot-kpi,.bot-setting,.bot-alert,.bot-status)[style*="background-color: white"],
+body.admin-page[data-admin-theme="future"] :is(.admin-panel,.admin-quick-card,.stat-card,.bot-intro,.bot-kpi,.bot-setting,.bot-alert,.bot-status)[style*="background-color: rgb(255, 255, 255)"] {
+  color:#111827!important;
+}
+body.admin-page[data-admin-theme="future"] :is(.admin-panel,.admin-quick-card,.stat-card,.bot-intro,.bot-kpi,.bot-setting,.bot-alert,.bot-status)[style*="background:#fff"] :is(h1,h2,h3,h4,p,span,div,label,small,strong,td,th),
+body.admin-page[data-admin-theme="future"] :is(.admin-panel,.admin-quick-card,.stat-card,.bot-intro,.bot-kpi,.bot-setting,.bot-alert,.bot-status)[style*="background: #fff"] :is(h1,h2,h3,h4,p,span,div,label,small,strong,td,th),
+body.admin-page[data-admin-theme="future"] :is(.admin-panel,.admin-quick-card,.stat-card,.bot-intro,.bot-kpi,.bot-setting,.bot-alert,.bot-status)[style*="background-color: white"] :is(h1,h2,h3,h4,p,span,div,label,small,strong,td,th),
+body.admin-page[data-admin-theme="future"] :is(.admin-panel,.admin-quick-card,.stat-card,.bot-intro,.bot-kpi,.bot-setting,.bot-alert,.bot-status)[style*="background-color: rgb(255, 255, 255)"] :is(h1,h2,h3,h4,p,span,div,label,small,strong,td,th) {
+  color:#111827!important;
+}
+/* Light form controls use dark text; dark console surfaces retain light text. */
+body.admin-page[data-admin-theme="future"] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),select,textarea,.admin-search,.admin-theme-picker select,option,optgroup) {
+  color:#111827!important;background:#fff!important;-webkit-text-fill-color:#111827;
+}
+body.admin-page[data-admin-theme="future"] :is(input,textarea)::placeholder {
+  color:#596579!important;-webkit-text-fill-color:#596579;
+}
+body.admin-page[data-admin-theme="future"] .admin-table th{color:#123047;background:#dff6ff}
+body.admin-page[data-admin-theme="future"] .admin-table td{color:#eaf7ff}
+body.admin-page[data-admin-theme="future"] .admin-table td a{color:#58ddff;text-decoration:underline}
+body.admin-page[data-admin-theme="future"] .admin-topbar p,
+body.admin-page[data-admin-theme="future"] .admin-muted,
+body.admin-page[data-admin-theme="future"] .stat-label{color:#b9d2e3}
+body.admin-page[data-admin-theme="future"] .admin-nav-label{color:#8bdcf0}
+body.admin-page[data-admin-theme="future"] .admin-btn:not(.primary):not(.danger){color:#eaf7ff}
+body.admin-page[data-admin-theme="future"] .admin-btn.primary{color:#04131f}
+body.admin-page[data-admin-theme="future"] .admin-btn.danger{color:#ffd4de}
+body.admin-page[data-admin-theme="future"] .admin-panel :is(input,select,textarea):focus{
+  outline:2px solid #19a9d1!important;outline-offset:1px;
+}
