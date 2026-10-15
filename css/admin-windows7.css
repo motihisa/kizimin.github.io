@@ -149,3 +149,114 @@ body.admin-page[data-admin-theme="win7"] optgroup{
 }
 body.admin-page[data-admin-theme="win7"] input[type="checkbox"],
 body.admin-page[data-admin-theme="win7"] input[type="radio"]{accent-color:#267fb5!important}
+
+
+/* Kizimin Admin: futuristic neon console theme. Presentation-only. */
+.admin-theme-picker{position:relative;z-index:2}
+body.admin-page[data-admin-theme="future"]{
+  --ad-bg:#070b18;--ad-panel:rgba(13,22,43,.88);--ad-text:#e5f7ff;--ad-muted:#8daec6;
+  --ad-line:#244a70;--ad-accent:#48e4ff;--ad-soft:#101d36;--ad-danger:#ff658d;--ad-ok:#54f0bb;
+  color:var(--ad-text);background:radial-gradient(ellipse at 15% 0%,#153c68 0%,#0a1328 38%,#050813 100%);
+  font-family:"Segoe UI","Yu Gothic UI",Meiryo,sans-serif;font-size:13px;
+}
+body.admin-page[data-admin-theme="future"] .admin-shell{background:transparent;grid-template-columns:248px minmax(0,1fr)}
+body.admin-page[data-admin-theme="future"] .admin-sidebar{
+  color:#c9f6ff;background:linear-gradient(180deg,rgba(8,22,45,.97),rgba(6,12,28,.98));
+  border-right:1px solid #1d7ca2;box-shadow:inset -1px 0 rgba(72,228,255,.16),8px 0 30px rgba(0,210,255,.05);
+}
+body.admin-page[data-admin-theme="future"] .admin-brand{
+  color:#eaffff;border:1px solid #287caa;border-radius:8px;padding:13px 10px;
+  background:linear-gradient(135deg,rgba(16,61,94,.95),rgba(12,23,51,.95));
+  text-shadow:0 0 12px rgba(72,228,255,.65);box-shadow:inset 0 0 18px rgba(40,196,255,.08),0 0 16px rgba(0,199,255,.08);
+}
+body.admin-page[data-admin-theme="future"] .admin-brand:before{
+  color:#07111f;border:1px solid #6cf2ff;border-radius:7px;background:linear-gradient(135deg,#9af7ff,#23aee6);
+  box-shadow:0 0 16px rgba(35,218,255,.35);text-shadow:none;
+}
+body.admin-page[data-admin-theme="future"] .admin-brand small{color:#6eddf6;letter-spacing:1.8px}
+body.admin-page[data-admin-theme="future"] .admin-nav-label{color:#54b9d7;text-shadow:none;letter-spacing:1.2px}
+body.admin-page[data-admin-theme="future"] .admin-nav button,
+body.admin-page[data-admin-theme="future"] .admin-sidebar a{
+  color:#b6d9ec;border:1px solid transparent;border-radius:7px;background:transparent;
+  font:13px "Segoe UI","Yu Gothic UI",sans-serif;transition:background .18s,border-color .18s,box-shadow .18s;
+}
+body.admin-page[data-admin-theme="future"] .admin-nav button:hover,
+body.admin-page[data-admin-theme="future"] .admin-sidebar a:hover{
+  color:#eaffff;border-color:#236f91;background:linear-gradient(90deg,rgba(31,150,201,.2),rgba(16,62,103,.28));
+  box-shadow:inset 3px 0 #45e7ff,0 0 14px rgba(28,201,255,.08);transform:none;
+}
+body.admin-page[data-admin-theme="future"] .admin-nav button.active{
+  color:#eaffff;border:1px solid #277fa7;background:linear-gradient(90deg,rgba(33,177,223,.26),rgba(30,63,111,.42));
+  box-shadow:inset 3px 0 #59f0ff,0 0 16px rgba(34,199,255,.1);font-weight:700;
+}
+body.admin-page[data-admin-theme="future"] .admin-nav button span{color:#69eaff}
+body.admin-page[data-admin-theme="future"] .admin-sidebar-bottom{border-top:1px solid #214a68}
+body.admin-page[data-admin-theme="future"] .admin-main{background:transparent;padding:22px 26px 48px}
+body.admin-page[data-admin-theme="future"] .admin-topbar{
+  padding:16px 19px;border:1px solid #245a80;border-radius:10px;
+  background:linear-gradient(110deg,rgba(10,29,57,.95),rgba(12,39,67,.88),rgba(14,22,48,.94));
+  box-shadow:inset 0 1px rgba(145,239,255,.12),0 0 26px rgba(0,185,255,.08);position:relative;overflow:hidden;
+}
+body.admin-page[data-admin-theme="future"] .admin-topbar:after{
+  content:"";position:absolute;right:-35px;top:-70px;width:190px;height:190px;border:1px solid rgba(67,224,255,.17);
+  border-radius:50%;box-shadow:0 0 0 18px rgba(67,224,255,.035),0 0 0 38px rgba(67,224,255,.025);pointer-events:none;
+}
+body.admin-page[data-admin-theme="future"] .admin-topbar h1{color:#e5fbff;font-size:25px;text-shadow:0 0 18px rgba(72,228,255,.23)}
+body.admin-page[data-admin-theme="future"] .admin-topbar h1:before{color:#55dff7;letter-spacing:2px}
+body.admin-page[data-admin-theme="future"] .admin-topbar p{color:#8eb9d3}
+body.admin-page[data-admin-theme="future"] .admin-panel{
+  color:var(--ad-text);border:1px solid #203f62;border-radius:10px;
+  background:linear-gradient(145deg,rgba(14,27,51,.94),rgba(8,16,34,.92));
+  box-shadow:inset 0 1px rgba(126,225,255,.045),0 8px 28px rgba(0,0,0,.16);backdrop-filter:blur(8px);
+}
+body.admin-page[data-admin-theme="future"] .admin-panel h2,
+body.admin-page[data-admin-theme="future"] .admin-panel h3{color:#a9f2ff}
+body.admin-page[data-admin-theme="future"] .admin-muted{color:#8daec6}
+body.admin-page[data-admin-theme="future"] #view-dashboard .admin-panel:first-child{
+  border-color:#24698c;background:linear-gradient(120deg,rgba(12,46,73,.98),rgba(15,27,54,.98));
+  box-shadow:inset 0 1px rgba(125,236,255,.1),0 0 22px rgba(0,185,255,.06);
+}
+body.admin-page[data-admin-theme="future"] #view-dashboard .admin-panel:first-child h2{color:#e1fbff}
+body.admin-page[data-admin-theme="future"] #view-dashboard .admin-panel:first-child .admin-muted{color:#9ac8df}
+body.admin-page[data-admin-theme="future"] .stat-card{
+  border:1px solid #245071;border-radius:8px;background:linear-gradient(145deg,rgba(19,44,72,.95),rgba(9,22,43,.95));
+  color:#e3faff;box-shadow:inset 0 1px rgba(137,235,255,.06);
+}
+body.admin-page[data-admin-theme="future"] .stat-number{color:#60eaff;text-shadow:0 0 14px rgba(67,224,255,.17)}
+body.admin-page[data-admin-theme="future"] .stat-label{color:#9dbfd2}
+body.admin-page[data-admin-theme="future"] .admin-btn{
+  color:#cceefa;border:1px solid #2c6382;border-radius:7px;background:linear-gradient(#17314c,#10223a);
+  box-shadow:inset 0 1px rgba(145,239,255,.09),0 2px 8px rgba(0,0,0,.12);font:13px "Segoe UI","Yu Gothic UI",sans-serif;
+}
+body.admin-page[data-admin-theme="future"] .admin-btn:hover{color:#fff;border-color:#42b9dc;background:linear-gradient(#1b4968,#12304e);box-shadow:0 0 14px rgba(50,207,255,.13);transform:translateY(-1px)}
+body.admin-page[data-admin-theme="future"] .admin-btn.primary{
+  color:#04131f;border-color:#5de9ff;background:linear-gradient(135deg,#a0f6ff,#35c9f0 55%,#1789c8);
+  text-shadow:none;box-shadow:0 0 18px rgba(39,208,255,.18),inset 0 1px #e0ffff;font-weight:800;
+}
+body.admin-page[data-admin-theme="future"] .admin-btn.primary:hover{background:linear-gradient(135deg,#d0fbff,#6de5ff 55%,#2caee8)}
+body.admin-page[data-admin-theme="future"] .admin-btn.danger{color:#ff9db2;border-color:#8e3b59;background:linear-gradient(#35192b,#251322)}
+body.admin-page[data-admin-theme="future"] .admin-search,
+body.admin-page[data-admin-theme="future"] input:not([type=checkbox]):not([type=radio]):not([type=color]),
+body.admin-page[data-admin-theme="future"] select,
+body.admin-page[data-admin-theme="future"] textarea{
+  color:#e4f8ff;border:1px solid #28516e;border-radius:6px;background:#09172a;accent-color:#49dff8;
+}
+body.admin-page[data-admin-theme="future"] input::placeholder,
+body.admin-page[data-admin-theme="future"] textarea::placeholder{color:#66869b}
+body.admin-page[data-admin-theme="future"] .admin-table-wrap{border:1px solid #254762;border-radius:8px}
+body.admin-page[data-admin-theme="future"] .admin-table th{color:#a7eaff;background:#102943;border-bottom:1px solid #28516e}
+body.admin-page[data-admin-theme="future"] .admin-table td{color:#d3eaf6;border-bottom:1px solid rgba(43,83,112,.55)}
+body.admin-page[data-admin-theme="future"] .admin-table tr:hover td{background:rgba(40,152,197,.09)}
+body.admin-page[data-admin-theme="future"] .admin-theme-picker{
+  color:#c7f5ff;border:1px solid #2c6382;border-radius:7px;background:linear-gradient(#17314c,#10223a);
+  font:12px "Segoe UI","Yu Gothic UI",sans-serif;box-shadow:0 0 12px rgba(0,185,255,.08);
+}
+body.admin-page[data-admin-theme="future"] .admin-theme-picker select{color:#e4f8ff;border:1px solid #28516e;background:#09172a}
+body.admin-page[data-admin-theme="future"] .kz-emoji{filter:drop-shadow(0 0 4px rgba(63,220,255,.24))}
+body.admin-page[data-admin-theme="future"] .admin-nav .kz-emoji,
+body.admin-page[data-admin-theme="future"] .admin-topbar .kz-emoji{width:1.3em;height:1.3em}
+@media(max-width:850px){
+ body.admin-page[data-admin-theme="future"] .admin-main{padding:14px 12px 30px}
+ body.admin-page[data-admin-theme="future"] .admin-shell{grid-template-columns:1fr}
+ body.admin-page[data-admin-theme="future"] .admin-sidebar{position:relative;height:auto}
+}
