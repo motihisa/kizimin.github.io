@@ -5,6 +5,19 @@ import { randomUUID } from "node:crypto";
 
 const app = express();
 app.disable("x-powered-by");
+
+// Security headers for this API-only service. CSP is intentionally restrictive because
+// this service returns JSON/downloads and does not serve an interactive HTML application.
+app.use((_req, res, next) => {
+  res.setHeader("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
 app.use(express.json({ limit: "16kb" }));
 
 const PORT = Number(process.env.PORT || 10000);
