@@ -142,6 +142,14 @@
     maintenanceDemoLabel:"デモ解除", maintenanceNormalLabel:"通常メンテナンス",
     maintenanceEmergencyLabel:"緊急メンテナンス", maintenanceOtherLabel:"その他",
     maintenanceBgColor:"#f5f7fb", maintenanceCardColor:"#ffffff", maintenanceAccentColor:"#25385e", maintenanceTextColor:"#172033",
+    banLabel:"ACCOUNT BANNED", banTitle:"アカウントがBANされています",
+    banBody:"このアカウントは、利用ルールに違反した可能性があるため、利用できなくなっています。",
+    banNote:"内容に心当たりがない場合は、管理者にお問い合わせください。",
+    suspendedLabel:"ACCOUNT SUSPENDED", suspendedTitle:"アカウントは一時停止中です",
+    suspendedBody:"管理者が停止を解除するまで、サイトを利用できません。",
+    suspendedNote:"内容に心当たりがない場合は、管理者にお問い合わせください。",
+    accountReasonLabel:"理由", accountExpiryLabel:"期限", accountContactLabel:"お問い合わせ",
+    accountBgColor:"#f6f7f9", accountCardColor:"#ffffff", accountAccentColor:"#c62828", accountTextColor:"#1f2937",
     showHero:true, showDaily:true, showPopular:true, showCategories:true, showDiscovery:true,
     showPolls:true, showChallenges:true, showQA:true, showLibrary:true
   };
@@ -192,6 +200,19 @@
       maintenanceOtherLabel:$("maintenance-other-label").value.trim().slice(0,40)||DEFAULTS.maintenanceOtherLabel,
       maintenanceBgColor:$("maintenance-bg-color").value, maintenanceCardColor:$("maintenance-card-color").value,
       maintenanceAccentColor:$("maintenance-accent-color").value, maintenanceTextColor:$("maintenance-text-color").value,
+      banLabel: $("ban-label").value.trim().slice(0,60)||DEFAULTS.banLabel,
+      banTitle: $("ban-title").value.trim().slice(0,120)||DEFAULTS.banTitle,
+      banBody: $("ban-body").value.slice(0,500),
+      banNote: $("ban-note").value.slice(0,300),
+      suspendedLabel: $("suspended-label").value.trim().slice(0,60)||DEFAULTS.suspendedLabel,
+      suspendedTitle: $("suspended-title").value.trim().slice(0,120)||DEFAULTS.suspendedTitle,
+      suspendedBody: $("suspended-body").value.slice(0,500),
+      suspendedNote: $("suspended-note").value.slice(0,300),
+      accountReasonLabel: $("account-reason-label").value.trim().slice(0,40)||DEFAULTS.accountReasonLabel,
+      accountExpiryLabel: $("account-expiry-label").value.trim().slice(0,40)||DEFAULTS.accountExpiryLabel,
+      accountContactLabel: $("account-contact-label").value.trim().slice(0,40)||DEFAULTS.accountContactLabel,
+      accountBgColor: $("account-bg-color").value, accountCardColor: $("account-card-color").value,
+      accountAccentColor: $("account-accent-color").value, accountTextColor: $("account-text-color").value,
       termsContent:$("terms-content").value.slice(0,30000), privacyContent:$("privacy-content").value.slice(0,30000),
       accentColor:$("accent-color").value, backgroundColor:$("background-color").value,
       textColor:$("text-color").value, cardRadius:Math.min(32,Math.max(0,Number($("card-radius").value)||0)),
@@ -212,6 +233,8 @@
     for(const [id,key] of [["maintenance-bg-color","maintenanceBgColor"],["maintenance-card-color","maintenanceCardColor"],["maintenance-accent-color","maintenanceAccentColor"],["maintenance-text-color","maintenanceTextColor"]]) $(id).value=x[key];
     for(const [id,key] of [["maintenance-brand","maintenanceBrand"],["maintenance-title","maintenanceTitle"],["maintenance-description","maintenanceDescription"],["maintenance-reason-title","maintenanceReasonTitle"],["maintenance-footer","maintenanceFooter"],["maintenance-demo-label","maintenanceDemoLabel"],["maintenance-normal-label","maintenanceNormalLabel"],["maintenance-emergency-label","maintenanceEmergencyLabel"],["maintenance-other-label","maintenanceOtherLabel"]]) $(id).value=x[key];
     for(const [id,key] of [["maintenance-bg-color","maintenanceBgColor"],["maintenance-card-color","maintenanceCardColor"],["maintenance-accent-color","maintenanceAccentColor"],["maintenance-text-color","maintenanceTextColor"]]) $(id).value=x[key];
+    for(const [id,key] of [["ban-label","banLabel"],["ban-title","banTitle"],["ban-body","banBody"],["ban-note","banNote"],["suspended-label","suspendedLabel"],["suspended-title","suspendedTitle"],["suspended-body","suspendedBody"],["suspended-note","suspendedNote"],["account-reason-label","accountReasonLabel"],["account-expiry-label","accountExpiryLabel"],["account-contact-label","accountContactLabel"]]) $(id).value=x[key];
+    for(const [id,key] of [["account-bg-color","accountBgColor"],["account-card-color","accountCardColor"],["account-accent-color","accountAccentColor"],["account-text-color","accountTextColor"]]) $(id).value=x[key];
     for(const [id,key] of [["show-hero","showHero"],["show-daily","showDaily"],["show-popular","showPopular"],["show-categories","showCategories"],["show-discovery","showDiscovery"],["show-polls","showPolls"],["show-challenges","showChallenges"],["show-qa","showQA"],["show-library","showLibrary"]]) $(id).checked=!!x[key];
     preview(x);
   }
@@ -241,6 +264,12 @@
     $("preview-categories").hidden=!x.showCategories;
     $("preview-community").hidden=!(x.showDaily||x.showPolls||x.showChallenges||x.showQA||x.showLibrary);
     $("preview-latest").style.borderRadius=x.cardRadius+"px";
+    for(const [id,value] of [["ban-preview-label",x.banLabel],["ban-preview-title",x.banTitle],["ban-preview-body",x.banBody],["ban-preview-note",x.banNote],["suspended-preview-label",x.suspendedLabel],["suspended-preview-title",x.suspendedTitle],["suspended-preview-body",x.suspendedBody],["suspended-preview-note",x.suspendedNote],["account-preview-reason-label",x.accountReasonLabel],["account-preview-expiry-label",x.accountExpiryLabel],["account-preview-contact-label",x.accountContactLabel]]) setText(id,value);
+    const ap=$("account-editor-preview"),ac=$("account-editor-preview-card");
+    if(ap){ap.style.background=x.accountBgColor;ap.style.color=x.accountTextColor;}
+    if(ac){ac.style.background=x.accountCardColor;ac.style.color=x.accountTextColor;}
+    for(const id of ["ban-preview-label","suspended-preview-label"]){const node=$(id);if(node)node.style.color=x.accountAccentColor;}
+    for(const id of ["ban-preview-title","suspended-preview-title"]){const node=$(id);if(node)node.style.color=x.accountTextColor;}
     const setText=(id,value)=>{const node=$(id);if(node)node.textContent=value;};
     setText("maintenance-preview-brand",x.maintenanceBrand);
     setText("maintenance-preview-title",x.maintenanceTitle);
