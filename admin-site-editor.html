@@ -30,6 +30,23 @@
 <label>文字色<input id="text-color" type="color"></label>
 <label>カード角丸（px）<input id="card-radius" type="number" min="0" max="32" step="1"></label>
 </div>
+<h3 style="margin:8px 0 0">メンテナンス画面の細部</h3>
+<p class="editor-note">ここで編集した文章は通常のテキストとして表示されます。MarkdownやHTMLは使えません。メンテナンス理由の本文は、管理画面のメンテナンス設定で編集します。</p>
+<label>ブランド名<input id="maintenance-brand" type="text" maxlength="60" required></label>
+<label>画面タイトル<input id="maintenance-title" type="text" maxlength="120" required></label>
+<label>タイトル下の説明文<textarea id="maintenance-description" maxlength="400" rows="3"></textarea></label>
+<label>理由欄の見出し<input id="maintenance-reason-title" type="text" maxlength="80" required></label>
+<label>画面下部の案内文<textarea id="maintenance-footer" maxlength="300" rows="3"></textarea></label>
+<label>デモ解除ボタンの表示名<input id="maintenance-demo-label" type="text" maxlength="40" required></label>
+<div class="editor-options">
+<label>通常メンテナンスのラベル<input id="maintenance-normal-label" type="text" maxlength="40" required></label>
+<label>緊急メンテナンスのラベル<input id="maintenance-emergency-label" type="text" maxlength="40" required></label>
+<label>その他メンテナンスのラベル<input id="maintenance-other-label" type="text" maxlength="40" required></label>
+<label>画面の背景色<input id="maintenance-bg-color" type="color"></label>
+<label>カードの背景色<input id="maintenance-card-color" type="color"></label>
+<label>アクセントカラー<input id="maintenance-accent-color" type="color"></label>
+<label>本文の文字色<input id="maintenance-text-color" type="color"></label>
+</div>
 <h3 style="margin:4px 0 0">表示するセクション</h3>
 <div class="editor-options">
 <label class="editor-check"><input id="show-hero" type="checkbox"> トップの見出し</label>
@@ -63,12 +80,21 @@
 <div id="preview-categories" class="preview-card">カテゴリ　日常 · テクノロジー · ゲーム</div>
 <div id="preview-community" class="preview-card">コミュニティ　今日のお題 · 投票 · 質問・回答</div>
 </div>
-<p id="editor-updated" class="editor-note" style="margin-top:12px">更新情報を読み込んでいます…</p>
+<section class="admin-panel" style="margin-top:18px"><div class="admin-panel-head"><div><h2>メンテナンス画面プレビュー</h2><p class="admin-muted">入力内容を確認できます。実際のメンテナンス理由は現在の運営設定が使われます。</p></div></div>
+<div id="maintenance-editor-preview" style="padding:22px;border-radius:18px;background:#f5f7fb;color:#172033">
+<div id="maintenance-editor-preview-card" style="max-width:650px;margin:auto;padding:30px;border-radius:22px;background:#fff;box-shadow:0 8px 30px #17203312">
+<strong id="maintenance-preview-brand">Kizimin</strong><p id="maintenance-preview-type" style="display:inline-block;margin:20px 0 0;padding:5px 10px;border-radius:999px;background:#f1f4f8">通常メンテナンス</p>
+<h3 id="maintenance-preview-title" style="font-size:28px;margin:18px 0 10px">ただいまメンテナンス中です</h3>
+<p id="maintenance-preview-description">サービスの品質向上と安定運用のため、一時的にサイトの利用を停止しています。</p>
+<hr style="border:0;border-top:1px solid #e9edf3;margin:24px 0">
+<strong id="maintenance-preview-reason-title">メンテナンスの理由</strong><p style="margin:8px 0">ここには管理画面で設定したメンテナンス理由が表示されます。</p>
+<p id="maintenance-preview-footer" style="font-size:12px;margin-top:25px">作業完了までしばらくお待ちください。ご不便をおかけします。</p><button id="maintenance-preview-demo" type="button" style="padding:9px 16px;border-radius:999px;border:1px solid #b8c5e0;background:#f2f6ff">デモ解除</button>
+</div></div></section><p id="editor-updated" class="editor-note" style="margin-top:12px">更新情報を読み込んでいます…</p>
 </section>
 </div>
 <section class="admin-panel" style="margin-top:18px"><div class="admin-panel-head"><div><h2>変更履歴</h2><p class="admin-muted">直近20件の変更を確認できます。</p></div></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>日時</th><th>操作</th><th>変更者</th><th>変更前後</th></tr></thead><tbody id="editor-history-body"><tr><td colspan="4">読み込み中…</td></tr></tbody></table></div></section>
 </main>
-<script src="js/admin-site-editor.js?v=20261012-sdk-guard1"></script>
+<script src="js/admin-site-editor.js?v=20261027-maintenance-editor1"></script>
 <script src="js/ban-screen.js?v=20261014-account-gate"></script>
 <script src="js/admin-theme.js?v=20261015-theme1"></script>
 <script src="js/kizimin-emoji.js?v=20261015-emoji1" defer></script>
