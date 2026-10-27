@@ -264,13 +264,13 @@
     $("preview-categories").hidden=!x.showCategories;
     $("preview-community").hidden=!(x.showDaily||x.showPolls||x.showChallenges||x.showQA||x.showLibrary);
     $("preview-latest").style.borderRadius=x.cardRadius+"px";
+    const setText=(id,value)=>{const node=$(id);if(node)node.textContent=value;};
     for(const [id,value] of [["ban-preview-label",x.banLabel],["ban-preview-title",x.banTitle],["ban-preview-body",x.banBody],["ban-preview-note",x.banNote],["suspended-preview-label",x.suspendedLabel],["suspended-preview-title",x.suspendedTitle],["suspended-preview-body",x.suspendedBody],["suspended-preview-note",x.suspendedNote],["account-preview-reason-label",x.accountReasonLabel],["account-preview-expiry-label",x.accountExpiryLabel],["account-preview-contact-label",x.accountContactLabel]]) setText(id,value);
     const ap=$("account-editor-preview"),ac=$("account-editor-preview-card");
     if(ap){ap.style.background=x.accountBgColor;ap.style.color=x.accountTextColor;}
     if(ac){ac.style.background=x.accountCardColor;ac.style.color=x.accountTextColor;}
     for(const id of ["ban-preview-label","suspended-preview-label"]){const node=$(id);if(node)node.style.color=x.accountAccentColor;}
     for(const id of ["ban-preview-title","suspended-preview-title"]){const node=$(id);if(node)node.style.color=x.accountTextColor;}
-    const setText=(id,value)=>{const node=$(id);if(node)node.textContent=value;};
     setText("maintenance-preview-brand",x.maintenanceBrand);
     setText("maintenance-preview-title",x.maintenanceTitle);
     setText("maintenance-preview-description",x.maintenanceDescription);
