@@ -15,6 +15,8 @@
   const originalFetch = window.fetch.bind(window);
 
   let gate = null;
+  let siteTheme = {};
+  let siteThemeLoadedAt = 0;
 
   function readSession() {
     try {
@@ -79,9 +81,26 @@
     if (before !== JSON.stringify(next)) render();
   }
 
+  async function loadSiteTheme(token) {
+    if (!token || Date.now() - siteThemeLoadedAt < 60000) return;
+    try {
+      const response = await originalFetch(
+        SUPABASE_URL + "/rest/v1/site_editor_settings?select=setting_value&setting_key=eq.site_theme",
+        { headers: { apikey: SUPABASE_KEY, Authorization: "Bearer " + token }, cache: "no-store" }
+      );
+      if (!response.ok) return;
+      const rows = await response.json();
+      if (Array.isArray(rows) && rows[0] && rows[0].setting_value && typeof rows[0].setting_value === "object") {
+        siteTheme = rows[0].setting_value;
+        siteThemeLoadedAt = Date.now();
+      }
+    } catch (_) {}
+  }
+
   async function refresh() {
     const session = readSession();
     const token = session && session.access_token;
+    await loadSiteTheme(token);
     if (!token) {
       setGate(null);
       return;
@@ -121,6 +140,24 @@
       note: "内容に心当たりがない場合は、管理者にお問い合わせください。"
     }
   };
+
+  function accountCopy(kind) {
+    const defaults = COPY[kind] || COPY.banned;
+    if (kind === "suspended") {
+      return {
+        label: siteTheme.suspendedLabel || defaults.label,
+        title: siteTheme.suspendedTitle || defaults.title,
+        body: siteTheme.suspendedBody || defaults.body,
+        note: siteTheme.suspendedNote || defaults.note
+      };
+    }
+    return {
+      label: siteTheme.banLabel || defaults.label,
+      title: siteTheme.banTitle || defaults.title,
+      body: siteTheme.banBody || defaults.body,
+      note: siteTheme.banNote || defaults.note
+    };
+  }
 
   function el(tag, style, text) {
     const node = document.createElement(tag);
@@ -178,11 +215,11 @@
   }
 
   function buildGate(g) {
-    const copy = COPY[g.kind];
+    const copy = accountCopy(g.kind);
     const overlay = el(
       "div",
       "position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;padding:24px;overflow:auto;" +
-      "background:var(--bg,#f6f7f9);color:var(--text,#1f2937);font-family:inherit;line-height:1.6;"
+      "background:" + (siteTheme.accountBgColor || "#f6f7f9") + ";color:" + (siteTheme.accountTextColor || "#1f2937") + ";font-family:inherit;line-height:1.6;"
     );
     overlay.id = GATE_ID;
     overlay.setAttribute("role", "dialog");
@@ -191,35 +228,35 @@
 
     const card = el(
       "div",
-      "width:min(100%,480px);padding:32px 28px;background:var(--surface,#fff);" +
-      "border:1px solid var(--border,#e4e7ec);border-radius:12px;box-shadow:0 6px 20px rgba(16,24,40,.07);"
+      "width:min(100%,480px);padding:32px 28px;background:" + (siteTheme.accountCardColor || "#ffffff") + ";" +
+      "border:1px solid #e4e7ec;border-radius:12px;box-shadow:0 6px 20px rgba(16,24,40,.07);"
     );
 
     card.appendChild(el(
       "p",
-      "margin:0 0 6px;color:#c62828;font-size:.72rem;font-weight:800;letter-spacing:.12em;",
+      "margin:0 0 6px;color:" + (siteTheme.accountAccentColor || "#c62828") + ";font-size:.72rem;font-weight:800;letter-spacing:.12em;",
       copy.label
     ));
 
-    const title = el("h1", "margin:0 0 12px;font-size:1.5rem;line-height:1.3;", copy.title);
+    const title = el("h1", "margin:0 0 12px;font-size:1.5rem;line-height:1.3;color:" + (siteTheme.accountTextColor || "#1f2937") + ";", copy.title);
     title.id = GATE_ID + "-title";
     card.appendChild(title);
 
     card.appendChild(el(
       "p",
-      "margin:0;color:var(--text-secondary,#667085);overflow-wrap:anywhere;",
+      "margin:0;color:" + (siteTheme.accountTextColor || "#667085") + ";overflow-wrap:anywhere;",
       copy.body
     ));
 
     if (g.reason) {
       const box = el(
         "div",
-        "margin-top:16px;padding:12px 14px;background:var(--surface-soft,#f1f3f6);border-radius:8px;"
+        "margin-top:16px;padding:12px 14px;background:" + (siteTheme.accountBgColor || "#f1f3f6") + ";border-radius:8px;"
       );
       box.appendChild(el(
         "p",
-        "margin:0 0 4px;font-size:.78rem;font-weight:700;color:var(--text-secondary,#667085);",
-        "理由"
+        "margin:0 0 4px;font-size:.78rem;font-weight:700;color:" + (siteTheme.accountTextColor || "#667085") + ";",
+        siteTheme.accountReasonLabel || "理由"
       ));
       box.appendChild(el(
         "p",
@@ -231,8 +268,8 @@
       if (expiry) {
         box.appendChild(el(
           "p",
-          "margin:12px 0 0;font-size:.78rem;font-weight:700;color:var(--text-secondary,#667085);",
-          "期限"
+          "margin:12px 0 0;font-size:.78rem;font-weight:700;color:" + (siteTheme.accountTextColor || "#667085") + ";",
+          siteTheme.accountExpiryLabel || "期限"
         ));
         box.appendChild(el(
           "p",
@@ -246,12 +283,12 @@
 
     card.appendChild(el(
       "p",
-      "margin:16px 0 0;font-size:.84rem;color:var(--text-muted,#98a2b3);",
+      "margin:16px 0 0;font-size:.84rem;color:" + (siteTheme.accountTextColor || "#667085") + ";",
       copy.note
     ));
 
     const actions = el("div", "display:flex;flex-wrap:wrap;gap:8px;margin-top:24px;");
-    actions.appendChild(button("お問い合わせ", function () { location.href = "contact.html"; }));
+    actions.appendChild(button(siteTheme.accountContactLabel || "お問い合わせ", function () { location.href = "contact.html"; }));
     card.appendChild(actions);
 
     overlay.appendChild(card);
