@@ -937,3 +937,11 @@ button:focus-visible,a:focus-visible{outline:3px solid rgba(143,118,236,.65);out
 .admin-page[data-site-theme="sakura"]{--ad-bg:#fff6fa;--ad-panel:#fff;--ad-text:#49263a;--ad-muted:#956b80;--ad-line:#f4dbe7;--ad-accent:#d94682;--ad-soft:#fff0f6}
 .admin-page[data-site-theme="sakura"] .admin-btn.primary{background:#d94682;border-color:#d94682}
 @media(max-width:760px){.admin-theme-picker span{display:none}.admin-theme-picker select{max-width:112px;padding:8px 6px}.admin-topbar{flex-wrap:wrap}.admin-top-actions{flex-wrap:wrap}}
+
+
+/* 2026-10-27: keep the theme selector at the very top of the admin workspace */
+.admin-theme-toolbar{display:flex;justify-content:flex-end;align-items:center;margin:0 0 14px;padding:0 0 10px;border-bottom:1px solid var(--ad-line)}
+.admin-theme-toolbar .admin-theme-picker{display:flex;align-items:center;gap:10px;font-size:13px}
+.admin-theme-toolbar .admin-theme-picker span{display:inline!important}
+.admin-theme-toolbar .admin-theme-picker select{max-width:220px;min-width:180px;min-height:40px;padding:9px 12px}
+@media(max-width:600px){.admin-theme-toolbar{justify-content:stretch}.admin-theme-toolbar .admin-theme-picker{width:100%;justify-content:space-between;gap:8px}.admin-theme-toolbar .admin-theme-picker span{display:inline!important}.admin-theme-toolbar .admin-theme-picker select{min-width:0;max-width:none;flex:1}}
