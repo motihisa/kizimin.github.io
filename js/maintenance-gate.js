@@ -3,7 +3,7 @@
   "use strict";
   const URL="https://bimddapbkdakspjaemsm.supabase.co",KEY="sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf",GATE="kizimin-maintenance-gate";
   const LABELS={normal:"通常メンテナンス",emergency:"緊急メンテナンス",other:"その他"};
-  let inertNodes=[],previousOverflow="";
+  let inertNodes=[],previousOverflow="",client=null;
   function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
   function restorePage(){
     inertNodes.forEach(n=>n.removeAttribute("inert"));
@@ -22,6 +22,7 @@
     button.id="kizimin-maintenance-demo-dismiss";
     button.type="button";
     button.setAttribute("aria-label","デモとしてメンテナンス画面を一時的に解除");
+    button.style.cssText="display:inline-flex;align-items:center;justify-content:center;min-height:42px;margin:20px 0 2px;padding:0 20px;border:1px solid #b8c5e0;border-radius:999px;background:#f2f6ff;color:#243b68;font:inherit;font-weight:750;cursor:pointer;box-shadow:0 4px 14px rgba(36,59,104,.08)";
     button.addEventListener("click",dismissDemo);
     const footer=overlay.querySelector(".kizimin-maintenance-footer");
     if(footer)footer.before(button);else overlay.querySelector(".kizimin-maintenance-card")?.append(button);
@@ -49,11 +50,12 @@
   }
   async function check(){
     try{
-      const client=window.supabase?.createClient(URL,KEY);if(!client)return;
+      client=client||window.supabase?.createClient(URL,KEY);if(!client)return;
       const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),4000);
       let result;
       try{result=await client.rpc("get_site_maintenance_details",{}, {signal:controller.signal});}finally{clearTimeout(timer);}
-      if(result.error||result.data?.active!==true)return;
+      if(result.error)return;
+      if(result.data?.active!==true){const existing=document.getElementById(GATE);if(existing){existing.remove();restorePage();}return;}
       let canDemo=false;
       const {data:sessionData}=await client.auth.getSession();
       const user=sessionData?.session?.user;
@@ -73,7 +75,7 @@
   function start(){
     check();
     try{
-      const client=window.supabase?.createClient(URL,KEY);
+      client=client||window.supabase?.createClient(URL,KEY);
       client?.auth.onAuthStateChange((event)=>{if(event==="SIGNED_OUT"||event==="SIGNED_IN")setTimeout(check,0);});
     }catch(error){console.warn("認証状態を監視できませんでした。",error);}
   }
