@@ -103,6 +103,21 @@ async function main(req: Request) {
 
   const body = await req.json().catch(() => ({}));
   const action = String(body.action || "");
+  if (action === "admin_user_details") {
+    const { data: ownerRow, error: ownerError } = await admin.from("site_owners").select("user_id").eq("user_id", userId).maybeSingle();
+    if (ownerError) return json({ error: "ADMIN_CHECK_FAILED" }, 500);
+    const allowed = !!ownerRow || profile?.role === "admin" || (await hasPermission("ban_users")) || (await hasPermission("manage_roles"));
+    if (!allowed) return json({ error: "ADMIN_REQUIRED" }, 403);
+    const targetId = String(body.user_id || "");
+    if (!targetId) return json({ error: "INVALID_USER" }, 400);
+    const { data: targetProfile, error: targetError } = await admin.from("profiles").select("id").eq("id", targetId).maybeSingle();
+    if (targetError) return json({ error: "USER_LOOKUP_FAILED" }, 500);
+    if (!targetProfile) return json({ error: "USER_NOT_FOUND" }, 404);
+    const { data: targetAuth, error: targetAuthError } = await admin.auth.admin.getUserById(targetId);
+    if (targetAuthError) return json({ error: "EMAIL_LOOKUP_FAILED" }, 500);
+    return json({ ok: true, email: targetAuth.user?.email || null });
+  }
+
   const { data: encryptionSecret, error: encryptionKeyError } = await admin.rpc("get_kizimin_content_encryption_key");
   if (encryptionKeyError || typeof encryptionSecret !== "string" || encryptionSecret.length < 32) {
     return json({ error: "ENCRYPTION_KEY_NOT_CONFIGURED" }, 500);
