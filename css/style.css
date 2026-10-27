@@ -1060,3 +1060,131 @@ dialog[open],
     transition-duration: .01ms !important;
   }
 }
+
+
+/* =========================================================
+   Kizimin Home Motion Plus — richer home-page interactions
+   Visual-only CSS; no content, navigation or data logic changes.
+   ========================================================= */
+@keyframes kz-home-rise {
+  0% { opacity: 0; transform: translateY(18px) scale(.985); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes kz-home-drift {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+@keyframes kz-home-glow {
+  0%, 100% { box-shadow: 0 14px 38px rgba(79, 70, 180, .10); }
+  50% { box-shadow: 0 18px 46px rgba(101, 88, 232, .19); }
+}
+@keyframes kz-home-sheen {
+  0% { background-position: 180% 0; }
+  100% { background-position: -180% 0; }
+}
+
+/* Home hero gets a more noticeable entrance and a soft ambient glow */
+.home-page .hero {
+  animation: kz-home-rise .72s cubic-bezier(.2,.75,.25,1) both,
+             kz-home-glow 7s ease-in-out 1s infinite;
+}
+.home-page .hero h1 { animation: kz-home-rise .65s .10s both; }
+.home-page .hero p { animation: kz-home-rise .65s .18s both; }
+.home-page .hero-actions { animation: kz-home-rise .65s .26s both; }
+
+/* Stagger community cards and widgets instead of making everything pop at once */
+.home-page .home-community-heading { animation: kz-home-rise .48s .12s both; }
+.home-page .home-community-card,
+.home-page .home-community-panel,
+.home-page .site-widget,
+.home-page .popular-panel,
+.home-page .side-card,
+.home-page .categories {
+  animation: kz-home-rise .52s cubic-bezier(.2,.7,.2,1) both;
+}
+.home-page .home-community-card:nth-child(2) { animation-delay: .08s; }
+.home-page .home-community-card:nth-child(3) { animation-delay: .14s; }
+.home-page .home-community-card:nth-child(4) { animation-delay: .20s; }
+.home-page .home-community-card:nth-child(5) { animation-delay: .26s; }
+.home-page .home-community-card:nth-child(6) { animation-delay: .32s; }
+.home-page .home-community-panels .home-community-panel:nth-child(2) { animation-delay: .08s; }
+.home-page .home-community-panels .home-community-panel:nth-child(3) { animation-delay: .16s; }
+.home-page .home-community-panels .home-community-panel:nth-child(4) { animation-delay: .24s; }
+
+/* Article list and category chips */
+.home-page .article {
+  animation: kz-home-rise .48s ease-out both;
+}
+.home-page .article:nth-child(2) { animation-delay: .04s; }
+.home-page .article:nth-child(3) { animation-delay: .08s; }
+.home-page .article:nth-child(4) { animation-delay: .12s; }
+.home-page .article:nth-child(5) { animation-delay: .16s; }
+.home-page .article:nth-child(n+6) { animation-delay: .20s; }
+.home-page .category {
+  transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease;
+}
+.home-page .category:hover {
+  transform: translateY(-2px) scale(1.025);
+  box-shadow: 0 5px 14px rgba(91, 78, 219, .12);
+}
+
+/* Logo, navigation, search and action buttons */
+.home-page .logo::before {
+  transition: transform .25s ease, box-shadow .25s ease;
+}
+.home-page .logo:hover::before {
+  transform: rotate(-7deg) scale(1.06);
+  box-shadow: 0 6px 16px rgba(101, 88, 232, .22);
+}
+.home-page .nav a {
+  transition: color .18s ease, background-color .18s ease, transform .18s ease;
+}
+.home-page .nav a:hover { transform: translateY(-1px); }
+.home-page .search:focus {
+  box-shadow: 0 0 0 4px rgba(101, 88, 232, .12);
+}
+.home-page .write-button,
+.home-page .login,
+.home-page .hero-secondary,
+.home-page .home-community-card-action {
+  transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+}
+.home-page .write-button:hover,
+.home-page .login:hover,
+.home-page .hero-secondary:hover,
+.home-page .home-community-card:hover .home-community-card-action {
+  transform: translateY(-2px);
+  filter: brightness(1.025);
+}
+.home-page .write-button:hover { box-shadow: 0 9px 22px rgba(91, 78, 219, .22); }
+
+/* Subtle hover lift for home panels and footer links */
+.home-page .home-community-card:hover,
+.home-page .home-community-panel:hover,
+.home-page .side-card:hover,
+.home-page .popular-panel:hover,
+.home-page .site-widget:hover {
+  transform: translateY(-3px);
+}
+.home-page .site-footer-links a {
+  transition: color .18s ease, transform .18s ease;
+}
+.home-page .site-footer-links a:hover { transform: translateY(-1px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .home-page .hero,
+  .home-page .hero h1,
+  .home-page .hero p,
+  .home-page .hero-actions,
+  .home-page .home-community-heading,
+  .home-page .home-community-card,
+  .home-page .home-community-panel,
+  .home-page .site-widget,
+  .home-page .popular-panel,
+  .home-page .side-card,
+  .home-page .categories,
+  .home-page .article {
+    animation: none !important;
+  }
+  .home-page * { scroll-behavior: auto !important; }
+}
