@@ -408,6 +408,35 @@
     renderDashboard(stats);
   }
 
+  async function loadAccessDetails() {
+    const container = $("access-details");
+    const button = $("access-details-toggle");
+    if (!container) return;
+    container.hidden = false;
+    container.innerHTML = '<p class="admin-muted">アクセス履歴を読み込んでいます...</p>';
+    if (button) button.disabled = true;
+    try {
+      const { data, error } = await supabase.rpc("admin_access_log_details", { p_limit: 200 });
+      if (error) throw error;
+      const rows = Array.isArray(data) ? data : [];
+      if (!rows.length) {
+        container.innerHTML = '<p class="admin-muted">アクセス履歴はまだありません。</p>';
+        return;
+      }
+      container.innerHTML = '<div class="access-details-heading"><div><h3>アクセス履歴</h3><p class="admin-muted">最新200件・日本時間。IPアドレスは記録していません。</p></div><span class="access-details-count">' + rows.length + '件</span></div>' +
+        '<div class="admin-table-wrap"><table class="admin-table access-details-table"><thead><tr><th>訪問日時</th><th>訪問者</th><th>ユーザーID</th><th>アクセス先</th></tr></thead><tbody>' +
+        rows.map(row => '<tr><td>' + esc(date(row.visited_at)) + '</td><td>' +
+          (row.user_id ? '<strong>' + esc(row.display_name || row.username || "名前未設定") + '</strong><small class="access-user-handle">' + esc(row.username ? "@" + row.username : "ログインユーザー") + '</small>' : '<span class="access-anonymous">匿名アクセス</span>') +
+          '</td><td><code>' + esc(row.user_id || "記録なし") + '</code></td><td><code class="access-path">' + esc(row.path || "/") + '</code></td></tr>').join("") +
+        '</tbody></table></div>';
+    } catch (error) {
+      console.error("アクセス詳細の読み込みに失敗しました。", error);
+      container.innerHTML = '<div class="admin-alert">アクセス詳細を読み込めませんでした。権限またはデータベース設定を確認してください。</div>';
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
   function renderAudit(changes) {
     $("role-audit-summary").innerHTML = changes.length
       ? '<div class="admin-alert"><strong>過去24時間に権限変更があります。</strong><div class="admin-log">' +
@@ -1199,6 +1228,11 @@
       });
     });
 
+    $("access-details-toggle")?.addEventListener("click", () => {
+      const panel = $("access-details");
+      if (panel && !panel.hidden) { panel.hidden = true; return; }
+      loadAccessDetails();
+    });
     $("broadcast-send")?.addEventListener("click", broadcastNotification);
     ["broadcast-title", "broadcast-body", "broadcast-link"].forEach(id => {
       $(id)?.addEventListener("input", updateBroadcastPreview);
