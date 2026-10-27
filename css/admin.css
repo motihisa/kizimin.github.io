@@ -1008,3 +1008,22 @@ button:focus-visible,a:focus-visible{outline:3px solid rgba(143,118,236,.65);out
 #maintenance-reason-save:hover{filter:brightness(1.12)}
 #maintenance-status{padding:15px 17px;border-radius:12px;background:var(--ad-soft);line-height:1.8}
 @media(max-width:560px){#maintenance-panel{padding:20px 16px}#maintenance-panel>.admin-panel-head{align-items:stretch;flex-direction:column;gap:18px}.maintenance-reason-actions{align-items:stretch;flex-direction:column}.maintenance-reason-actions button{width:100%}}
+
+
+/* Access details: privacy-preserving visitor history */
+.access-details-action{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-top:18px;padding-top:18px;border-top:1px solid var(--ad-line)}
+.access-details-action .admin-muted{max-width:540px;margin:0;line-height:1.8}
+#access-details-toggle{min-height:42px;padding:10px 17px;border-radius:11px;background:var(--ad-text);color:#fff}
+#access-details-toggle:disabled{opacity:.6;cursor:wait}
+.access-details-panel{margin-top:22px;padding-top:22px;border-top:1px solid var(--ad-line)}
+.access-details-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.access-details-heading h3{margin:0;font-size:17px}
+.access-details-heading .admin-muted{margin:6px 0 0;line-height:1.7}
+.access-details-count{padding:6px 10px;border-radius:999px;background:var(--ad-soft);color:var(--ad-text);font-size:12px;font-weight:800;white-space:nowrap}
+.access-details-table{min-width:680px}
+.access-details-table td{vertical-align:middle}
+.access-user-handle{display:block;margin-top:4px;color:var(--ad-muted);font-size:11px}
+.access-anonymous{display:inline-block;padding:5px 8px;border-radius:8px;background:var(--ad-soft);color:var(--ad-muted);font-size:12px}
+.access-details-table code{font-size:11px;overflow-wrap:anywhere}
+.access-path{white-space:normal}
+@media(max-width:560px){.access-details-action{align-items:stretch;flex-direction:column}.access-details-action .admin-btn{width:100%}.access-details-panel{margin-top:16px;padding-top:16px}}
