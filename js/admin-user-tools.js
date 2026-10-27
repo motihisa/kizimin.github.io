@@ -2,7 +2,7 @@
 "use strict";
 const $=id=>document.getElementById(id);
 const esc = value => String(value ?? "").replace(/[&<>"']/g, character => { switch (character) { case "&": return "&amp;"; case "<": return "&lt;"; case ">": return "&gt;"; case '"': return "&quot;"; case "'": return "&#039;"; default: return character; } });
-const labels={user:"一般ユーザー",moderator:"モデレーター",admin:"管理者",owner:"オーナー",active:"有効",banned:"BAN",suspended:"一時停止"};
+const labels={user:"一般ユーザー",moderator:"モデレーター",admin:"管理者",debugger:"デバッカー",owner:"オーナー",active:"有効",banned:"BAN",suspended:"一時停止"};
 const fmt=v=>v?new Date(v).toLocaleString("ja-JP",{timeZone:"Asia/Tokyo",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}):"なし";
 const reasons=["利用規約に反する投稿が確認されたため","他のユーザーへの迷惑行為が確認されたため","通報内容を確認し、運営による対応が必要と判断したため","確認のため一時的に利用を制限しています"];
 let ready=false,rows=[],q="",status="all",role="all";
@@ -10,7 +10,7 @@ function setup(){
  const view=$("view-users"); if(!view||ready)return;
  const panel=view.querySelector(".admin-panel"),wrap=panel?.querySelector(".admin-table-wrap");if(!panel||!wrap)return;ready=true;
  let c=$("user-tools-controls");
- if(!c){c=document.createElement("div");c.id="user-tools-controls";c.innerHTML='<div class="user-tools-stats" id="user-tools-stats"></div><div class="user-tools-filters"><label>状態<select id="user-status-filter"><option value="all">すべて</option><option value="active">有効</option><option value="banned">BAN</option><option value="suspended">一時停止</option></select></label><label>権限<select id="user-role-filter"><option value="all">すべて</option><option value="user">一般ユーザー</option><option value="moderator">モデレーター</option><option value="admin">管理者</option></select></label><label>BAN解除予定<select id="user-expiry-filter"><option value="all">すべて</option><option value="soon">7日以内</option><option value="expired">期限超過</option><option value="indefinite">無期限</option></select></label><button class="admin-btn" id="user-filter-reset" type="button">絞り込み解除</button></div><div id="user-expiry-summary" class="user-expiry-summary"></div>';panel.insertBefore(c,wrap);}
+ if(!c){c=document.createElement("div");c.id="user-tools-controls";c.innerHTML='<div class="user-tools-stats" id="user-tools-stats"></div><div class="user-tools-filters"><label>状態<select id="user-status-filter"><option value="all">すべて</option><option value="active">有効</option><option value="banned">BAN</option><option value="suspended">一時停止</option></select></label><label>権限<select id="user-role-filter"><option value="all">すべて</option><option value="user">一般ユーザー</option><option value="moderator">モデレーター</option><option value="admin">管理者</option><option value="debugger">デバッカー</option></select></label><label>BAN解除予定<select id="user-expiry-filter"><option value="all">すべて</option><option value="soon">7日以内</option><option value="expired">期限超過</option><option value="indefinite">無期限</option></select></label><button class="admin-btn" id="user-filter-reset" type="button">絞り込み解除</button></div><div id="user-expiry-summary" class="user-expiry-summary"></div>';panel.insertBefore(c,wrap);}
  let d=$("user-detail-dialog");if(!d){d=document.createElement("dialog");d.id="user-detail-dialog";d.className="user-detail-dialog";d.innerHTML='<div class="user-detail-head"><div><h2 id="user-detail-title">ユーザー詳細</h2><p id="user-detail-subtitle" class="admin-muted"></p></div><button id="user-detail-close" type="button" class="admin-btn">閉じる</button></div><div id="user-detail-content"></div>';document.body.appendChild(d);}
  $("user-status-filter").onchange=e=>{status=e.target.value;filterRows()};
  $("user-role-filter").onchange=e=>{role=e.target.value;filterRows()};
@@ -24,7 +24,7 @@ function read(r){
  const cells=Array.from(r.cells||r.children||[]);
  const cellText=index=>cells[index]?.textContent?.trim()||"";
  const s=r.querySelector(".account-status"),ro=r.querySelector(".user-role-select"),ex=r.querySelector(".ban-expires");
- return {row:r,id:s?.dataset.id||ro?.dataset.id||ex?.dataset.id,status:s?.value||(cellText(3).includes("BAN")?"banned":"active"),role:ro?.value||(cellText(2).includes("オーナー")?"owner":cellText(2).includes("管理者")?"admin":cellText(2).includes("モデレーター")?"moderator":"user"),expiry:ex?.value||"",name:cellText(1)||cellText(0)||"ユーザー",username:cellText(0),registered:cellText(4)||"-",reason:cells[3]?.querySelector(".admin-muted")?.textContent||""};
+ return {row:r,id:s?.dataset.id||ro?.dataset.id||ex?.dataset.id,status:s?.value||(cellText(3).includes("BAN")?"banned":"active"),role:ro?.value||(cellText(2).includes("オーナー")?"owner":cellText(2).includes("管理者")?"admin":cellText(2).includes("モデレーター")?"moderator":cellText(2).includes("デバッカー")?"debugger":"user"),expiry:ex?.value||"",name:cellText(1)||cellText(0)||"ユーザー",username:cellText(0),registered:cellText(4)||"-",reason:cells[3]?.querySelector(".admin-muted")?.textContent||""};
 }
 function decorate(){
  const b=$("users-body");if(!b)return;rows=[...b.querySelectorAll("tr")].filter(r=>r.querySelector(".account-status")||r.querySelector(".user-role-select")).map(read);
