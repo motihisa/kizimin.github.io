@@ -36,6 +36,7 @@
 <label>画面タイトル<input id="maintenance-title" type="text" maxlength="120" required></label>
 <label>タイトル下の説明文<textarea id="maintenance-description" maxlength="400" rows="3"></textarea></label>
 <label>理由欄の見出し<input id="maintenance-reason-title" type="text" maxlength="80" required></label>
+<label>メンテナンス理由本文（任意）<textarea id="maintenance-reason-body" maxlength="1000" rows="4" placeholder="空欄の場合は管理画面のメンテナンス設定にある理由を表示します。"></textarea><span class="editor-note">通常の文章として表示されます。MarkdownやHTMLは使えません。</span></label>
 <label>画面下部の案内文<textarea id="maintenance-footer" maxlength="300" rows="3"></textarea></label>
 <label>デモ解除ボタンの表示名<input id="maintenance-demo-label" type="text" maxlength="40" required></label>
 <div class="editor-options">
@@ -94,7 +95,7 @@
 </div>
 <section class="admin-panel" style="margin-top:18px"><div class="admin-panel-head"><div><h2>変更履歴</h2><p class="admin-muted">直近20件の変更を確認できます。</p></div></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>日時</th><th>操作</th><th>変更者</th><th>変更前後</th></tr></thead><tbody id="editor-history-body"><tr><td colspan="4">読み込み中…</td></tr></tbody></table></div></section>
 </main>
-<script src="js/admin-site-editor.js?v=20261027-maintenance-editor2"></script>
+<script src="js/admin-site-editor.js?v=20261027-maintenance-editor3"></script>
 <script src="js/ban-screen.js?v=20261014-account-gate"></script>
 <script src="js/admin-theme.js?v=20261015-theme1"></script>
 <script src="js/kizimin-emoji.js?v=20261015-emoji1" defer></script>
