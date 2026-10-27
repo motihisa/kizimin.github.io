@@ -11,7 +11,12 @@
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
   const path = location.pathname || "/";
 
-  void sb.from("access_logs").insert({ path }).then(({ error }) => {
+  // セッションがある場合のみ本人のユーザーIDを記録。IPアドレスは取得・保存しない。
+  void sb.auth.getSession().then(({ data, error: sessionError }) => {
+    if (sessionError) console.debug("ログイン状態を確認できませんでした。", sessionError);
+    const userId = data?.session?.user?.id || null;
+    return sb.from("access_logs").insert({ path, user_id: userId });
+  }).then(({ error }) => {
     if (error) console.debug("アクセス記録を保存できませんでした。", error);
-  });
+  }).catch(error => console.debug("アクセス記録を保存できませんでした。", error));
 })();
