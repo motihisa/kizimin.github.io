@@ -217,10 +217,58 @@
       ["要確認コメント",stats.suspiciousComments,"review"],["要確認記事",stats.suspiciousArticles,"review"]
     ];
     if($("bot-kpis")) $("bot-kpis").innerHTML=kpis.map(([label,value,kind])=>'<div class="bot-kpi '+kind+'"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong></div>').join("");
-    if($("bot-alert-list")) $("bot-alert-list").innerHTML=alerts.length?alerts.slice(0,80).map(a=>'<article class="bot-alert '+esc(a.level)+'"><div class="bot-alert-head"><span class="bot-alert-source">'+esc(a.source)+'</span><strong>'+esc(a.title)+'</strong></div><p>'+esc(a.detail)+'</p></article>').join(""):'<div class="bot-empty">今回のチェックでアラートは見つかりませんでした。</div>';
+    renderAlertList();
     if($("bot-last-run")) $("bot-last-run").textContent=fmt(lastRunAt);
     if($("bot-run-summary")) $("bot-run-summary").textContent=reason+"：アラート "+alerts.length+" 件 / 読み込み失敗 "+stats.errors.length+" 件";
     renderHistory();
+  }
+  function renderAlertList() {
+    const el=$("bot-alert-list");
+    if(!el)return;
+    const level=$("bot-filter-level")?.value||"all";
+    const source=$("bot-filter-source")?.value||"all";
+    const rows=lastAlerts.filter(a=>(level==="all"||a.level===level)&&(source==="all"||a.source===source));
+    el.innerHTML=rows.length?rows.slice(0,80).map(a=>'<article class="bot-alert '+esc(a.level)+'"><div class="bot-alert-head"><span class="bot-alert-source">'+esc(a.source)+'</span><strong>'+esc(a.title)+'</strong><span class="bot-alert-level">'+esc(({high:"高",medium:"中",review:"要確認"})[a.level]||a.level)+'</span></div><p>'+esc(a.detail)+'</p></article>').join(""):'<div class="bot-empty">選択した条件に一致するアラートはありません。</div>';
+    if($("bot-filter-count")) $("bot-filter-count").textContent=rows.length+" / "+lastAlerts.length+" 件を表示";
+  }
+  function exportAlerts(format) {
+    const rows=lastAlerts.map(a=>({検出日時:a.at||lastRunAt||"",重要度:a.level||"",対象:a.source||"",タイトル:a.title||"",詳細:a.detail||"",対象ID:a.id||""}));
+    if(!rows.length){setStatus("出力するアラートがありません。先にチェックを実行してください。","error");return;}
+    let content,type,extension;
+    if(format==="csv"){
+      const keys=Object.keys(rows[0]);
+      const quote=value=>'"'+String(value??"").replace(/"/g,'""')+'"';
+      content="\uFEFF"+[keys.map(quote).join(","),...rows.map(row=>keys.map(key=>quote(row[key])).join(","))].join("\r\n");
+      type="text/csv;charset=utf-8";extension="csv";
+    }else{
+      content=JSON.stringify({generatedAt:lastRunAt, count:rows.length, alerts:rows},null,2);
+      type="application/json;charset=utf-8";extension="json";
+    }
+    const blob=new Blob([content],{type});
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement("a");
+    link.href=url;link.download="kizimin-bot-alerts-"+new Date().toISOString().replace(/[:.]/g,"-")+"."+extension;
+    document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
+    setStatus(format==="csv"?"アラートをCSVで出力しました。":"アラートをJSONで出力しました。","success");
+  }
+  async function notifyDiscord() {
+    const button=$("bot-notify-discord");if(button)button.disabled=true;
+    try{
+      const {data:{session},error:sessionError}=await db.auth.getSession();
+      if(sessionError||!session?.access_token)throw new Error("ログインセッションを確認できません。再ログインしてください。");
+      setStatus("DiscordへBotの検知概要を送信しています…");
+      const response=await fetch("https://kizimin-site.onrender.com/api/bot/notify",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},
+        body:JSON.stringify({generatedAt:lastRunAt,alerts:lastAlerts.slice(0,10).map(a=>({level:a.level,source:a.source,title:a.title}))})
+      });
+      const result=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(result.error||("通知APIエラー: HTTP "+response.status));
+      setStatus("Discordへ通知しました。","success");
+    }catch(error){
+      setStatus("Discord通知に失敗しました: "+(error.message||"接続設定を確認してください"),"error");
+      console.error("[Kizimin Bot] Discord notification failed",error);
+    }finally{if(button)button.disabled=false;}
   }
   function readHistory(){try{const x=JSON.parse(localStorage.getItem(storageKey()+":history")||"[]");return Array.isArray(x)?x:[];}catch{return[];}}
   function writeHistory(rows){try{localStorage.setItem(storageKey()+":history",JSON.stringify(rows));}catch{}}
@@ -246,6 +294,11 @@
   function bind() {
     const config=readConfig();
     $("bot-run-now")?.addEventListener("click",()=>scan("手動チェック"));
+    $("bot-export-csv")?.addEventListener("click",()=>exportAlerts("csv"));
+    $("bot-export-json")?.addEventListener("click",()=>exportAlerts("json"));
+    $("bot-notify-discord")?.addEventListener("click",notifyDiscord);
+    $("bot-filter-level")?.addEventListener("change",renderAlertList);
+    $("bot-filter-source")?.addEventListener("change",renderAlertList);
     $("bot-policy-save")?.addEventListener("click",savePolicy);
     $("bot-stop")?.addEventListener("click",()=>{
       const c=readConfig();c.enabled=false;writeConfig(c);setRunning(false);renderConfig();
