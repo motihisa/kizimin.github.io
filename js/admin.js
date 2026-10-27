@@ -15,7 +15,7 @@
   const date = v => v ? new Date(v).toLocaleString("ja-JP", JST_OPTIONS) : "-";
   const jstDateTimeValue = v => { if (!v) return ""; const d = new Date(v); if (Number.isNaN(d.getTime())) return ""; return new Intl.DateTimeFormat("sv-SE", { timeZone:"Asia/Tokyo", year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:false }).format(d).replace(" ", "T"); };
   const jstInputToIso = value => { if (!value) return null; const m = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/); if (!m) return null; return new Date(Date.UTC(Number(m[1]), Number(m[2])-1, Number(m[3]), Number(m[4])-9, Number(m[5]), Number(m[6] || 0))).toISOString(); };
-  const statusLabel=v=>({owner:"オーナー",admin:"管理者",moderator:"モデレーター",user:"一般ユーザー",active:"有効",banned:"BAN",suspended:"一時停止",draft:"下書き",published:"公開中",archived:"アーカイブ",visible:"表示",hidden:"非表示",deleted:"削除済み",open:"未対応",reviewing:"確認中",resolved:"解決済み",dismissed:"却下",closed:"終了"})[v]||v;
+  const statusLabel=v=>({owner:"オーナー",admin:"管理者",moderator:"モデレーター",debugger:"デバッカー",user:"一般ユーザー",active:"有効",banned:"BAN",suspended:"一時停止",draft:"下書き",published:"公開中",archived:"アーカイブ",visible:"表示",hidden:"非表示",deleted:"削除済み",open:"未対応",reviewing:"確認中",resolved:"解決済み",dismissed:"却下",closed:"終了"})[v]||v;
   const errorMessage=e=>{const m=String(e?.message||e||"");if(/permission denied|not authorized|row-level security/i.test(m))return "この操作を行う権限がありません。";if(/network|fetch failed/i.test(m))return "通信に失敗しました。";return "処理に失敗しました。しばらくしてからもう一度お試しください。";};
 
   function forbidden(message, detail = "") {
@@ -491,7 +491,7 @@
         </td>
         <td>${esc(date(u.created_at))}</td>
         <td class="admin-actions">
-          ${canManageRoles && u.id !== "9589135e-4f75-4913-b13f-35407eeedf3b" && (currentAdminRole === "owner" || (u.id !== window.__kiziminCurrentUserId && ["user","moderator"].includes(u.role || "user"))) ? `<select class="user-role-select" data-id="${esc(u.id)}" data-current="${esc(u.role || "user")}" aria-label="ユーザー権限">${(currentAdminRole === "owner" ? ["user","moderator","admin"] : ["user","moderator"]).map(r => '<option value="'+r+'" '+(r===(u.role||"user")?"selected":"")+'>'+statusLabel(r)+'</option>').join("")}</select>` : `<span class="admin-muted">${esc(statusLabel(u.role || "user"))}</span>`}
+          ${canManageRoles && u.id !== "9589135e-4f75-4913-b13f-35407eeedf3b" && (currentAdminRole === "owner" || (u.id !== window.__kiziminCurrentUserId && ["user","moderator"].includes(u.role || "user"))) ? `<select class="user-role-select" data-id="${esc(u.id)}" data-current="${esc(u.role || "user")}" aria-label="ユーザー権限">${(currentAdminRole === "owner" ? ["user","moderator","admin","debugger"] : ["user","moderator"]).map(r => '<option value="'+r+'" '+(r===(u.role||"user")?"selected":"")+'>'+statusLabel(r)+'</option>').join("")}</select>` : `<span class="admin-muted">${esc(statusLabel(u.role || "user"))}</span>`}
           ${canBanUsers ? `<select class="account-status" data-id="${esc(u.id)}" data-current="${esc(u.account_status || "active")}" aria-label="アカウント状態" ${(u.id === "9589135e-4f75-4913-b13f-35407eeedf3b" || (u.role === "admin" && currentAdminRole !== "owner")) ? "disabled" : ""}>
             ${["active","banned","suspended"].map(s => '<option value="'+s+'" '+(s===(u.account_status||"active")?"selected":"")+'>'+statusLabel(s)+'</option>').join("")}
           </select>
@@ -1092,9 +1092,9 @@
     const {data,error} = await supabase.rpc("admin_get_role_permissions");
     if (error) throw error;
     const values = new Map((data || []).map(row => [row.role + ":" + row.permission_key, !!row.allowed]));
-    grid.innerHTML = '<table class="admin-table"><thead><tr><th>権限</th><th>user</th><th>moderator</th><th>admin</th><th>owner</th></tr></thead><tbody>' +
+    grid.innerHTML = '<table class="admin-table"><thead><tr><th>権限</th><th>user</th><th>moderator</th><th>admin</th><th>owner</th><th>debugger</th></tr></thead><tbody>' +
       rolePermissionMeta.map(([key,label]) => '<tr><td>' + esc(label) + '</td>' +
-        ["user","moderator","admin","owner"].map(role => {
+        ["user","moderator","admin","owner","debugger"].map(role => {
           if (currentAdminRole !== "owner" && (role === "admin" || role === "owner")) {
             return '<td><span class="admin-muted">オーナー専用</span></td>';
           }
