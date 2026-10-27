@@ -867,3 +867,38 @@ button:focus-visible,a:focus-visible{outline:3px solid rgba(143,118,236,.65);out
   .dashboard-stats{gap:7px}
   .stat-card{padding:10px}
 }
+
+
+/* User detail modal: identity, protected email, and permission-aware action panel */
+.user-detail-dialog{width:min(760px,calc(100vw - 28px));max-width:760px;max-height:min(88dvh,900px);overflow:auto;border:1px solid #d9e2ef;border-radius:16px;padding:22px;background:#fff;color:#1f2937;box-shadow:0 24px 80px rgba(15,23,42,.24)}
+.user-detail-dialog::backdrop{background:rgba(15,23,42,.55);backdrop-filter:blur(3px)}
+.user-detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding-bottom:15px;margin-bottom:16px;border-bottom:1px solid #e5eaf1}
+.user-detail-head h2{margin:0;font-size:20px}
+.user-detail-head p{margin:5px 0 0;font-size:11px;overflow-wrap:anywhere}
+.user-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.user-detail-grid>div{min-width:0;padding:12px;border:1px solid #e6ebf2;border-radius:10px;background:#f8fafc}
+.user-detail-grid span,.user-detail-field>span{display:block;margin-bottom:5px;color:#64748b;font-size:11px;font-weight:750}
+.user-detail-grid strong{display:block;font-size:13px;overflow-wrap:anywhere}
+.user-detail-grid p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
+.user-detail-grid .user-detail-wide{grid-column:1/-1}
+.user-detail-email{user-select:text}
+.user-detail-actions{margin:18px 0;padding:16px;border:1px solid #dbe5f3;border-radius:12px;background:#f8fbff}
+.user-detail-actions h3{margin:0 0 4px;font-size:15px}
+.user-detail-actions>.admin-muted{font-size:11px;margin:0 0 12px}
+.user-detail-action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:end}
+.user-detail-field{display:grid;gap:5px;min-width:0}
+.user-detail-field>span{margin:0}
+.user-detail-field select,.user-detail-field input{width:100%;min-width:0;box-sizing:border-box;min-height:38px;padding:8px 10px;border:1px solid #d7e0ec;border-radius:8px;background:#fff;color:#1f2937;font:inherit}
+.user-detail-action-grid .admin-btn{min-height:38px;justify-self:stretch}
+.user-detail-action-grid .danger{background:#fff1f2;border-color:#fecdd3;color:#be123c}
+.user-detail-action-grid .user-detail-official{background:#fffbeb;border-color:#f4d58b;color:#854d0e}
+.user-detail-dialog h3:not(.user-detail-actions h3){font-size:14px;margin:18px 0 9px}
+.user-detail-dialog .user-activity-list{display:grid;gap:8px}
+.user-detail-dialog .user-activity-item{padding:11px;border:1px solid #e7ecf3;border-radius:9px}
+.user-detail-dialog .user-activity-item p{margin:5px 0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
+.user-detail-dialog .user-activity-item small{color:#64748b;font-size:10px}
+@media(max-width:560px){
+ .user-detail-dialog{padding:15px;border-radius:13px}
+ .user-detail-grid,.user-detail-action-grid{grid-template-columns:minmax(0,1fr)}
+ .user-detail-head h2{font-size:17px}
+}
