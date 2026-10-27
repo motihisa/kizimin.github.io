@@ -93,7 +93,7 @@
       if (Array.isArray(rows) && rows[0] && rows[0].setting_value && typeof rows[0].setting_value === "object") {
         siteTheme = rows[0].setting_value;
         siteThemeLoadedAt = Date.now();
-        if (gate) render();
+        if (gate) { const node = document.getElementById(GATE_ID); if (node) node.removeAttribute("data-key"); render(); }
       }
     } catch (_) {}
   }
