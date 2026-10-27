@@ -1092,7 +1092,7 @@
     const {data,error} = await supabase.rpc("admin_get_role_permissions");
     if (error) throw error;
     const values = new Map((data || []).map(row => [row.role + ":" + row.permission_key, !!row.allowed]));
-    grid.innerHTML = '<table class="admin-table"><thead><tr><th>権限</th><th>user</th><th>moderator</th><th>admin</th><th>owner</th><th>debugger</th></tr></thead><tbody>' +
+    grid.innerHTML = '<table class="admin-table"><thead><tr><th>権限</th><th>user</th><th>moderator</th><th>admin</th><th>owner</th><th>デバッカー</th></tr></thead><tbody>' +
       rolePermissionMeta.map(([key,label]) => '<tr><td>' + esc(label) + '</td>' +
         ["user","moderator","admin","owner","debugger"].map(role => {
           if (currentAdminRole !== "owner" && (role === "admin" || role === "owner")) {
