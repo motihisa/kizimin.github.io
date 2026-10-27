@@ -1228,3 +1228,21 @@ dialog[open],
 .kizimin-maintenance-reason p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px;line-height:1.85;color:#202b40}
 .kizimin-maintenance-footer{margin:22px 0 0;color:#7a8496;font-size:12px;line-height:1.8}
 @media(max-width:480px){.kizimin-maintenance-screen{padding:14px}.kizimin-maintenance-card{border-radius:18px;padding:24px 18px}.kizimin-maintenance-reason{padding:14px}}
+
+
+/* Kizimin maintenance redesign: airy editorial layout */
+.kizimin-maintenance-screen{padding:clamp(22px,5vw,64px);background:#f5f7fb;color:#172033}
+.kizimin-maintenance-card{width:min(100%,760px);padding:clamp(30px,7vw,76px);border:0;border-radius:30px;background:#fff;box-shadow:0 18px 70px rgba(24,39,75,.07);text-align:left}
+.kizimin-maintenance-brand{display:flex;align-items:center;gap:12px;font-size:14px;letter-spacing:.12em;color:#24345a}
+.kizimin-maintenance-brand:before{content:"K";display:grid;place-items:center;width:38px;height:38px;border-radius:13px;background:#25385e;color:white;font-size:18px;letter-spacing:0}
+.kizimin-maintenance-symbol{width:76px;height:76px;margin:54px 0 26px;border-radius:24px;background:#f0f3f8;color:#344968;font-size:32px}
+.kizimin-maintenance-type{padding:7px 12px;background:#f1f4f8!important;color:#4a5870!important;font-size:11px;letter-spacing:.025em}
+.kizimin-maintenance-type-emergency{background:#fff0ef!important;color:#b42318!important}
+.kizimin-maintenance-type-other{background:#f4efff!important;color:#6941a5!important}
+.kizimin-maintenance-card h1{max-width:560px;margin:22px 0 18px;font-size:clamp(30px,5vw,46px);line-height:1.25;letter-spacing:-.045em;font-weight:800}
+.kizimin-maintenance-description{max-width:520px;font-size:15px;line-height:2;color:#667085}
+.kizimin-maintenance-reason{margin:42px 0 0;padding:25px 0 0;border:0;border-top:1px solid #e9edf3;border-radius:0;background:transparent;text-align:left}
+.kizimin-maintenance-reason h2{margin:0 0 13px;color:#8791a3;font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+.kizimin-maintenance-reason p{max-width:620px;font-size:16px;line-height:2;color:#27344a}
+.kizimin-maintenance-footer{margin:34px 0 0;padding-top:18px;border-top:1px solid #f0f2f6;color:#98a1b1;font-size:12px}
+@media(max-width:480px){.kizimin-maintenance-screen{padding:14px}.kizimin-maintenance-card{padding:28px 22px;border-radius:22px}.kizimin-maintenance-symbol{margin:38px 0 22px}.kizimin-maintenance-reason{margin-top:32px;padding-top:20px}}
