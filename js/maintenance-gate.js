@@ -38,7 +38,7 @@
     const pill=el("div","kizimin-maintenance-type kizimin-maintenance-type-"+type,labels[type]),heading=el("h1","",c.title);heading.id="kizimin-maintenance-title";
     const description=el("p","kizimin-maintenance-description",c.description);description.style.color=c.textColor;
     const box=el("section","kizimin-maintenance-reason"),subhead=el("h2","","メンテナンスの理由"),reasonText=el("p","",reason);
-    subhead.textContent=c.reasonTitle;reasonText.style.color=c.textColor;box.append(subhead,reasonText);
+    subhead.textContent=c.reasonTitle;reasonText.style.color=c.textColor;subhead.textContent=c.reasonTitle;reasonText.style.color=c.textColor;box.append(subhead,reasonText);
     const footer=el("p","kizimin-maintenance-footer",c.footer);footer.style.color=c.textColor;
     card.append(brand,symbol,pill,heading,description,box);
     addDemoButton(card,canDemo,c.demoLabel);
