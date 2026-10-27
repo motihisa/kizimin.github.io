@@ -902,3 +902,22 @@ button:focus-visible,a:focus-visible{outline:3px solid rgba(143,118,236,.65);out
  .user-detail-grid,.user-detail-action-grid{grid-template-columns:minmax(0,1fr)}
  .user-detail-head h2{font-size:17px}
 }
+
+
+/* User list: keep all account actions inside the Details dialog. Hidden controls remain available to existing dialog handlers. */
+#view-users .admin-actions > :not(.user-detail-open){display:none!important}
+#view-users .admin-actions{min-width:84px}
+#view-users .user-detail-open{white-space:nowrap}
+
+/* Clearer user details dialog */
+.user-detail-dialog{width:min(820px,calc(100vw - 24px));padding:clamp(16px,3vw,28px);background:#f9fbff}
+.user-detail-head{position:sticky;top:-1px;z-index:2;background:#f9fbff;padding:4px 0 16px}
+.user-detail-grid{gap:12px}
+.user-detail-grid>div{padding:14px;background:#fff;border-color:#e1e8f2;box-shadow:0 2px 7px rgba(30,55,90,.035)}
+.user-detail-grid span,.user-detail-field>span{font-size:12px;letter-spacing:.01em}
+.user-detail-grid strong{font-size:14px;line-height:1.55}
+.user-detail-actions{padding:18px;background:#f0f5ff;border-color:#d9e5fa}
+.user-detail-action-grid{gap:12px}
+.user-detail-action-grid .admin-btn{min-height:42px}
+.user-detail-dialog #user-activity-loading,.user-detail-dialog .user-activity-list{margin-top:10px}
+@media(max-width:560px){.user-detail-dialog{width:calc(100vw - 16px);max-height:92dvh;padding:13px}.user-detail-grid{gap:8px}.user-detail-grid>div{padding:11px}.user-detail-actions{padding:12px}}
