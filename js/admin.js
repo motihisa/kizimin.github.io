@@ -38,6 +38,22 @@
     }
 
     if (!session?.user?.id) {
+      // メンテナンス中は admin.html からログイン画面へ誘導しない。
+      // 既存のログインセッションを持つ管理者は、下の通常の権限チェックへ進める。
+      const { data: maintenance, error: maintenanceError } = await supabase
+        .from("site_settings")
+        .select("maintenance_mode")
+        .limit(1)
+        .maybeSingle();
+
+      if (!maintenanceError && maintenance?.maintenance_mode === true) {
+        forbidden(
+          "現在メンテナンス中です。",
+          "メンテナンス中は、未ログイン状態から管理画面へログインできません。サイト再開後にアクセスしてください。"
+        );
+        return false;
+      }
+
       location.href = "login.html";
       return false;
     }
