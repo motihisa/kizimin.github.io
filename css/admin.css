@@ -921,3 +921,19 @@ button:focus-visible,a:focus-visible{outline:3px solid rgba(143,118,236,.65);out
 .user-detail-action-grid .admin-btn{min-height:42px}
 .user-detail-dialog #user-activity-loading,.user-detail-dialog .user-activity-list{margin-top:10px}
 @media(max-width:560px){.user-detail-dialog{width:calc(100vw - 16px);max-height:92dvh;padding:13px}.user-detail-grid{gap:8px}.user-detail-grid>div{padding:11px}.user-detail-actions{padding:12px}}
+
+
+/* Admin-only theme picker and themes */
+.admin-theme-picker{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--ad-muted)}
+.admin-theme-picker select{max-width:155px;border:1px solid var(--ad-line);border-radius:9px;background:var(--ad-panel);color:var(--ad-text);padding:9px 10px;font:inherit;cursor:pointer}
+.admin-page[data-site-theme="violet"]{--ad-bg:#f5f3ff;--ad-panel:#fff;--ad-text:#241b3b;--ad-muted:#756b8d;--ad-line:#e5defa;--ad-accent:#7652d6;--ad-soft:#f0eaff}
+.admin-page[data-site-theme="light"]{--ad-bg:#f5f7fb;--ad-panel:#fff;--ad-text:#111827;--ad-muted:#6b7280;--ad-line:#e5e7eb;--ad-accent:#111827;--ad-soft:#f3f4f6}
+.admin-page[data-site-theme="dark"]{--ad-bg:#111827;--ad-panel:#1f2937;--ad-text:#f3f4f6;--ad-muted:#aab4c4;--ad-line:#374151;--ad-accent:#a78bfa;--ad-soft:#273449}
+.admin-page[data-site-theme="dark"] .admin-sidebar{background:#080d18}
+.admin-page[data-site-theme="dark"] .stat-card,.admin-page[data-site-theme="dark"] .admin-btn:not(.primary):not(.danger){background:#273449;color:#e5e7eb;border-color:#4b5563}
+.admin-page[data-site-theme="dark"] .admin-btn.primary{background:#7c3aed;border-color:#7c3aed}
+.admin-page[data-site-theme="ocean"]{--ad-bg:#effaff;--ad-panel:#fff;--ad-text:#123047;--ad-muted:#52778a;--ad-line:#cceaf3;--ad-accent:#087eaa;--ad-soft:#e0f7ff}
+.admin-page[data-site-theme="ocean"] .admin-btn.primary{background:#087eaa;border-color:#087eaa}
+.admin-page[data-site-theme="sakura"]{--ad-bg:#fff6fa;--ad-panel:#fff;--ad-text:#49263a;--ad-muted:#956b80;--ad-line:#f4dbe7;--ad-accent:#d94682;--ad-soft:#fff0f6}
+.admin-page[data-site-theme="sakura"] .admin-btn.primary{background:#d94682;border-color:#d94682}
+@media(max-width:760px){.admin-theme-picker span{display:none}.admin-theme-picker select{max-width:112px;padding:8px 6px}.admin-topbar{flex-wrap:wrap}.admin-top-actions{flex-wrap:wrap}}
