@@ -40,6 +40,13 @@
       </div>
     </section>
 
+    <div class="site-community-top">
+      <section class="site-widget daily-widget" id="community-daily" aria-labelledby="daily-topic-heading">
+        <div><h2 id="daily-topic-heading">💡 今日のお題</h2><p class="site-widget-hint">今日のテーマから、気軽に記事を書いてみよう。</p></div>
+        <div id="daily-topic"><p>お題を読み込んでいます…</p></div>
+      </section>
+    </div>
+
     <section id="home-announcements" class="site-widget home-announcements" aria-labelledby="announcements-heading">
       <div class="announcement-heading"><h2 id="announcements-heading">📢 お知らせ</h2><span class="announcement-label">運営からのお知らせ</span></div>
       <div id="announcement-content" aria-live="polite"><p>現在、お知らせはありません。</p></div>
@@ -57,12 +64,6 @@
         <button class="home-community-card" type="button" data-home-community="library" aria-controls="home-community-panel-library" aria-expanded="false"><span class="home-community-card-icon" aria-hidden="true">📚</span><span class="home-community-card-title">情報ライブラリ</span><span class="home-community-card-desc">役立つ知識や手順を共有する</span><span class="home-community-card-action">開く <span aria-hidden="true">↗</span></span></button>
       </div>
       <div class="home-community-panels" aria-live="polite">
-        <div class="home-community-panel" id="home-community-panel-daily" data-home-community-panel="daily" hidden>
-<section class="site-widget daily-widget" id="community-daily">
-        <div><h2>💡 今日のお題</h2><p class="site-widget-hint">お題から記事を書き始められます。</p></div>
-        <div id="daily-topic"><p>お題を読み込んでいます…</p></div>
-      </section>
-        </div>
         <div class="home-community-panel" id="home-community-panel-qa" data-home-community-panel="qa" hidden>
 <section class="site-widget qa-widget" id="community-qa">
         <h2>🧩 質問・回答</h2>
@@ -178,6 +179,21 @@
     const panels = Array.from(document.querySelectorAll("[data-home-community-panel]"));
     const aliases = { "community-daily":"daily", "community-qa":"qa", "community-polls":"polls", "community-challenges":"challenges", "community-library":"library" };
     function openCommunity(key, updateHash = true) {
+      if (key === "daily") {
+        panels.forEach(item => { item.hidden = true; });
+        cards.forEach(card => {
+          const active = card.dataset.homeCommunity === key;
+          card.classList.toggle("is-active", active);
+          card.setAttribute("aria-expanded", String(active));
+        });
+        if (updateHash) history.replaceState(null, "", "#community-daily");
+        const topic = document.getElementById("community-daily");
+        if (topic) {
+          const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          topic.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+        }
+        return;
+      }
       const panel = panels.find(item => item.dataset.homeCommunityPanel === key);
       if (!panel) return;
       panels.forEach(item => { item.hidden = item !== panel; });
@@ -186,7 +202,7 @@
         card.classList.toggle("is-active", active);
         card.setAttribute("aria-expanded", String(active));
       });
-      if (updateHash) history.replaceState(null, "", "#" + ({daily:"community-daily",qa:"community-qa",polls:"community-polls",challenges:"community-challenges",library:"community-library"}[key]));
+      if (updateHash) history.replaceState(null, "", "#" + ({qa:"community-qa",polls:"community-polls",challenges:"community-challenges",library:"community-library"}[key]));
       const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       panel.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "nearest" });
     }
