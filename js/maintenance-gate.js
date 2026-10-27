@@ -1,50 +1,26 @@
-/* Kizimin maintenance gate
- * The site uses its existing Supabase maintenance-state RPC.
- * No IP address is collected or used.
- */
+/* Kizimin custom maintenance screen. No redirect to Render. */
 (() => {
   "use strict";
-  const URL = "https://bimddapbkdakspjaemsm.supabase.co";
-  const KEY = "sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf";
-  const GATE = "kizimin-maintenance-gate";
-  function render() {
-    if (document.getElementById(GATE) || !document.body) return;
-    const overlay = document.createElement("div");
-    overlay.id = GATE;
-    overlay.setAttribute("role", "dialog");
-    overlay.setAttribute("aria-modal", "true");
-    overlay.setAttribute("aria-labelledby", "kizimin-maintenance-title");
-    overlay.setAttribute("aria-live", "polite");
-    overlay.style.cssText = "position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;padding:24px;box-sizing:border-box;background:#fff;color:#111;font-family:inherit;text-align:center;overflow:auto";
-    overlay.innerHTML = '<main style="width:min(100%,560px);margin:auto"><h1 id="kizimin-maintenance-title" style="margin:0 0 18px;font-size:clamp(24px,5vw,32px);font-weight:700;line-height:1.5">現在メンテナンス中です</h1><p style="margin:0;font-size:15px;line-height:2;color:#333">Kiziminはメンテナンス中のため、現在記事の閲覧・投稿などの機能をご利用いただけません。</p><p style="margin:18px 0 0;font-size:13px;line-height:1.8;color:#666">メンテナンス終了までしばらくお待ちください。</p></main>';
-    document.body.appendChild(overlay);
-    Array.from(document.body.children).forEach((element) => {
-      if (element !== overlay) element.setAttribute("inert", "");
-    });
-    document.documentElement.style.overflow = "hidden";
+  const URL="https://bimddapbkdakspjaemsm.supabase.co",KEY="sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf",GATE="kizimin-maintenance-gate";
+  const LABELS={normal:"通常メンテナンス",emergency:"緊急メンテナンス",other:"その他"};
+  function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
+  function render(data){
+    if(document.getElementById(GATE)||!document.body)return;
+    const type=LABELS[data?.type]?data.type:"normal",reason=String(data?.reason||"システムメンテナンスを実施しています。").slice(0,1000);
+    const overlay=el("div","kizimin-maintenance-screen");overlay.id=GATE;overlay.setAttribute("role","dialog");overlay.setAttribute("aria-modal","true");overlay.setAttribute("aria-labelledby","kizimin-maintenance-title");
+    const card=el("main","kizimin-maintenance-card"),brand=el("div","kizimin-maintenance-brand","Kizimin"),symbol=el("div","kizimin-maintenance-symbol",type==="emergency"?"!":"⚙");
+    symbol.setAttribute("aria-hidden","true");
+    const pill=el("div","kizimin-maintenance-type kizimin-maintenance-type-"+type,LABELS[type]),heading=el("h1","","ただいまメンテナンス中です");heading.id="kizimin-maintenance-title";
+    const description=el("p","kizimin-maintenance-description","サービスの品質向上と安定運用のため、一時的にサイトの利用を停止しています。");
+    const box=el("section","kizimin-maintenance-reason"),subhead=el("h2","","メンテナンスの理由"),reasonText=el("p","",reason);
+    box.append(subhead,reasonText);
+    const footer=el("p","kizimin-maintenance-footer","作業完了までしばらくお待ちください。ご不便をおかけします。");
+    card.append(brand,symbol,pill,heading,description,box,footer);overlay.appendChild(card);document.body.appendChild(overlay);
+    Array.from(document.body.children).forEach(n=>{if(n!==overlay)n.setAttribute("inert","");});document.documentElement.style.overflow="hidden";
   }
-
-  async function check() {
-    try {
-      // Resolve the client at DOM ready, so pages that include this file before
-      // the Supabase CDN script still get the maintenance check.
-      const client = window.supabase?.createClient(URL, KEY);
-      if (!client) return;
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 4000);
-      let result;
-      try {
-        result = await client.rpc("get_site_maintenance_state", {}, { signal: controller.signal });
-      } finally {
-        clearTimeout(timer);
-      }
-      if (!result.error && result.data === true) render();
-    } catch (error) {
-      // If Supabase is unreachable, do not falsely claim maintenance is enabled.
-      console.warn("メンテナンス状態を確認できませんでした。", error);
-    }
+  async function check(){
+    try{const client=window.supabase?.createClient(URL,KEY);if(!client)return;const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),4000);let result;try{result=await client.rpc("get_site_maintenance_details",{}, {signal:controller.signal});}finally{clearTimeout(timer);}if(!result.error&&result.data?.active===true)render(result.data);}
+    catch(error){console.warn("メンテナンス状態を確認できませんでした。",error);}
   }
-
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", check, { once: true });
-  else check();
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",check,{once:true});else check();
 })();
