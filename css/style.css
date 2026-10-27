@@ -948,3 +948,115 @@ footer {
 @media (prefers-reduced-motion: reduce) {
   .hero, .article, .write-button, .login, .category { transition: none !important; }
 }
+
+
+/* =========================================================
+   Kizimin UI motion system — shared across pages
+   Presentation only; does not alter application logic.
+   ========================================================= */
+@keyframes kz-ui-enter {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes kz-ui-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes kz-ui-pop {
+  from { opacity: 0; transform: translateY(7px) scale(.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Gentle entrance for shared page structure */
+body:not(.admin-page) .header { animation: kz-ui-fade .38s ease-out both; }
+body:not(.admin-page) main { animation: kz-ui-enter .48s cubic-bezier(.2,.7,.2,1) both; }
+body:not(.admin-page) .hero { animation: kz-ui-enter .58s cubic-bezier(.2,.7,.2,1) both; }
+body:not(.admin-page) .side-card,
+body:not(.admin-page) .categories,
+body:not(.admin-page) .card,
+body:not(.admin-page) .contact-card,
+body:not(.admin-page) .legal-card,
+body:not(.admin-page) .org-card,
+body:not(.admin-page) .dm-panel,
+body:not(.admin-page) .notify-item {
+  animation: kz-ui-pop .42s ease-out both;
+}
+
+/* Consistent hover and press feedback */
+a, button, [role="button"], input, textarea, select {
+  -webkit-tap-highlight-color: transparent;
+}
+a, button, [role="button"] {
+  transition:
+    color .18s ease,
+    background-color .18s ease,
+    border-color .18s ease,
+    box-shadow .2s ease,
+    transform .18s ease;
+}
+button:not(:disabled):active,
+[role="button"]:active,
+.write-button:active,
+.login:active {
+  transform: scale(.98);
+}
+button:disabled { cursor: not-allowed; }
+
+/* Shared interactive surfaces */
+.card,
+.side-card,
+.contact-card,
+.legal-card,
+.org-card,
+.dm-panel,
+.notify-item,
+.feature-card,
+.home-community-card,
+.feature-list-card {
+  transition: box-shadow .22s ease, border-color .22s ease, transform .22s ease;
+}
+.card:hover,
+.side-card:hover,
+.feature-card:hover,
+.home-community-card:hover,
+.feature-list-card:hover {
+  border-color: #d8d2ff;
+  box-shadow: 0 12px 30px rgba(65, 53, 156, .09);
+}
+
+/* Focus states that remain visible for keyboard users */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+button:focus-visible,
+a:focus-visible {
+  outline-offset: 3px;
+}
+
+/* Modal/dialog entrance; hidden dialogs remain hidden */
+dialog[open],
+[role="dialog"]:not([hidden]) {
+  animation: kz-ui-pop .22s ease-out both;
+}
+[hidden] { animation: none !important; }
+
+/* Respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  body:not(.admin-page) .header,
+  body:not(.admin-page) main,
+  body:not(.admin-page) .hero,
+  body:not(.admin-page) .side-card,
+  body:not(.admin-page) .categories,
+  body:not(.admin-page) .card,
+  body:not(.admin-page) .contact-card,
+  body:not(.admin-page) .legal-card,
+  body:not(.admin-page) .org-card,
+  body:not(.admin-page) .dm-panel,
+  body:not(.admin-page) .notify-item {
+    animation: none !important;
+  }
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
+}
