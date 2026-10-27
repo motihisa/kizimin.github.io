@@ -31,7 +31,7 @@
 <label>カード角丸（px）<input id="card-radius" type="number" min="0" max="32" step="1"></label>
 </div>
 <h3 style="margin:8px 0 0">メンテナンス画面の細部</h3>
-<p class="editor-note">ここで編集した文章は通常のテキストとして表示されます。MarkdownやHTMLは使えません。メンテナンス理由の本文は、管理画面のメンテナンス設定で編集します。</p>
+<p class="editor-note">ここで編集した文章は通常のテキストとして表示されます。MarkdownやHTMLは使えません。理由本文を空欄にすると、管理画面のメンテナンス設定で入力した理由が使われます。</p>
 <label>ブランド名<input id="maintenance-brand" type="text" maxlength="60" required></label>
 <label>画面タイトル<input id="maintenance-title" type="text" maxlength="120" required></label>
 <label>タイトル下の説明文<textarea id="maintenance-description" maxlength="400" rows="3"></textarea></label>
@@ -81,7 +81,7 @@
 <div id="preview-categories" class="preview-card">カテゴリ　日常 · テクノロジー · ゲーム</div>
 <div id="preview-community" class="preview-card">コミュニティ　今日のお題 · 投票 · 質問・回答</div>
 </div>
-<section class="admin-panel" style="margin-top:18px"><div class="admin-panel-head"><div><h2>メンテナンス画面プレビュー</h2><p class="admin-muted">入力内容を確認できます。実際のメンテナンス理由は現在の運営設定が使われます。</p></div></div>
+<section class="admin-panel" style="margin-top:18px"><div class="admin-panel-head"><div><h2>メンテナンス画面プレビュー</h2><p class="admin-muted">入力内容を確認できます。理由本文が空欄の場合は現在の運営設定の理由が使われます。</p></div></div>
 <div id="maintenance-editor-preview" style="padding:22px;border-radius:18px;background:#f5f7fb;color:#172033">
 <div id="maintenance-editor-preview-card" style="max-width:650px;margin:auto;padding:30px;border-radius:22px;background:#fff;box-shadow:0 8px 30px #17203312">
 <strong id="maintenance-preview-brand">Kizimin</strong><p id="maintenance-preview-type" style="display:inline-block;margin:20px 0 0;padding:5px 10px;border-radius:999px;background:#f1f4f8">通常メンテナンス</p>
