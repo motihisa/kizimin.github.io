@@ -709,7 +709,7 @@
       }
     } catch (error) {
       if (selectEl) selectEl.value = current;
-      alert("権限変更に失敗しました: " + errorMessage(error));
+      alert("権限変更に失敗しました。\n\n詳細: " + String(error?.message || error || "不明なエラー") + (error?.code ? "\nコード: " + error.code : ""));
     } finally {
       if (selectEl) selectEl.disabled = false;
     }
