@@ -192,4 +192,78 @@ app.post("/api/backup", async (req, res) => {
   }
 });
 
+
+const DISCORD_BOT_WEBHOOK_URL = process.env.DISCORD_BOT_WEBHOOK_URL || "";
+let lastDiscordBotNotificationAt = 0;
+
+app.post("/api/bot/notify", async (req, res) => {
+  let auth;
+  try {
+    const origin = req.headers.origin || "";
+    if (origin && ALLOWED_ORIGIN && origin !== ALLOWED_ORIGIN) {
+      return res.status(403).json({ error: "許可されていない接続元です。" });
+    }
+    auth = await authenticateOwner(req);
+    if (!DISCORD_BOT_WEBHOOK_URL) {
+      return res.status(503).json({ error: "Discord連携が未設定です。RenderのDISCORD_BOT_WEBHOOK_URL環境変数を設定してください。" });
+    }
+    let webhook;
+    try { webhook = new URL(DISCORD_BOT_WEBHOOK_URL); } catch {
+      return res.status(503).json({ error: "Discord Webhook URLの形式が正しくありません。" });
+    }
+    if (webhook.protocol !== "https:" ||
+        !["discord.com", "discordapp.com"].includes(webhook.hostname) ||
+        !/^\/api\/webhooks\/\d+\/[^/]+\/?$/.test(webhook.pathname)) {
+      return res.status(503).json({ error: "登録された通知先URLはDiscord Webhookとして認識できません。" });
+    }
+    if (Date.now() - lastDiscordBotNotificationAt < 15000) {
+      return res.status(429).json({ error: "通知間隔が短すぎます。15秒以上待ってください。" });
+    }
+    const incoming = Array.isArray(req.body?.alerts) ? req.body.alerts.slice(0, 10) : [];
+    const allowedLevels = new Set(["high", "medium", "review"]);
+    const alerts = incoming.map(item => ({
+      level: allowedLevels.has(item?.level) ? item.level : "review",
+      source: String(item?.source || "Bot").replace(/[\r\n]/g, " ").slice(0, 40),
+      title: String(item?.title || "要確認項目").replace(/[\r\n]/g, " ").slice(0, 120)
+    }));
+    const lines = alerts.length
+      ? alerts.map(item => "• [" + ({ high: "高", medium: "中", review: "要確認" }[item.level]) + "] " + item.source + "： " + item.title).join("\n")
+      : "今回のチェックで通知対象のアラートはありませんでした。";
+    const payload = {
+      username: "Kizimin Bot",
+      allowed_mentions: { parse: [] },
+      embeds: [{
+        title: "Kizimin Bot 検知レポート",
+        description: lines.slice(0, 3500),
+        color: alerts.some(item => item.level === "high") ? 0xE11D48 : (alerts.length ? 0x7C3AED : 0x059669),
+        fields: [
+          { name: "アラート数", value: String(alerts.length), inline: true },
+          { name: "チェック日時", value: new Date().toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }), inline: true }
+        ],
+        footer: { text: "詳細な本文や問い合わせ内容は送信していません。" },
+        timestamp: new Date().toISOString()
+      }]
+    };
+    const response = await fetch(webhook.toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+      console.error("discord_bot_notify_failed", { status: response.status });
+      return res.status(502).json({ error: "Discordへの送信に失敗しました。Webhook設定とDiscord側の状態を確認してください。" });
+    }
+    lastDiscordBotNotificationAt = Date.now();
+    return res.json({ ok: true, sentAt: new Date().toISOString(), count: alerts.length });
+  } catch (error) {
+    const status = error.status || 500;
+    if (status >= 500) console.error("bot_notify_failed", { status, message: error.message });
+    return res.status(status).json({
+      error: status === 500 ? "通知処理に失敗しました。サーバーログを確認してください。" : error.message
+    });
+  } finally {
+    if (auth?.client) await auth.client.end().catch(() => {});
+  }
+});
+
 app.listen(PORT, "0.0.0.0", () => console.log("Kizimin backup service listening on " + PORT));
