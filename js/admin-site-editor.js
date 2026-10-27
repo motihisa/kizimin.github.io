@@ -217,34 +217,48 @@
   }
   function preview(v){
     const x={...DEFAULTS,...v};
-    $("preview-head").textContent=x.brandName; $("preview-title").textContent=x.heroTitle; $("preview-description").textContent=x.heroDescription;
-    $("preview-announcements").replaceChildren(); const announcementLabel=document.createElement("strong"); announcementLabel.textContent="📢 "+x.announcementTitle; $("preview-announcements").appendChild(announcementLabel); const announcementBody=document.createElement("div"); announcementBody.innerHTML=markdownToHtml(x.announcementBody||"現在、お知らせはありません。"); $("preview-announcements").appendChild(announcementBody);
-    for(const [id,value] of [["preview-announcement-body",x.announcementBody],["preview-terms-content",x.termsContent],["preview-privacy-content",x.privacyContent]]) { const node=$(id); if(node) node.innerHTML=markdownToHtml(value||""); }
+    $("preview-head").textContent=x.brandName;
+    $("preview-title").textContent=x.heroTitle;
+    $("preview-description").textContent=x.heroDescription;
+    $("preview-announcements").replaceChildren();
+    const announcementLabel=document.createElement("strong");
+    announcementLabel.textContent="📢 "+x.announcementTitle;
+    $("preview-announcements").appendChild(announcementLabel);
+    const announcementBody=document.createElement("div");
+    announcementBody.innerHTML=markdownToHtml(x.announcementBody||"現在、お知らせはありません。");
+    $("preview-announcements").appendChild(announcementBody);
+    for(const [id,value] of [["preview-terms-content",x.termsContent],["preview-privacy-content",x.privacyContent]]){
+      const node=$(id); if(node)node.innerHTML=markdownToHtml(value||"");
+    }
     $("preview-announcements").hidden=!x.showAnnouncements;
     const p=$("editor-preview");
-    p.style.setProperty("--preview-accent",x.accentColor); p.style.setProperty("--preview-bg",x.backgroundColor);
-    p.style.setProperty("--preview-text",x.textColor); p.style.setProperty("--preview-radius",x.cardRadius+"px");
-    $("preview-hero").hidden=!x.showHero; $("preview-popular").hidden=!x.showPopular; $("preview-categories").hidden=!x.showCategories;
+    p.style.setProperty("--preview-accent",x.accentColor);
+    p.style.setProperty("--preview-bg",x.backgroundColor);
+    p.style.setProperty("--preview-text",x.textColor);
+    p.style.setProperty("--preview-radius",x.cardRadius+"px");
+    $("preview-hero").hidden=!x.showHero;
+    $("preview-popular").hidden=!x.showPopular;
+    $("preview-categories").hidden=!x.showCategories;
     $("preview-community").hidden=!(x.showDaily||x.showPolls||x.showChallenges||x.showQA||x.showLibrary);
     $("preview-latest").style.borderRadius=x.cardRadius+"px";
     const setText=(id,value)=>{const node=$(id);if(node)node.textContent=value;};
-    setText("maintenance-preview-brand",x.maintenanceBrand);setText("maintenance-preview-title",x.maintenanceTitle);setText("maintenance-preview-description",x.maintenanceDescription);
-    setText("maintenance-preview-reason-title",x.maintenanceReasonTitle);setText("maintenance-preview-reason-body",x.maintenanceReasonBody||"ここには管理画面で設定したメンテナンス理由が表示されます。");setText("maintenance-preview-footer",x.maintenanceFooter);setText("maintenance-preview-demo",x.maintenanceDemoLabel);setText("maintenance-preview-type",x.maintenanceNormalLabel);
-    const mp=$("maintenance-editor-preview"),mc=$("maintenance-editor-preview-card");if(mp){mp.style.background=x.maintenanceBgColor;mp.style.color=x.maintenanceTextColor;}if(mc){mc.style.background=x.maintenanceCardColor;mc.style.color=x.maintenanceTextColor;}
-    const mb=$("maintenance-preview-brand"),mt=$("maintenance-preview-type"),mh=$("maintenance-preview-title"),md=$("maintenance-preview-demo");
-    if(mb)mb.style.color=x.maintenanceAccentColor;if(mt){mt.style.color=x.maintenanceAccentColor;mt.style.background=x.maintenanceBgColor;}if(mh)mh.style.color=x.maintenanceTextColor;if(md){md.style.color=x.maintenanceAccentColor;md.style.borderColor=x.maintenanceAccentColor;}
-    const setText=(id,value)=>{const node=$(id);if(node)node.textContent=value;};
-    setText("maintenance-preview-brand",x.maintenanceBrand);setText("maintenance-preview-title",x.maintenanceTitle);
-    setText("maintenance-preview-description",x.maintenanceDescription);setText("maintenance-preview-reason-title",x.maintenanceReasonTitle);
-    setText("maintenance-preview-footer",x.maintenanceFooter);setText("maintenance-preview-demo",x.maintenanceDemoLabel);
+    setText("maintenance-preview-brand",x.maintenanceBrand);
+    setText("maintenance-preview-title",x.maintenanceTitle);
+    setText("maintenance-preview-description",x.maintenanceDescription);
+    setText("maintenance-preview-reason-title",x.maintenanceReasonTitle);
+    setText("maintenance-preview-reason-body",x.maintenanceReasonBody||"ここには管理画面で設定したメンテナンス理由が表示されます。");
+    setText("maintenance-preview-footer",x.maintenanceFooter);
+    setText("maintenance-preview-demo",x.maintenanceDemoLabel);
     setText("maintenance-preview-type",x.maintenanceNormalLabel);
     const mp=$("maintenance-editor-preview"),mc=$("maintenance-editor-preview-card");
     if(mp){mp.style.background=x.maintenanceBgColor;mp.style.color=x.maintenanceTextColor;}
     if(mc){mc.style.background=x.maintenanceCardColor;mc.style.color=x.maintenanceTextColor;}
-    const mbrand=$("maintenance-preview-brand");if(mbrand)mbrand.style.color=x.maintenanceAccentColor;
-    const mtype=$("maintenance-preview-type");if(mtype){mtype.style.color=x.maintenanceAccentColor;mtype.style.background=x.maintenanceBgColor;}
-    const mtitle=$("maintenance-preview-title");if(mtitle)mtitle.style.color=x.maintenanceTextColor;
-    const mdemo=$("maintenance-preview-demo");if(mdemo){mdemo.style.color=x.maintenanceAccentColor;mdemo.style.borderColor=x.maintenanceAccentColor;}
+    const mbrand=$("maintenance-preview-brand"),mtype=$("maintenance-preview-type");
+    const mtitle=$("maintenance-preview-title"),mdemo=$("maintenance-preview-demo");
+    if(mbrand)mbrand.style.color=x.maintenanceAccentColor;
+    if(mtype){mtype.style.color=x.maintenanceAccentColor;mtype.style.background=x.maintenanceBgColor;}
+    if(mtitle)mtitle.style.color=x.maintenanceTextColor;
+    if(mdemo){mdemo.style.color=x.maintenanceAccentColor;mdemo.style.borderColor=x.maintenanceAccentColor;}
   }
   async function loadHistory(){
     const body=$("editor-history-body"); if(!body)return;
