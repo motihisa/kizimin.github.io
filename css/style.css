@@ -968,17 +968,17 @@ footer {
 }
 
 /* Gentle entrance for shared page structure */
-body:not(.admin-page) .header { animation: kz-ui-fade .38s ease-out both; }
-body:not(.admin-page) main { animation: kz-ui-enter .48s cubic-bezier(.2,.7,.2,1) both; }
-body:not(.admin-page) .hero { animation: kz-ui-enter .58s cubic-bezier(.2,.7,.2,1) both; }
-body:not(.admin-page) .side-card,
-body:not(.admin-page) .categories,
-body:not(.admin-page) .card,
-body:not(.admin-page) .contact-card,
-body:not(.admin-page) .legal-card,
-body:not(.admin-page) .org-card,
-body:not(.admin-page) .dm-panel,
-body:not(.admin-page) .notify-item {
+body .header { animation: kz-ui-fade .38s ease-out both; }
+body main { animation: kz-ui-enter .48s cubic-bezier(.2,.7,.2,1) both; }
+body .hero { animation: kz-ui-enter .58s cubic-bezier(.2,.7,.2,1) both; }
+body .side-card,
+body .categories,
+body .card,
+body .contact-card,
+body .legal-card,
+body .org-card,
+body .dm-panel,
+body .notify-item {
   animation: kz-ui-pop .42s ease-out both;
 }
 
@@ -1042,17 +1042,17 @@ dialog[open],
 
 /* Respect reduced-motion preferences */
 @media (prefers-reduced-motion: reduce) {
-  body:not(.admin-page) .header,
-  body:not(.admin-page) main,
-  body:not(.admin-page) .hero,
-  body:not(.admin-page) .side-card,
-  body:not(.admin-page) .categories,
-  body:not(.admin-page) .card,
-  body:not(.admin-page) .contact-card,
-  body:not(.admin-page) .legal-card,
-  body:not(.admin-page) .org-card,
-  body:not(.admin-page) .dm-panel,
-  body:not(.admin-page) .notify-item {
+  body .header,
+  body main,
+  body .hero,
+  body .side-card,
+  body .categories,
+  body .card,
+  body .contact-card,
+  body .legal-card,
+  body .org-card,
+  body .dm-panel,
+  body .notify-item {
     animation: none !important;
   }
   *, *::before, *::after {
