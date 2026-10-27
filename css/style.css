@@ -1246,3 +1246,8 @@ dialog[open],
 .kizimin-maintenance-reason p{max-width:620px;font-size:16px;line-height:2;color:#27344a}
 .kizimin-maintenance-footer{margin:34px 0 0;padding-top:18px;border-top:1px solid #f0f2f6;color:#98a1b1;font-size:12px}
 @media(max-width:480px){.kizimin-maintenance-screen{padding:14px}.kizimin-maintenance-card{padding:28px 22px;border-radius:22px}.kizimin-maintenance-symbol{margin:38px 0 22px}.kizimin-maintenance-reason{margin-top:32px;padding-top:20px}}
+
+/* Temporary maintenance demo bypass for authorized debuggers */
+.kizimin-maintenance-demo-button{display:inline-flex;align-items:center;justify-content:center;min-height:42px;margin:20px 0 2px;padding:0 20px;border:1px solid #b8c5e0;border-radius:999px;background:#f2f6ff;color:#243b68;font:inherit;font-weight:750;cursor:pointer;box-shadow:0 4px 14px rgba(36,59,104,.08);transition:background .18s ease,transform .18s ease}
+.kizimin-maintenance-demo-button:hover{background:#e5edff;transform:translateY(-1px)}
+.kizimin-maintenance-demo-button:focus-visible{outline:3px solid #6b8ed6;outline-offset:3px}
