@@ -44,14 +44,75 @@ function filterRows(){
 }
 async function details(id){
  const x=rows.find(a=>a.id===id);if(!x)return;
- $("user-detail-title").textContent=x.name;$("user-detail-subtitle").textContent="ユーザーID: "+id;
- $("user-detail-content").innerHTML='<div class="user-detail-grid"><div><span>表示名</span><strong>'+esc(x.name)+'</strong></div><div><span>ユーザー名</span><strong>'+esc(x.username)+'</strong></div><div><span>権限</span><strong>'+esc(labels[x.role]||x.role)+'</strong></div><div><span>状態</span><strong>'+esc(labels[x.status]||x.status)+'</strong></div><div><span>登録日</span><strong>'+esc(x.registered)+'</strong></div><div><span>BAN解除日時（JST）</span><strong>'+esc(x.expiry?fmt(x.expiry):(x.status==="banned"?"無期限":"-"))+'</strong></div><div class="user-detail-wide"><span>制限理由</span><p>'+esc(x.reason||"記録なし")+'</p></div></div><h3>関連通報・運営通知</h3><div id="user-activity-loading" class="admin-muted">履歴を読み込んでいます...</div>';
- $("user-detail-dialog").showModal();
- try{
+ const row=x.row;
+ const roleSelect=row.querySelector(".user-role-select");
+ const statusSelect=row.querySelector(".account-status");
+ const expiryInput=row.querySelector(".ban-expires");
+ const officialButton=row.querySelector(".user-official-toggle");
+ const identityButton=row.querySelector(".user-identity-edit");
+ const deleteButton=row.querySelector(".user-delete");
+ const warningButton=row.querySelector(".user-warning-open");
+ const canManageState=!!row.querySelector(".account-status-save");
+ const actions=[];
+ if(canManageState){
+   actions.push('<label class="user-detail-field"><span>アカウント状態</span><select id="user-detail-status"><option value="active">有効（制限解除）</option><option value="banned">BAN</option><option value="suspended">一時停止</option></select></label>');
+   actions.push('<label class="user-detail-field" id="user-detail-expiry-wrap"><span>BAN解除日時（任意）</span><input id="user-detail-expiry" type="datetime-local" step="1"></label>');
+   actions.push('<button type="button" class="admin-btn primary" id="user-detail-save-status">状態を保存</button>');
+ }
+ if(roleSelect){
+   actions.push('<label class="user-detail-field"><span>権限</span><select id="user-detail-role">'+Array.from(roleSelect.options).map(o=>'<option value="'+esc(o.value)+'">'+esc(o.textContent)+'</option>').join("")+'</select></label>');
+   actions.push('<button type="button" class="admin-btn" id="user-detail-save-role">権限を変更</button>');
+ }
+ if(officialButton)actions.push('<button type="button" class="admin-btn user-detail-official" id="user-detail-official">'+esc(officialButton.textContent.trim())+'</button>');
+ if(identityButton)actions.push('<button type="button" class="admin-btn" id="user-detail-identity">ユーザー名・表示名を変更</button>');
+ if(warningButton)actions.push('<button type="button" class="admin-btn" id="user-detail-warning">警告を送信</button>');
+ if(deleteButton)actions.push('<button type="button" class="admin-btn danger" id="user-detail-delete">アカウントを強制削除</button>');
+ $("user-detail-title").textContent=x.name;
+ $("user-detail-subtitle").textContent="ユーザーID: "+id;
+ $("user-detail-content").innerHTML='<div class="user-detail-grid"><div><span>表示名</span><strong>'+esc(x.name)+'</strong></div><div><span>ユーザー名</span><strong>'+esc(x.username)+'</strong></div><div><span>メールアドレス</span><strong id="user-detail-email" class="user-detail-email">権限を確認して取得しています...</strong></div><div><span>権限</span><strong>'+esc(labels[x.role]||x.role)+'</strong></div><div><span>状態</span><strong>'+esc(labels[x.status]||x.status)+'</strong></div><div><span>登録日</span><strong>'+esc(x.registered)+'</strong></div><div><span>BAN解除日時（JST）</span><strong>'+esc(x.expiry?fmt(x.expiry):(x.status==="banned"?"無期限":"-"))+'</strong></div><div class="user-detail-wide"><span>制限理由</span><p>'+esc(x.reason||"記録なし")+'</p></div></div><section class="user-detail-actions"><h3>ユーザー操作</h3><p class="admin-muted">表示される操作は、現在の管理権限に応じて変わります。</p><div class="user-detail-action-grid">'+(actions.length?actions.join(""):'<p class="admin-muted">このアカウントに対して実行できる操作はありません。</p>')+'</div></section><h3>関連通報・運営通知</h3><div id="user-activity-loading" class="admin-muted">履歴を読み込んでいます...</div>';
+ const dialog=$("user-detail-dialog");
+ dialog.showModal();
+ if(statusSelect){
+   $("user-detail-status").value=statusSelect.value;
+   $("user-detail-expiry").value=expiryInput?.value||"";
+   const syncExpiry=()=>{$("user-detail-expiry-wrap").style.display=$("user-detail-status").value==="banned"?"grid":"none"};
+   $("user-detail-status").addEventListener("change",syncExpiry);syncExpiry();
+ }
+ if(canManageState){
+   $("user-detail-save-status").onclick=()=>{
+     const targetStatus=$("user-detail-status").value;
+     statusSelect.value=targetStatus;
+     statusSelect.dispatchEvent(new Event("change",{bubbles:true}));
+     if(expiryInput)expiryInput.value=$("user-detail-expiry").value;
+     const save=row.querySelector(".account-status-save");
+     if(save){save.click();dialog.close();}
+   };
+ }
+ if(roleSelect){
+   $("user-detail-role").value=roleSelect.value;
+   $("user-detail-save-role").onclick=()=>{
+     roleSelect.value=$("user-detail-role").value;
+     roleSelect.dispatchEvent(new Event("change",{bubbles:true}));
+     dialog.close();
+   };
+ }
+ if(officialButton)$("user-detail-official").onclick=()=>{officialButton.click();dialog.close()};
+ if(identityButton)$("user-detail-identity").onclick=()=>{identityButton.click();dialog.close()};
+ if(warningButton)$("user-detail-warning").onclick=()=>{warningButton.click();dialog.close()};
+ if(deleteButton)$("user-detail-delete").onclick=()=>{deleteButton.click();dialog.close()};
  const client=window.supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf");
- const r=await client.functions.invoke("secure-content",{body:{action:"admin_user_activity",user_id:id}});
- if(r.error||!r.data?.ok)throw r.error||new Error(r.data?.error||"取得失敗");
- const el=$("user-activity-loading");if(el){const items=(r.data.items||[]);el.outerHTML='<div class="user-activity-list">'+(items.length?items.map(v=>'<div class="user-activity-item"><strong>'+esc(v.title||v.kind||"履歴")+'</strong><p>'+esc(v.body||v.reason||v.status||"")+'</p><small>'+esc(fmt(v.created_at))+'</small></div>').join(""):'<p class="admin-muted">表示できる履歴はありません。</p>')+'</div>';}
+ try{
+   const emailResult=await client.functions.invoke("secure-content",{body:{action:"admin_user_details",user_id:id}});
+   const emailEl=$("user-detail-email");
+   if(emailEl){
+     if(emailResult.error||!emailResult.data?.ok)emailEl.textContent="メールアドレスを取得できません（権限またはサーバー設定を確認）";
+     else emailEl.textContent=emailResult.data.email||"登録なし";
+   }
+ }catch(e){const emailEl=$("user-detail-email");if(emailEl)emailEl.textContent="メールアドレスを取得できません";}
+ try{
+   const r=await client.functions.invoke("secure-content",{body:{action:"admin_user_activity",user_id:id}});
+   if(r.error||!r.data?.ok)throw r.error||new Error(r.data?.error||"取得失敗");
+   const el=$("user-activity-loading");if(el){const items=(r.data.items||[]);el.outerHTML='<div class="user-activity-list">'+(items.length?items.map(v=>'<div class="user-activity-item"><strong>'+esc(v.title||v.kind||"履歴")+'</strong><p>'+esc(v.body||v.reason||v.status||"")+'</p><small>'+esc(fmt(v.created_at))+'</small></div>').join(""):'<p class="admin-muted">表示できる履歴はありません。</p>')+'</div>';}
  }catch(e){const el=$("user-activity-loading");if(el)el.innerHTML='<div class="admin-alert">履歴を読み込めませんでした。secure-content関数の更新・デプロイ状態と権限を確認してください。</div>';console.warn("ユーザー履歴取得失敗",e)}
 }
 async function warn(id){
