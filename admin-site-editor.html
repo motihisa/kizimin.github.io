@@ -48,6 +48,25 @@
 <label>アクセントカラー<input id="maintenance-accent-color" type="color"></label>
 <label>本文の文字色<input id="maintenance-text-color" type="color"></label>
 </div>
+<h3 style="margin:8px 0 0">BAN画面・一時停止画面</h3>
+<p class="editor-note">BAN画面と一時停止画面の文章・配色を編集できます。理由や停止期限はアカウント状態から取得した値を別に表示します。MarkdownやHTMLは使えません。</p>
+<label>BAN画面の上部ラベル<input id="ban-label" type="text" maxlength="60" required></label>
+<label>BAN画面のタイトル<input id="ban-title" type="text" maxlength="120" required></label>
+<label>BAN画面の説明文<textarea id="ban-body" maxlength="500" rows="3"></textarea></label>
+<label>BAN画面の案内文<textarea id="ban-note" maxlength="300" rows="2"></textarea></label>
+<label>一時停止画面の上部ラベル<input id="suspended-label" type="text" maxlength="60" required></label>
+<label>一時停止画面のタイトル<input id="suspended-title" type="text" maxlength="120" required></label>
+<label>一時停止画面の説明文<textarea id="suspended-body" maxlength="500" rows="3"></textarea></label>
+<label>一時停止画面の案内文<textarea id="suspended-note" maxlength="300" rows="2"></textarea></label>
+<div class="editor-options">
+<label>理由欄のラベル<input id="account-reason-label" type="text" maxlength="40" required></label>
+<label>期限欄のラベル<input id="account-expiry-label" type="text" maxlength="40" required></label>
+<label>お問い合わせボタン<input id="account-contact-label" type="text" maxlength="40" required></label>
+<label>画面の背景色<input id="account-bg-color" type="color"></label>
+<label>カードの背景色<input id="account-card-color" type="color"></label>
+<label>見出しのアクセント色<input id="account-accent-color" type="color"></label>
+<label>本文の文字色<input id="account-text-color" type="color"></label>
+</div>
 <h3 style="margin:4px 0 0">表示するセクション</h3>
 <div class="editor-options">
 <label class="editor-check"><input id="show-hero" type="checkbox"> トップの見出し</label>
@@ -90,7 +109,27 @@
 <hr style="border:0;border-top:1px solid #e9edf3;margin:24px 0">
 <strong id="maintenance-preview-reason-title">メンテナンスの理由</strong><p id="maintenance-preview-reason-body" style="margin:8px 0">ここには管理画面で設定したメンテナンス理由が表示されます。</p>
 <p id="maintenance-preview-footer" style="font-size:12px;margin-top:25px">作業完了までしばらくお待ちください。ご不便をおかけします。</p><button id="maintenance-preview-demo" type="button" style="padding:9px 16px;border-radius:999px;border:1px solid #b8c5e0;background:#f2f6ff">デモ解除</button>
-</div></div></section><p id="editor-updated" class="editor-note" style="margin-top:12px">更新情報を読み込んでいます…</p>
+</div></div></section>
+<section class="admin-panel" style="margin-top:18px">
+<div class="admin-panel-head"><div><h2>BAN・一時停止画面プレビュー</h2><p class="admin-muted">保存前の表示イメージです。</p></div></div>
+<div id="account-editor-preview" style="padding:22px;border-radius:18px;background:#f6f7f9;color:#1f2937">
+<div id="account-editor-preview-card" style="max-width:650px;margin:auto;padding:28px;border-radius:14px;background:#fff;border:1px solid #e4e7ec">
+<div style="padding-bottom:24px;border-bottom:1px solid #e4e7ec;margin-bottom:24px">
+<strong id="ban-preview-label" style="display:block;color:#c62828;font-size:12px;letter-spacing:.12em">ACCOUNT BANNED</strong>
+<h3 id="ban-preview-title" style="margin:8px 0;font-size:24px">アカウントがBANされています</h3>
+<p id="ban-preview-body">このアカウントは、利用ルールに違反した可能性があるため、利用できなくなっています。</p>
+<p id="ban-preview-note" style="font-size:13px;color:#667085">内容に心当たりがない場合は、管理者にお問い合わせください。</p>
+</div>
+<div style="padding-bottom:24px">
+<strong id="suspended-preview-label" style="display:block;color:#c62828;font-size:12px;letter-spacing:.12em">ACCOUNT SUSPENDED</strong>
+<h3 id="suspended-preview-title" style="margin:8px 0;font-size:24px">アカウントは一時停止中です</h3>
+<p id="suspended-preview-body">管理者が停止を解除するまで、サイトを利用できません。</p>
+<p id="suspended-preview-note" style="font-size:13px;color:#667085">内容に心当たりがない場合は、管理者にお問い合わせください。</p>
+</div>
+<div style="padding:12px 14px;background:#f1f3f6;border-radius:8px"><strong id="account-preview-reason-label">理由</strong><p style="margin:6px 0">設定された理由がここに表示されます。</p><strong id="account-preview-expiry-label">期限</strong><p style="margin:6px 0">2026/12/31 12:00（日本時間）</p></div>
+<button id="account-preview-contact-label" type="button" style="margin-top:18px;padding:9px 16px;border:1px solid #cfd4dc;border-radius:8px;background:#fff">お問い合わせ</button>
+</div></div></section>
+<p id="editor-updated" class="editor-note" style="margin-top:12px">更新情報を読み込んでいます…</p>
 </section>
 </div>
 <section class="admin-panel" style="margin-top:18px"><div class="admin-panel-head"><div><h2>変更履歴</h2><p class="admin-muted">直近20件の変更を確認できます。</p></div></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>日時</th><th>操作</th><th>変更者</th><th>変更前後</th></tr></thead><tbody id="editor-history-body"><tr><td colspan="4">読み込み中…</td></tr></tbody></table></div></section>
