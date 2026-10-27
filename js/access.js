@@ -11,6 +11,9 @@
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
   const path = location.pathname || "/";
 
+  // 管理画面自身の閲覧は公開サイトのアクセス記録に混ぜない。
+  if (/\/admin(?:\.html)?\/?$/i.test(path)) return;
+
   // セッションがある場合のみ本人のユーザーIDを記録。IPアドレスは取得・保存しない。
   void sb.auth.getSession().then(({ data, error: sessionError }) => {
     if (sessionError) console.debug("ログイン状態を確認できませんでした。", sessionError);
