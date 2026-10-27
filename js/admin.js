@@ -40,13 +40,19 @@
     if (!session?.user?.id) {
       // メンテナンス中は admin.html からログイン画面へ誘導しない。
       // 既存のログインセッションを持つ管理者は、下の通常の権限チェックへ進める。
-      const { data: maintenance, error: maintenanceError } = await supabase
-        .from("site_settings")
-        .select("maintenance_mode")
-        .limit(1)
-        .maybeSingle();
+      const { data: maintenanceActive, error: maintenanceError } = await supabase
+        .rpc("get_site_maintenance_state");
 
-      if (!maintenanceError && maintenance?.maintenance_mode === true) {
+      if (maintenanceError) {
+        console.error("メンテナンス状態の確認に失敗しました", maintenanceError);
+        forbidden(
+          "メンテナンス状態を確認できません。",
+          "安全のためログイン画面への移動を停止しました。少し待ってから再読み込みしてください。"
+        );
+        return false;
+      }
+
+      if (maintenanceActive === true) {
         forbidden(
           "現在メンテナンス中です。",
           "メンテナンス中は、未ログイン状態から管理画面へログインできません。サイト再開後にアクセスしてください。"
