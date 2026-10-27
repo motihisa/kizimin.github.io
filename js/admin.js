@@ -367,16 +367,50 @@
     });
   }
 
+  const MAINTENANCE_TYPES = {
+    normal: "通常メンテナンス",
+    emergency: "緊急メンテナンス",
+    other: "その他"
+  };
+
+  function maintenanceTypeLabel() {
+    const select = $("maintenance-type");
+    return MAINTENANCE_TYPES[select?.value] || MAINTENANCE_TYPES.normal;
+  }
+
   async function loadMaintenance() {
-    const { data, error } = await supabase.from("site_settings").select("maintenance_mode").eq("id", true).maybeSingle();
+    const { data, error } = await supabase.from("site_settings")
+      .select("maintenance_mode, maintenance_type").eq("id", true).maybeSingle();
     if (error) throw error;
     const enabled = !!data?.maintenance_mode;
+    const typeSelect = $("maintenance-type");
+    if (typeSelect) typeSelect.value = MAINTENANCE_TYPES[data?.maintenance_type] ? data.maintenance_type : "normal";
     const toggle = $("maintenance-toggle");
     if (toggle) toggle.checked = enabled;
     const status = $("maintenance-status");
     if (status) status.textContent = enabled
-      ? "現在オンです。一般ユーザーはサイトを利用できません。"
-      : "現在オフです。通常どおりサイトを利用できます。";
+      ? "現在オンです（" + maintenanceTypeLabel() + "）。一般ユーザーはサイトを利用できません。"
+      : "現在オフです。選択中の種類：" + maintenanceTypeLabel() + "。通常どおりサイトを利用できます。";
+  }
+
+  async function setMaintenanceType(type) {
+    const select = $("maintenance-type");
+    const status = $("maintenance-status");
+    if (select) select.disabled = true;
+    try {
+      const { error } = await supabase.rpc("admin_set_maintenance_type", { p_type: type });
+      if (error) throw error;
+      if (status) status.textContent = "種類を「" + maintenanceTypeLabel() + "」に変更しました。" +
+        ($("maintenance-toggle")?.checked ? " メンテナンスモードはオンです。" : " メンテナンスモードはオフです。");
+    } catch (e) {
+      if (select) select.value = select.dataset.previousValue || "normal";
+      alert("メンテナンス種類の保存に失敗しました: " + errorMessage(e));
+    } finally {
+      if (select) {
+        select.disabled = false;
+        select.dataset.previousValue = select.value;
+      }
+    }
   }
 
   async function setMaintenance(enabled) {
@@ -389,7 +423,7 @@
       });
       if (error) throw error;
       if (status) status.textContent = enabled
-        ? "メンテナンスモードをオンにしました。一般ユーザーは利用できません。"
+        ? maintenanceTypeLabel() + "をオンにしました。一般ユーザーはサイトを利用できません。"
         : "メンテナンスモードをオフにしました。通常利用できます。";
     } catch (e) {
       if (toggle) toggle.checked = !enabled;
@@ -1205,12 +1239,25 @@
 
     $("maintenance-toggle")?.addEventListener("change", e => {
       const enabled = e.target.checked;
-      if (!confirm(enabled ? "メンテナンスモードをオンにしますか？一般ユーザーは閲覧・投稿できなくなります。" : "メンテナンスモードをオフにしますか？")) {
+      if (!confirm(enabled ? maintenanceTypeLabel() + "を有効にしますか？一般ユーザーは閲覧・投稿できなくなります。" : "メンテナンスモードをオフにしますか？")) {
         e.target.checked = !enabled;
         return;
       }
       setMaintenance(enabled);
     });
+
+    const maintenanceTypeSelect = $("maintenance-type");
+    if (maintenanceTypeSelect) {
+      maintenanceTypeSelect.dataset.previousValue = maintenanceTypeSelect.value;
+      maintenanceTypeSelect.addEventListener("change", e => {
+        const nextType = e.target.value;
+        if (!confirm("メンテナンスの種類を「" + (MAINTENANCE_TYPES[nextType] || MAINTENANCE_TYPES.normal) + "」に変更しますか？")) {
+          e.target.value = e.target.dataset.previousValue || "normal";
+          return;
+        }
+        setMaintenanceType(nextType);
+      });
+    }
 
     $("user-search")?.addEventListener("input", e => {
       const q = e.target.value.trim().toLowerCase();
