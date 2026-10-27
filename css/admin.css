@@ -701,3 +701,114 @@ button:focus-visible,a:focus-visible{outline:3px solid rgba(143,118,236,.65);out
   .admin-nav{flex:0 0 auto;overflow:visible}
   .admin-sidebar-bottom{margin-top:10px}
 }
+
+
+/* =========================================================
+   Kizimin Admin UI motion — dashboard and admin subpages
+   Keeps all permissions, data operations and handlers unchanged.
+   ========================================================= */
+@keyframes kz-admin-enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes kz-admin-soft-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Main admin layout appears only after the existing auth gate reveals it */
+.admin-page .admin-shell:not(.hidden) {
+  animation: kz-admin-soft-in .3s ease-out both;
+}
+.admin-page .admin-main {
+  animation: kz-admin-enter .38s cubic-bezier(.2,.7,.2,1) both;
+}
+.admin-page .admin-topbar {
+  animation: kz-admin-enter .4s ease-out both;
+}
+.admin-page .admin-view.active {
+  animation: kz-admin-enter .32s ease-out both;
+}
+.admin-page .admin-view.active > .admin-panel,
+.admin-page .admin-view.active > .admin-grid,
+.admin-page .admin-view.active > .ops-grid {
+  animation: kz-admin-enter .38s ease-out both;
+}
+.admin-page .admin-view.active > .admin-panel:nth-child(2) { animation-delay: .04s; }
+.admin-page .admin-view.active > .admin-panel:nth-child(3) { animation-delay: .08s; }
+.admin-page .admin-view.active > .admin-panel:nth-child(4) { animation-delay: .12s; }
+
+/* Dashboard statistics and data cards */
+.admin-page .stat-card,
+.admin-page .user-stat-card,
+.admin-page .ops-kpi {
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.admin-page .stat-card:hover,
+.admin-page .user-stat-card:hover,
+.admin-page .ops-kpi:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, .08);
+  border-color: #c7d2fe;
+}
+
+/* Sidebar navigation feedback */
+.admin-page .admin-nav button,
+.admin-page .admin-sidebar a {
+  transition: background-color .18s ease, color .18s ease, transform .18s ease;
+}
+.admin-page .admin-nav button:hover,
+.admin-page .admin-sidebar a:hover {
+  transform: translateX(2px);
+}
+.admin-page .admin-nav button:active,
+.admin-page .admin-sidebar a:active {
+  transform: scale(.99);
+}
+
+/* Tables: subtle row feedback without changing selection or actions */
+.admin-page .admin-table tbody tr {
+  transition: background-color .16s ease;
+}
+.admin-page .admin-table tbody tr:hover {
+  background-color: rgba(99, 102, 241, .045);
+}
+.admin-page .admin-table td .admin-btn {
+  transition: transform .16s ease, box-shadow .16s ease, background-color .16s ease;
+}
+
+/* Inputs and dialogs */
+.admin-page .admin-search,
+.admin-page input,
+.admin-page textarea,
+.admin-page select {
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+.admin-page dialog[open],
+.admin-page [role="dialog"]:not([hidden]) {
+  animation: kz-admin-enter .2s ease-out both;
+}
+
+/* Do not animate hidden/unauthorized views into visibility */
+.admin-page [hidden],
+.admin-page .hidden,
+.admin-page .admin-view:not(.active) {
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-page .admin-shell:not(.hidden),
+  .admin-page .admin-main,
+  .admin-page .admin-topbar,
+  .admin-page .admin-view.active,
+  .admin-page .admin-view.active > .admin-panel,
+  .admin-page .admin-view.active > .admin-grid,
+  .admin-page .admin-view.active > .ops-grid {
+    animation: none !important;
+  }
+  .admin-page *,
+  .admin-page *::before,
+  .admin-page *::after {
+    transition-duration: .01ms !important;
+  }
+}
