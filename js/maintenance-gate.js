@@ -31,7 +31,7 @@
     if(!document.body)return;
     const existing=document.getElementById(GATE);
     if(existing){addDemoButton(existing,canDemo);return;}
-    const type=labels[data?.type]?data.type:"normal",reason=String(data?.reason||"システムメンテナンスを実施しています。").slice(0,1000);
+    const type=labels[data?.type]?data.type:"normal",reason=String(c.reasonBody||data?.reason||"システムメンテナンスを実施しています。").slice(0,1000);
     const overlay=el("div","kizimin-maintenance-screen");overlay.id=GATE;overlay.setAttribute("role","dialog");overlay.setAttribute("aria-modal","true");overlay.setAttribute("aria-labelledby","kizimin-maintenance-title");
     const card=el("main","kizimin-maintenance-card"),brand=el("div","kizimin-maintenance-brand",c.brand),symbol=el("div","kizimin-maintenance-symbol",type==="emergency"?"!":"⚙");\n    overlay.style.background=c.bgColor;overlay.style.color=c.textColor;card.style.background=c.cardColor;card.style.color=c.textColor;brand.style.color=c.accentColor;symbol.style.background=c.bgColor;symbol.style.color=c.accentColor;
     symbol.setAttribute("aria-hidden","true");
@@ -56,7 +56,7 @@
       try{result=await client.rpc("get_site_maintenance_details",{}, {signal:controller.signal});}finally{clearTimeout(timer);}
       if(result.error)return;
       if(result.data?.active!==true){const existing=document.getElementById(GATE);if(existing){existing.remove();restorePage();}return;}
-      let canDemo=false,custom={};\n      const {data:themeRow,error:themeError}=await client.from("site_editor_settings").select("setting_value").eq("setting_key","site_theme").maybeSingle();\n      if(!themeError&&themeRow?.setting_value){const v=themeRow.setting_value;custom={brand:v.maintenanceBrand,title:v.maintenanceTitle,description:v.maintenanceDescription,reasonTitle:v.maintenanceReasonTitle,footer:v.maintenanceFooter,demoLabel:v.maintenanceDemoLabel,normalLabel:v.maintenanceNormalLabel,emergencyLabel:v.maintenanceEmergencyLabel,otherLabel:v.maintenanceOtherLabel,bgColor:v.maintenanceBgColor,cardColor:v.maintenanceCardColor,accentColor:v.maintenanceAccentColor,textColor:v.maintenanceTextColor};}
+      let canDemo=false,custom={};\n      const {data:themeRow,error:themeError}=await client.from("site_editor_settings").select("setting_value").eq("setting_key","site_theme").maybeSingle();\n      if(!themeError&&themeRow?.setting_value){const v=themeRow.setting_value;custom={brand:v.maintenanceBrand||DEFAULTS.brand,title:v.maintenanceTitle||DEFAULTS.title,description:v.maintenanceDescription||DEFAULTS.description,reasonTitle:v.maintenanceReasonTitle||DEFAULTS.reasonTitle,reasonBody:v.maintenanceReasonBody||"",footer:v.maintenanceFooter||DEFAULTS.footer,demoLabel:v.maintenanceDemoLabel||DEFAULTS.demoLabel,normalLabel:v.maintenanceNormalLabel||DEFAULTS.normalLabel,emergencyLabel:v.maintenanceEmergencyLabel||DEFAULTS.emergencyLabel,otherLabel:v.maintenanceOtherLabel||DEFAULTS.otherLabel,bgColor:v.maintenanceBgColor||DEFAULTS.bgColor,cardColor:v.maintenanceCardColor||DEFAULTS.cardColor,accentColor:v.maintenanceAccentColor||DEFAULTS.accentColor,textColor:v.maintenanceTextColor||DEFAULTS.textColor};}
       const {data:sessionData}=await client.auth.getSession();
       const user=sessionData?.session?.user;
       if(user?.id){
