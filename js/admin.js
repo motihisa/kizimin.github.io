@@ -367,70 +367,38 @@
     });
   }
 
-  const MAINTENANCE_TYPES = {
-    normal: "通常メンテナンス",
-    emergency: "緊急メンテナンス",
-    other: "その他"
-  };
-
-  function maintenanceTypeLabel() {
-    const select = $("maintenance-type");
-    return MAINTENANCE_TYPES[select?.value] || MAINTENANCE_TYPES.normal;
-  }
-
+  const MAINTENANCE_TYPES = { normal:"通常メンテナンス", emergency:"緊急メンテナンス", other:"その他" };
+  function maintenanceTypeLabel(value) { return MAINTENANCE_TYPES[value || $("maintenance-type")?.value] || MAINTENANCE_TYPES.normal; }
   async function loadMaintenance() {
-    const { data, error } = await supabase.from("site_settings")
-      .select("maintenance_mode, maintenance_type").eq("id", true).maybeSingle();
-    if (error) throw error;
-    const enabled = !!data?.maintenance_mode;
-    const typeSelect = $("maintenance-type");
-    if (typeSelect) typeSelect.value = MAINTENANCE_TYPES[data?.maintenance_type] ? data.maintenance_type : "normal";
-    const toggle = $("maintenance-toggle");
-    if (toggle) toggle.checked = enabled;
-    const status = $("maintenance-status");
-    if (status) status.textContent = enabled
-      ? "現在オンです（" + maintenanceTypeLabel() + "）。一般ユーザーはサイトを利用できません。"
-      : "現在オフです。選択中の種類：" + maintenanceTypeLabel() + "。通常どおりサイトを利用できます。";
+    const {data,error}=await supabase.from("site_settings").select("maintenance_mode, maintenance_type, maintenance_reason").eq("id",true).maybeSingle();
+    if(error) throw error;
+    const enabled=!!data?.maintenance_mode, typeSelect=$("maintenance-type"), input=$("maintenance-reason"), toggle=$("maintenance-toggle"), status=$("maintenance-status");
+    if(typeSelect){typeSelect.value=MAINTENANCE_TYPES[data?.maintenance_type]?data.maintenance_type:"normal";typeSelect.dataset.previousValue=typeSelect.value;}
+    if(input){input.value=data?.maintenance_reason||"";input.dataset.savedValue=input.value;}
+    if(toggle)toggle.checked=enabled;
+    if(status)status.textContent=enabled?"現在オンです（"+maintenanceTypeLabel(data?.maintenance_type)+"）。一般ユーザーにはKizimin独自のメンテナンス画面が表示されます。":"現在オフです。選択中の種類："+maintenanceTypeLabel(data?.maintenance_type)+"。通常どおりサイトを利用できます。";
   }
-
   async function setMaintenanceType(type) {
-    const select = $("maintenance-type");
-    const status = $("maintenance-status");
-    if (select) select.disabled = true;
-    try {
-      const { error } = await supabase.rpc("admin_set_maintenance_type", { p_type: type });
-      if (error) throw error;
-      if (status) status.textContent = "種類を「" + maintenanceTypeLabel() + "」に変更しました。" +
-        ($("maintenance-toggle")?.checked ? " メンテナンスモードはオンです。" : " メンテナンスモードはオフです。");
-    } catch (e) {
-      if (select) select.value = select.dataset.previousValue || "normal";
-      alert("メンテナンス種類の保存に失敗しました: " + errorMessage(e));
-    } finally {
-      if (select) {
-        select.disabled = false;
-        select.dataset.previousValue = select.value;
-      }
-    }
+    const select=$("maintenance-type"),status=$("maintenance-status");if(select)select.disabled=true;
+    try{const {error}=await supabase.rpc("admin_set_maintenance_type",{p_type:type});if(error)throw error;if(status)status.textContent="種類を「"+maintenanceTypeLabel(type)+"」に変更しました。";}
+    catch(e){if(select)select.value=select.dataset.previousValue||"normal";alert("メンテナンス種類の保存に失敗しました: "+errorMessage(e));}
+    finally{if(select){select.disabled=false;select.dataset.previousValue=select.value;}}
   }
-
+  async function saveMaintenanceReason() {
+    const input=$("maintenance-reason"),button=$("maintenance-reason-save"),status=$("maintenance-status"),reason=input?.value.trim()||"";
+    if(reason.length>1000){alert("理由は1000文字以内で入力してください。");return false;}
+    if(button)button.disabled=true;
+    try{const {error}=await supabase.rpc("admin_set_maintenance_reason",{p_reason:reason});if(error)throw error;if(input)input.dataset.savedValue=reason;if(button)button.textContent="保存済み";if(status)status.textContent=reason?"メンテナンス理由を保存しました。利用者向け画面に表示されます。":"理由を空欄で保存しました。利用者向け画面には標準の案内文が表示されます。";return true;}
+    catch(e){alert("メンテナンス理由の保存に失敗しました: "+errorMessage(e));return false;}
+    finally{if(button)button.disabled=false;}
+  }
   async function setMaintenance(enabled) {
-    const toggle = $("maintenance-toggle");
-    const status = $("maintenance-status");
-    if (toggle) toggle.disabled = true;
-    try {
-      const { error } = await supabase.rpc("admin_set_maintenance_mode", {
-        p_enabled: enabled
-      });
-      if (error) throw error;
-      if (status) status.textContent = enabled
-        ? maintenanceTypeLabel() + "をオンにしました。一般ユーザーはサイトを利用できません。"
-        : "メンテナンスモードをオフにしました。通常利用できます。";
-    } catch (e) {
-      if (toggle) toggle.checked = !enabled;
-      alert("メンテナンス設定の変更に失敗しました: " + errorMessage(e));
-    } finally {
-      if (toggle) toggle.disabled = false;
-    }
+    const toggle=$("maintenance-toggle"),status=$("maintenance-status");
+    if(enabled){const reason=$("maintenance-reason")?.value.trim()||"",saved=$("maintenance-reason")?.dataset.savedValue||"";if(!reason){if(toggle)toggle.checked=false;alert("メンテナンスを有効にする前に、利用者に表示する理由を入力してください。");return;}if(reason!==saved&&!(await saveMaintenanceReason())){if(toggle)toggle.checked=false;return;}}
+    if(toggle)toggle.disabled=true;
+    try{const {error}=await supabase.rpc("admin_set_maintenance_mode",{p_enabled:enabled});if(error)throw error;if(status)status.textContent=enabled?maintenanceTypeLabel()+"をオンにしました。利用者にはKizimin独自の案内画面が表示されます。":"メンテナンスモードをオフにしました。通常利用できます。";}
+    catch(e){if(toggle)toggle.checked=!enabled;alert("メンテナンス設定の変更に失敗しました: "+errorMessage(e));}
+    finally{if(toggle)toggle.disabled=false;}
   }
 
   async function loadDashboard() {
@@ -1238,26 +1206,14 @@
     updateBroadcastPreview();
 
     $("maintenance-toggle")?.addEventListener("change", e => {
-      const enabled = e.target.checked;
-      if (!confirm(enabled ? maintenanceTypeLabel() + "を有効にしますか？一般ユーザーは閲覧・投稿できなくなります。" : "メンテナンスモードをオフにしますか？")) {
-        e.target.checked = !enabled;
-        return;
-      }
+      const enabled=e.target.checked;
+      if(!confirm(enabled?maintenanceTypeLabel()+"を有効にしますか？利用者には設定した理由とKizimin独自のメンテナンス画面が表示されます。":"メンテナンスモードをオフにしますか？")){e.target.checked=!enabled;return;}
       setMaintenance(enabled);
     });
-
-    const maintenanceTypeSelect = $("maintenance-type");
-    if (maintenanceTypeSelect) {
-      maintenanceTypeSelect.dataset.previousValue = maintenanceTypeSelect.value;
-      maintenanceTypeSelect.addEventListener("change", e => {
-        const nextType = e.target.value;
-        if (!confirm("メンテナンスの種類を「" + (MAINTENANCE_TYPES[nextType] || MAINTENANCE_TYPES.normal) + "」に変更しますか？")) {
-          e.target.value = e.target.dataset.previousValue || "normal";
-          return;
-        }
-        setMaintenanceType(nextType);
-      });
-    }
+    const maintenanceTypeSelect=$("maintenance-type");
+    if(maintenanceTypeSelect){maintenanceTypeSelect.dataset.previousValue=maintenanceTypeSelect.value;maintenanceTypeSelect.addEventListener("change",e=>{const next=e.target.value;if(!confirm("メンテナンスの種類を「"+maintenanceTypeLabel(next)+"」に変更しますか？")){e.target.value=e.target.dataset.previousValue||"normal";return;}setMaintenanceType(next);});}
+    $("maintenance-reason-save")?.addEventListener("click",saveMaintenanceReason);
+    $("maintenance-reason")?.addEventListener("input",e=>{const button=$("maintenance-reason-save");if(button)button.textContent=e.target.value===e.target.dataset.savedValue?"理由を保存":"変更を保存";});
 
     $("user-search")?.addEventListener("input", e => {
       const q = e.target.value.trim().toLowerCase();
