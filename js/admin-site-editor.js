@@ -133,7 +133,7 @@
     brandName:"Kizimin", heroTitle:"好きなことを、\n好きなように書こう。", heroDescription:"Kiziminは、記事を読んだり、書いたりできる場所。",
     accentColor:"#111827", backgroundColor:"#f5f7fb", textColor:"#111827", cardRadius:14,
     maintenanceBrand:"Kizimin", maintenanceTitle:"ただいまメンテナンス中です", maintenanceDescription:"サービスの品質向上と安定運用のため、一時的にサイトの利用を停止しています。",
-    maintenanceReasonTitle:"メンテナンスの理由", maintenanceFooter:"作業完了までしばらくお待ちください。ご不便をおかけします。", maintenanceDemoLabel:"デモ解除",
+    maintenanceReasonTitle:"メンテナンスの理由", maintenanceReasonBody:"", maintenanceFooter:"作業完了までしばらくお待ちください。ご不便をおかけします。", maintenanceDemoLabel:"デモ解除",
     maintenanceNormalLabel:"通常メンテナンス", maintenanceEmergencyLabel:"緊急メンテナンス", maintenanceOtherLabel:"その他",
     maintenanceBgColor:"#f5f7fb", maintenanceCardColor:"#ffffff", maintenanceAccentColor:"#25385e", maintenanceTextColor:"#172033",
     maintenanceBrand:"Kizimin", maintenanceTitle:"ただいまメンテナンス中です",
@@ -172,7 +172,7 @@
       maintenanceBrand:$("maintenance-brand").value.trim().slice(0,60)||DEFAULTS.maintenanceBrand,
       maintenanceTitle:$("maintenance-title").value.trim().slice(0,120)||DEFAULTS.maintenanceTitle,
       maintenanceDescription:$("maintenance-description").value.slice(0,400),
-      maintenanceReasonTitle:$("maintenance-reason-title").value.trim().slice(0,80)||DEFAULTS.maintenanceReasonTitle,
+      maintenanceReasonTitle:$("maintenance-reason-title").value.trim().slice(0,80)||DEFAULTS.maintenanceReasonTitle,\n      maintenanceReasonBody:$("maintenance-reason-body").value.slice(0,1000),
       maintenanceFooter:$("maintenance-footer").value.slice(0,300),
       maintenanceDemoLabel:$("maintenance-demo-label").value.trim().slice(0,40)||DEFAULTS.maintenanceDemoLabel,
       maintenanceNormalLabel:$("maintenance-normal-label").value.trim().slice(0,40)||DEFAULTS.maintenanceNormalLabel,
@@ -207,7 +207,7 @@
     $("show-announcements").checked=!!x.showAnnouncements; $("terms-content").value=x.termsContent||""; $("privacy-content").value=x.privacyContent||"";
     $("accent-color").value=x.accentColor; $("background-color").value=x.backgroundColor; $("text-color").value=x.textColor;
     $("card-radius").value=x.cardRadius;
-    for(const [id,key] of [["maintenance-brand","maintenanceBrand"],["maintenance-title","maintenanceTitle"],["maintenance-description","maintenanceDescription"],["maintenance-reason-title","maintenanceReasonTitle"],["maintenance-footer","maintenanceFooter"],["maintenance-demo-label","maintenanceDemoLabel"],["maintenance-normal-label","maintenanceNormalLabel"],["maintenance-emergency-label","maintenanceEmergencyLabel"],["maintenance-other-label","maintenanceOtherLabel"]]) $(id).value=x[key];
+    for(const [id,key] of [["maintenance-brand","maintenanceBrand"],["maintenance-title","maintenanceTitle"],["maintenance-description","maintenanceDescription"],["maintenance-reason-title","maintenanceReasonTitle"],["maintenance-reason-body","maintenanceReasonBody"],["maintenance-footer","maintenanceFooter"],["maintenance-demo-label","maintenanceDemoLabel"],["maintenance-normal-label","maintenanceNormalLabel"],["maintenance-emergency-label","maintenanceEmergencyLabel"],["maintenance-other-label","maintenanceOtherLabel"]]) $(id).value=x[key];
     for(const [id,key] of [["maintenance-bg-color","maintenanceBgColor"],["maintenance-card-color","maintenanceCardColor"],["maintenance-accent-color","maintenanceAccentColor"],["maintenance-text-color","maintenanceTextColor"]]) $(id).value=x[key];
     for(const [id,key] of [["maintenance-brand","maintenanceBrand"],["maintenance-title","maintenanceTitle"],["maintenance-description","maintenanceDescription"],["maintenance-reason-title","maintenanceReasonTitle"],["maintenance-footer","maintenanceFooter"],["maintenance-demo-label","maintenanceDemoLabel"],["maintenance-normal-label","maintenanceNormalLabel"],["maintenance-emergency-label","maintenanceEmergencyLabel"],["maintenance-other-label","maintenanceOtherLabel"]]) $(id).value=x[key];
     for(const [id,key] of [["maintenance-bg-color","maintenanceBgColor"],["maintenance-card-color","maintenanceCardColor"],["maintenance-accent-color","maintenanceAccentColor"],["maintenance-text-color","maintenanceTextColor"]]) $(id).value=x[key];
@@ -228,7 +228,7 @@
     $("preview-latest").style.borderRadius=x.cardRadius+"px";
     const setText=(id,value)=>{const node=$(id);if(node)node.textContent=value;};
     setText("maintenance-preview-brand",x.maintenanceBrand);setText("maintenance-preview-title",x.maintenanceTitle);setText("maintenance-preview-description",x.maintenanceDescription);
-    setText("maintenance-preview-reason-title",x.maintenanceReasonTitle);setText("maintenance-preview-footer",x.maintenanceFooter);setText("maintenance-preview-demo",x.maintenanceDemoLabel);setText("maintenance-preview-type",x.maintenanceNormalLabel);
+    setText("maintenance-preview-reason-title",x.maintenanceReasonTitle);setText("maintenance-preview-reason-body",x.maintenanceReasonBody||"ここには管理画面で設定したメンテナンス理由が表示されます。");setText("maintenance-preview-footer",x.maintenanceFooter);setText("maintenance-preview-demo",x.maintenanceDemoLabel);setText("maintenance-preview-type",x.maintenanceNormalLabel);
     const mp=$("maintenance-editor-preview"),mc=$("maintenance-editor-preview-card");if(mp){mp.style.background=x.maintenanceBgColor;mp.style.color=x.maintenanceTextColor;}if(mc){mc.style.background=x.maintenanceCardColor;mc.style.color=x.maintenanceTextColor;}
     const mb=$("maintenance-preview-brand"),mt=$("maintenance-preview-type"),mh=$("maintenance-preview-title"),md=$("maintenance-preview-demo");
     if(mb)mb.style.color=x.maintenanceAccentColor;if(mt){mt.style.color=x.maintenanceAccentColor;mt.style.background=x.maintenanceBgColor;}if(mh)mh.style.color=x.maintenanceTextColor;if(md){md.style.color=x.maintenanceAccentColor;md.style.borderColor=x.maintenanceAccentColor;}
