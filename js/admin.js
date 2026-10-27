@@ -677,7 +677,7 @@
       alert("管理者は自分自身の権限や、管理者以上の権限を変更できません。変更できるのは一般ユーザーとモデレーターのみです。");
       return;
     }
-    if (!["user","moderator","admin"].includes(next)) {
+    if (!["user","moderator","admin","debugger"].includes(next)) {
       if (selectEl) selectEl.value = current;
       return;
     }
