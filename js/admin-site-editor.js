@@ -132,6 +132,10 @@
 個人情報の取り扱いに関する連絡はお問い合わせフォームから送信してください。`,
     brandName:"Kizimin", heroTitle:"好きなことを、\n好きなように書こう。", heroDescription:"Kiziminは、記事を読んだり、書いたりできる場所。",
     accentColor:"#111827", backgroundColor:"#f5f7fb", textColor:"#111827", cardRadius:14,
+    maintenanceBrand:"Kizimin", maintenanceTitle:"ただいまメンテナンス中です", maintenanceDescription:"サービスの品質向上と安定運用のため、一時的にサイトの利用を停止しています。",
+    maintenanceReasonTitle:"メンテナンスの理由", maintenanceFooter:"作業完了までしばらくお待ちください。ご不便をおかけします。", maintenanceDemoLabel:"デモ解除",
+    maintenanceNormalLabel:"通常メンテナンス", maintenanceEmergencyLabel:"緊急メンテナンス", maintenanceOtherLabel:"その他",
+    maintenanceBgColor:"#f5f7fb", maintenanceCardColor:"#ffffff", maintenanceAccentColor:"#25385e", maintenanceTextColor:"#172033",
     maintenanceBrand:"Kizimin", maintenanceTitle:"ただいまメンテナンス中です",
     maintenanceDescription:"サービスの品質向上と安定運用のため、一時的にサイトの利用を停止しています。",
     maintenanceReasonTitle:"メンテナンスの理由", maintenanceFooter:"作業完了までしばらくお待ちください。ご不便をおかけします。",
@@ -174,6 +178,17 @@
       maintenanceNormalLabel:$("maintenance-normal-label").value.trim().slice(0,40)||DEFAULTS.maintenanceNormalLabel,
       maintenanceEmergencyLabel:$("maintenance-emergency-label").value.trim().slice(0,40)||DEFAULTS.maintenanceEmergencyLabel,
       maintenanceOtherLabel:$("maintenance-other-label").value.trim().slice(0,40)||DEFAULTS.maintenanceOtherLabel,
+      maintenanceBgColor:$("maintenance-bg-color").value,maintenanceCardColor:$("maintenance-card-color").value,
+      maintenanceAccentColor:$("maintenance-accent-color").value,maintenanceTextColor:$("maintenance-text-color").value,
+      maintenanceBrand:$("maintenance-brand").value.trim().slice(0,60)||DEFAULTS.maintenanceBrand,
+      maintenanceTitle:$("maintenance-title").value.trim().slice(0,120)||DEFAULTS.maintenanceTitle,
+      maintenanceDescription:$("maintenance-description").value.slice(0,400),
+      maintenanceReasonTitle:$("maintenance-reason-title").value.trim().slice(0,80)||DEFAULTS.maintenanceReasonTitle,
+      maintenanceFooter:$("maintenance-footer").value.slice(0,300),
+      maintenanceDemoLabel:$("maintenance-demo-label").value.trim().slice(0,40)||DEFAULTS.maintenanceDemoLabel,
+      maintenanceNormalLabel:$("maintenance-normal-label").value.trim().slice(0,40)||DEFAULTS.maintenanceNormalLabel,
+      maintenanceEmergencyLabel:$("maintenance-emergency-label").value.trim().slice(0,40)||DEFAULTS.maintenanceEmergencyLabel,
+      maintenanceOtherLabel:$("maintenance-other-label").value.trim().slice(0,40)||DEFAULTS.maintenanceOtherLabel,
       maintenanceBgColor:$("maintenance-bg-color").value, maintenanceCardColor:$("maintenance-card-color").value,
       maintenanceAccentColor:$("maintenance-accent-color").value, maintenanceTextColor:$("maintenance-text-color").value,
       termsContent:$("terms-content").value.slice(0,30000), privacyContent:$("privacy-content").value.slice(0,30000),
@@ -194,6 +209,8 @@
     $("card-radius").value=x.cardRadius;
     for(const [id,key] of [["maintenance-brand","maintenanceBrand"],["maintenance-title","maintenanceTitle"],["maintenance-description","maintenanceDescription"],["maintenance-reason-title","maintenanceReasonTitle"],["maintenance-footer","maintenanceFooter"],["maintenance-demo-label","maintenanceDemoLabel"],["maintenance-normal-label","maintenanceNormalLabel"],["maintenance-emergency-label","maintenanceEmergencyLabel"],["maintenance-other-label","maintenanceOtherLabel"]]) $(id).value=x[key];
     for(const [id,key] of [["maintenance-bg-color","maintenanceBgColor"],["maintenance-card-color","maintenanceCardColor"],["maintenance-accent-color","maintenanceAccentColor"],["maintenance-text-color","maintenanceTextColor"]]) $(id).value=x[key];
+    for(const [id,key] of [["maintenance-brand","maintenanceBrand"],["maintenance-title","maintenanceTitle"],["maintenance-description","maintenanceDescription"],["maintenance-reason-title","maintenanceReasonTitle"],["maintenance-footer","maintenanceFooter"],["maintenance-demo-label","maintenanceDemoLabel"],["maintenance-normal-label","maintenanceNormalLabel"],["maintenance-emergency-label","maintenanceEmergencyLabel"],["maintenance-other-label","maintenanceOtherLabel"]]) $(id).value=x[key];
+    for(const [id,key] of [["maintenance-bg-color","maintenanceBgColor"],["maintenance-card-color","maintenanceCardColor"],["maintenance-accent-color","maintenanceAccentColor"],["maintenance-text-color","maintenanceTextColor"]]) $(id).value=x[key];
     for(const [id,key] of [["show-hero","showHero"],["show-daily","showDaily"],["show-popular","showPopular"],["show-categories","showCategories"],["show-discovery","showDiscovery"],["show-polls","showPolls"],["show-challenges","showChallenges"],["show-qa","showQA"],["show-library","showLibrary"]]) $(id).checked=!!x[key];
     preview(x);
   }
@@ -209,6 +226,12 @@
     $("preview-hero").hidden=!x.showHero; $("preview-popular").hidden=!x.showPopular; $("preview-categories").hidden=!x.showCategories;
     $("preview-community").hidden=!(x.showDaily||x.showPolls||x.showChallenges||x.showQA||x.showLibrary);
     $("preview-latest").style.borderRadius=x.cardRadius+"px";
+    const setText=(id,value)=>{const node=$(id);if(node)node.textContent=value;};
+    setText("maintenance-preview-brand",x.maintenanceBrand);setText("maintenance-preview-title",x.maintenanceTitle);setText("maintenance-preview-description",x.maintenanceDescription);
+    setText("maintenance-preview-reason-title",x.maintenanceReasonTitle);setText("maintenance-preview-footer",x.maintenanceFooter);setText("maintenance-preview-demo",x.maintenanceDemoLabel);setText("maintenance-preview-type",x.maintenanceNormalLabel);
+    const mp=$("maintenance-editor-preview"),mc=$("maintenance-editor-preview-card");if(mp){mp.style.background=x.maintenanceBgColor;mp.style.color=x.maintenanceTextColor;}if(mc){mc.style.background=x.maintenanceCardColor;mc.style.color=x.maintenanceTextColor;}
+    const mb=$("maintenance-preview-brand"),mt=$("maintenance-preview-type"),mh=$("maintenance-preview-title"),md=$("maintenance-preview-demo");
+    if(mb)mb.style.color=x.maintenanceAccentColor;if(mt){mt.style.color=x.maintenanceAccentColor;mt.style.background=x.maintenanceBgColor;}if(mh)mh.style.color=x.maintenanceTextColor;if(md){md.style.color=x.maintenanceAccentColor;md.style.borderColor=x.maintenanceAccentColor;}
     const setText=(id,value)=>{const node=$(id);if(node)node.textContent=value;};
     setText("maintenance-preview-brand",x.maintenanceBrand);setText("maintenance-preview-title",x.maintenanceTitle);
     setText("maintenance-preview-description",x.maintenanceDescription);setText("maintenance-preview-reason-title",x.maintenanceReasonTitle);
