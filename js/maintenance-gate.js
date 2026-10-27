@@ -2,7 +2,7 @@
 (() => {
   "use strict";
   const URL="https://bimddapbkdakspjaemsm.supabase.co",KEY="sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf",GATE="kizimin-maintenance-gate";
-  const LABELS={normal:"通常メンテナンス",emergency:"緊急メンテナンス",other:"その他"};
+  const DEFAULTS={brand:"Kizimin",title:"ただいまメンテナンス中です",description:"サービスの品質向上と安定運用のため、一時的にサイトの利用を停止しています。",reasonTitle:"メンテナンスの理由",footer:"作業完了までしばらくお待ちください。ご不便をおかけします。",demoLabel:"デモ解除",normalLabel:"通常メンテナンス",emergencyLabel:"緊急メンテナンス",otherLabel:"その他",bgColor:"#f5f7fb",cardColor:"#ffffff",accentColor:"#25385e",textColor:"#172033"};
   let inertNodes=[],previousOverflow="",client=null;
   function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
   function restorePage(){
@@ -16,9 +16,9 @@
     overlay.remove();
     restorePage();
   }
-  function addDemoButton(overlay,canDemo){
+  function addDemoButton(overlay,canDemo,label){
     if(!canDemo||overlay.querySelector("#kizimin-maintenance-demo-dismiss"))return;
-    const button=el("button","kizimin-maintenance-demo-button","デモ解除");
+    const button=el("button","kizimin-maintenance-demo-button",label||DEFAULTS.demoLabel);
     button.id="kizimin-maintenance-demo-dismiss";
     button.type="button";
     button.setAttribute("aria-label","デモとしてメンテナンス画面を一時的に解除");
@@ -27,21 +27,21 @@
     const footer=overlay.querySelector(".kizimin-maintenance-footer");
     if(footer)footer.before(button);else overlay.querySelector(".kizimin-maintenance-card")?.append(button);
   }
-  function render(data,canDemo){
+  function render(data,canDemo,custom){\n    const c={...DEFAULTS,...(custom||{})};\n    const labels={normal:c.normalLabel,emergency:c.emergencyLabel,other:c.otherLabel};
     if(!document.body)return;
     const existing=document.getElementById(GATE);
     if(existing){addDemoButton(existing,canDemo);return;}
-    const type=LABELS[data?.type]?data.type:"normal",reason=String(data?.reason||"システムメンテナンスを実施しています。").slice(0,1000);
+    const type=labels[data?.type]?data.type:"normal",reason=String(data?.reason||"システムメンテナンスを実施しています。").slice(0,1000);
     const overlay=el("div","kizimin-maintenance-screen");overlay.id=GATE;overlay.setAttribute("role","dialog");overlay.setAttribute("aria-modal","true");overlay.setAttribute("aria-labelledby","kizimin-maintenance-title");
-    const card=el("main","kizimin-maintenance-card"),brand=el("div","kizimin-maintenance-brand","Kizimin"),symbol=el("div","kizimin-maintenance-symbol",type==="emergency"?"!":"⚙");
+    const card=el("main","kizimin-maintenance-card"),brand=el("div","kizimin-maintenance-brand",c.brand),symbol=el("div","kizimin-maintenance-symbol",type==="emergency"?"!":"⚙");\n    overlay.style.background=c.bgColor;overlay.style.color=c.textColor;card.style.background=c.cardColor;card.style.color=c.textColor;brand.style.color=c.accentColor;symbol.style.background=c.bgColor;symbol.style.color=c.accentColor;
     symbol.setAttribute("aria-hidden","true");
-    const pill=el("div","kizimin-maintenance-type kizimin-maintenance-type-"+type,LABELS[type]),heading=el("h1","","ただいまメンテナンス中です");heading.id="kizimin-maintenance-title";
-    const description=el("p","kizimin-maintenance-description","サービスの品質向上と安定運用のため、一時的にサイトの利用を停止しています。");
+    const pill=el("div","kizimin-maintenance-type kizimin-maintenance-type-"+type,labels[type]),heading=el("h1","",c.title);heading.id="kizimin-maintenance-title";
+    const description=el("p","kizimin-maintenance-description",c.description);description.style.color=c.textColor;
     const box=el("section","kizimin-maintenance-reason"),subhead=el("h2","","メンテナンスの理由"),reasonText=el("p","",reason);
-    box.append(subhead,reasonText);
-    const footer=el("p","kizimin-maintenance-footer","作業完了までしばらくお待ちください。ご不便をおかけします。");
+    subhead.textContent=c.reasonTitle;reasonText.style.color=c.textColor;box.append(subhead,reasonText);
+    const footer=el("p","kizimin-maintenance-footer",c.footer);footer.style.color=c.textColor;
     card.append(brand,symbol,pill,heading,description,box);
-    addDemoButton(card,canDemo);
+    addDemoButton(card,canDemo,c.demoLabel);
     card.append(footer);overlay.appendChild(card);document.body.appendChild(overlay);
     inertNodes=[];
     Array.from(document.body.children).forEach(n=>{if(n!==overlay&&!n.hasAttribute("inert")){n.setAttribute("inert","");inertNodes.push(n);}});
@@ -56,7 +56,7 @@
       try{result=await client.rpc("get_site_maintenance_details",{}, {signal:controller.signal});}finally{clearTimeout(timer);}
       if(result.error)return;
       if(result.data?.active!==true){const existing=document.getElementById(GATE);if(existing){existing.remove();restorePage();}return;}
-      let canDemo=false;
+      let canDemo=false,custom={};\n      const {data:themeRow,error:themeError}=await client.from("site_editor_settings").select("setting_value").eq("setting_key","site_theme").maybeSingle();\n      if(!themeError&&themeRow?.setting_value){const v=themeRow.setting_value;custom={brand:v.maintenanceBrand,title:v.maintenanceTitle,description:v.maintenanceDescription,reasonTitle:v.maintenanceReasonTitle,footer:v.maintenanceFooter,demoLabel:v.maintenanceDemoLabel,normalLabel:v.maintenanceNormalLabel,emergencyLabel:v.maintenanceEmergencyLabel,otherLabel:v.maintenanceOtherLabel,bgColor:v.maintenanceBgColor,cardColor:v.maintenanceCardColor,accentColor:v.maintenanceAccentColor,textColor:v.maintenanceTextColor};}
       const {data:sessionData}=await client.auth.getSession();
       const user=sessionData?.session?.user;
       if(user?.id){
@@ -69,7 +69,7 @@
           }
         }
       }
-      render(result.data,canDemo);
+      render(result.data,canDemo,custom);
     }catch(error){console.warn("メンテナンス状態を確認できませんでした。",error);}
   }
   function start(){
