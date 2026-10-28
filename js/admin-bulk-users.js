@@ -45,7 +45,7 @@
   }
   function updateCount() {
     const count = document.querySelectorAll("#users-body .bulk-user-check:checked").length;
-    if ($("bulk-user-count")) $("bulk-user-count").textContent = count + "人選択中";
+    if ($("bulk-user-count") && $("bulk-user-count").textContent !== count + "人選択中") $("bulk-user-count").textContent = count + "人選択中";
     if ($("bulk-user-apply")) $("bulk-user-apply").disabled = busy || count === 0;
   }
   function toIsoJst(value) {
