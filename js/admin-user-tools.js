@@ -12,6 +12,7 @@ function setup(){
  let c=$("user-tools-controls");
  if(!c){c=document.createElement("div");c.id="user-tools-controls";c.innerHTML='<div class="user-tools-stats" id="user-tools-stats"></div><div class="user-tools-filters"><label>状態<select id="user-status-filter"><option value="all">すべて</option><option value="active">有効</option><option value="banned">BAN</option><option value="suspended">一時停止</option></select></label><label>権限<select id="user-role-filter"><option value="all">すべて</option><option value="user">一般ユーザー</option><option value="moderator">モデレーター</option><option value="admin">管理者</option><option value="debugger">デバッカー</option></select></label><label>BAN解除予定<select id="user-expiry-filter"><option value="all">すべて</option><option value="soon">7日以内</option><option value="expired">期限超過</option><option value="indefinite">無期限</option></select></label><button class="admin-btn" id="user-filter-reset" type="button">絞り込み解除</button></div><div id="user-expiry-summary" class="user-expiry-summary"></div>';panel.insertBefore(c,wrap);}
  let d=$("user-detail-dialog");if(!d){d=document.createElement("dialog");d.id="user-detail-dialog";d.className="user-detail-dialog";d.innerHTML='<div class="user-detail-head"><div><h2 id="user-detail-title">ユーザー詳細</h2><p id="user-detail-subtitle" class="admin-muted"></p></div><button id="user-detail-close" type="button" class="admin-btn">閉じる</button></div><div id="user-detail-content"></div>';document.body.appendChild(d);}
+ if(!$("user-tools-toolbar")){const toolbar=document.createElement("div");toolbar.id="user-tools-toolbar";toolbar.style.cssText="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0";toolbar.innerHTML='<label style="display:flex;align-items:center;gap:8px;font-weight:600">並び替え<select id="user-sort-mode" class="admin-search" style="width:auto"><option value="newest">登録日が新しい順</option><option value="oldest">登録日が古い順</option><option value="name">表示名・ユーザー名順</option><option value="role">権限順</option><option value="status">状態順</option></select></label><button id="user-export-csv" class="admin-btn" type="button">表示中のユーザーをCSV出力</button><span id="user-result-count" class="admin-muted" aria-live="polite"></span>';const filters=$("user-tools-controls").querySelector(".user-tools-filters");if(filters)filters.parentNode.insertBefore(toolbar,filters);else $("user-tools-controls").appendChild(toolbar);$("user-sort-mode").onchange=filterRows;$("user-export-csv").onclick=exportVisibleCsv;}
  $("user-status-filter").onchange=e=>{status=e.target.value;filterRows()};
  $("user-role-filter").onchange=e=>{role=e.target.value;filterRows()};
  $("user-expiry-filter").onchange=filterRows;
@@ -40,7 +41,23 @@ function decorate(){
 }
 function filterRows(){
  const mode=$("user-expiry-filter")?.value||"all",now=Date.now(),week=now+604800000;
- rows.forEach(x=>{const t=x.expiry?new Date(x.expiry).getTime():null,expiryOk=mode==="all"||(mode==="soon"&&x.status==="banned"&&t!==null&&t>now&&t<=week)||(mode==="expired"&&x.status==="banned"&&t!==null&&t<=now)||(mode==="indefinite"&&x.status==="banned"&&!x.expiry);x.row.hidden=!(x.row.textContent.toLowerCase().includes(q)&&(status==="all"||x.status===status)&&(role==="all"||x.role===role)&&expiryOk)});
+ const visible=[];
+ rows.forEach(x=>{const t=x.expiry?new Date(x.expiry).getTime():null,expiryOk=mode==="all"||(mode==="soon"&&x.status==="banned"&&t!==null&&t>now&&t<=week)||(mode==="expired"&&x.status==="banned"&&t!==null&&t<=now)||(mode==="indefinite"&&x.status==="banned"&&!x.expiry);const match=x.row.textContent.toLowerCase().includes(q)&&(status==="all"||x.status===status)&&(role==="all"||x.role===role)&&expiryOk;x.row.hidden=!match;if(match)visible.push(x)});
+ const sort=$("user-sort-mode")?.value||"newest";
+ const roleOrder={owner:0,admin:1,moderator:2,debugger:3,user:4},statusOrder={banned:0,suspended:1,active:2};
+ visible.sort((a,b)=>sort==="oldest"?(Date.parse(a.row.querySelector("td:nth-child(5)")?.textContent||"")||0)-(Date.parse(b.row.querySelector("td:nth-child(5)")?.textContent||"")||0):sort==="name"?a.name.localeCompare(b.name,"ja"):sort==="role"?(roleOrder[a.role]??9)-(roleOrder[b.role]??9):sort==="status"?(statusOrder[a.status]??9)-(statusOrder[b.status]??9):(Date.parse(b.row.querySelector("td:nth-child(5)")?.textContent||"")||0)-(Date.parse(a.row.querySelector("td:nth-child(5)")?.textContent||"")||0));
+ const body=$("users-body");visible.forEach(x=>body.appendChild(x.row));
+ if($("user-result-count"))$("user-result-count").textContent="表示中 "+visible.length+" / "+rows.length+" 人";
+}
+function exportVisibleCsv(){
+ const visible=rows.filter(x=>!x.row.hidden);
+ if(!visible.length){alert("出力できるユーザーがいません。絞り込み条件を確認してください。");return}
+ const quote=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
+ const data=[["ユーザーID","ユーザー名","表示名","権限","状態","登録日","BAN解除日時","制限理由"],...visible.map(x=>[x.id,x.username,x.name,labels[x.role]||x.role,labels[x.status]||x.status,x.registered,x.expiry?fmt(x.expiry):(x.status==="banned"?"無期限":""),x.reason])];
+ const csv="\\uFEFF"+data.map(row=>row.map(quote).join(",")).join("\\r\\n");
+ const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+ const a=document.createElement("a");a.href=url;a.download="kizimin-users-"+new Date().toISOString().slice(0,10)+".csv";document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+}
 }
 async function details(id){
  const x=rows.find(a=>a.id===id);if(!x)return;
@@ -69,6 +86,7 @@ async function details(id){
  if(deleteButton)actions.push('<button type="button" class="admin-btn danger" id="user-detail-delete">アカウントを強制削除</button>');
  $("user-detail-title").textContent=x.name;
  $("user-detail-subtitle").textContent="ユーザーID: "+id;
+ const copyIdButton=document.createElement("button");copyIdButton.type="button";copyIdButton.className="admin-btn";copyIdButton.textContent="ユーザーIDをコピー";copyIdButton.style.marginTop="8px";copyIdButton.onclick=async()=>{try{await navigator.clipboard.writeText(id);copyIdButton.textContent="コピーしました";setTimeout(()=>{copyIdButton.textContent="ユーザーIDをコピー"},1500)}catch{prompt("ユーザーIDをコピーしてください",id)}};$("user-detail-subtitle").appendChild(document.createTextNode(" "));$("user-detail-subtitle").appendChild(copyIdButton);
  $("user-detail-content").innerHTML='<div class="user-detail-grid"><div><span>表示名</span><strong>'+esc(x.name)+'</strong></div><div><span>ユーザー名</span><strong>'+esc(x.username)+'</strong></div><div><span>メールアドレス</span><strong id="user-detail-email" class="user-detail-email">権限を確認して取得しています...</strong></div><div><span>権限</span><strong>'+esc(labels[x.role]||x.role)+'</strong></div><div><span>状態</span><strong>'+esc(labels[x.status]||x.status)+'</strong></div><div><span>登録日</span><strong>'+esc(x.registered)+'</strong></div><div><span>BAN解除日時（JST）</span><strong>'+esc(x.expiry?fmt(x.expiry):(x.status==="banned"?"無期限":"-"))+'</strong></div><div class="user-detail-wide"><span>制限理由</span><p>'+esc(x.reason||"記録なし")+'</p></div></div><section class="user-detail-actions"><h3>ユーザー操作</h3><p class="admin-muted">表示される操作は、現在の管理権限に応じて変わります。</p><div class="user-detail-action-grid">'+(actions.length?actions.join(""):'<p class="admin-muted">このアカウントに対して実行できる操作はありません。</p>')+'</div></section><h3>関連通報・運営通知</h3><div id="user-activity-loading" class="admin-muted">履歴を読み込んでいます...</div>';
  const dialog=$("user-detail-dialog");
  dialog.showModal();
