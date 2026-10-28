@@ -288,7 +288,7 @@ function fallbackMarkdown(value){
 }
 function renderMarkdown(v){
   const colorTokens=[];
-  const source=String(v??"").replace(/\\{\\{color:(#[0-9a-fA-F]{6})\\|([\\s\\S]*?)\\}\\}/g,(_,color,text)=>{
+  const source=String(v??"").replace(/\{\{color:(#[0-9a-fA-F]{6})\|([\s\S]*?)\}\}/g,(_,color,text)=>{
     const token="KIZIMINCOLOR"+colorTokens.length+"TOKEN";
     colorTokens.push({token,color,text});
     return token;
