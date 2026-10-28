@@ -481,7 +481,7 @@
     $("users-body").innerHTML = data.length ? data.map(u => {
       const isOfficial = titleByUser.get(u.id) === "Official";
       return `
-      <tr>
+      <tr data-created-at="${esc(u.created_at || "")}">
         <td>${esc(u.username || u.id)}</td>
         <td>${esc(u.display_name || "-")}${isOfficial ? ' <span class="admin-badge" style="background:#111;color:#fff">Official</span>' : ''}</td>
         <td><span class="admin-badge">${u.id === "9589135e-4f75-4913-b13f-35407eeedf3b" ? "👑 オーナー" : esc(statusLabel(u.role))}</span></td>
