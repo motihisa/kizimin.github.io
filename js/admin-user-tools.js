@@ -46,7 +46,7 @@ function filterRows(){
  const sort=$("user-sort-mode")?.value||"newest";
  const roleOrder={owner:0,admin:1,moderator:2,debugger:3,user:4},statusOrder={banned:0,suspended:1,active:2};
  visible.sort((a,b)=>sort==="oldest"?(Date.parse(a.registeredAt)||0)-(Date.parse(b.registeredAt)||0):sort==="name"?a.name.localeCompare(b.name,"ja"):sort==="role"?(roleOrder[a.role]??9)-(roleOrder[b.role]??9):sort==="status"?(statusOrder[a.status]??9)-(statusOrder[b.status]??9):(Date.parse(b.registeredAt)||0)-(Date.parse(a.registeredAt)||0));
- const body=$("users-body");visible.forEach(x=>body.appendChild(x.row));
+ const body=$("users-body");if(body){const current=[...body.querySelectorAll("tr")].filter(r=>!r.hidden&&r.querySelector(".account-status,.user-role-select"));if(current.length!==visible.length||current.some((r,i)=>r!==visible[i].row)){visible.forEach(x=>body.appendChild(x.row));}}
  if($("user-result-count"))$("user-result-count").textContent="表示中 "+visible.length+" / "+rows.length+" 人";
 }
 function exportVisibleCsv(){
