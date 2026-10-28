@@ -251,25 +251,6 @@
     document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
     setStatus(format==="csv"?"アラートをCSVで出力しました。":"アラートをJSONで出力しました。","success");
   }
-  async function notifyDiscord() {
-    const button=$("bot-notify-discord");if(button)button.disabled=true;
-    try{
-      const {data:{session},error:sessionError}=await db.auth.getSession();
-      if(sessionError||!session?.access_token)throw new Error("ログインセッションを確認できません。再ログインしてください。");
-      setStatus("DiscordへBotの検知概要を送信しています…");
-      const response=await fetch("https://kizimin-site.onrender.com/api/bot/notify",{
-        method:"POST",
-        headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},
-        body:JSON.stringify({generatedAt:lastRunAt,alerts:lastAlerts.slice(0,10).map(a=>({level:a.level,source:a.source,title:a.title}))})
-      });
-      const result=await response.json().catch(()=>({}));
-      if(!response.ok)throw new Error(result.error||("通知APIエラー: HTTP "+response.status));
-      setStatus("Discordへ通知しました。","success");
-    }catch(error){
-      setStatus("Discord通知に失敗しました: "+(error.message||"接続設定を確認してください"),"error");
-      console.error("[Kizimin Bot] Discord notification failed",error);
-    }finally{if(button)button.disabled=false;}
-  }
   function readHistory(){try{const x=JSON.parse(localStorage.getItem(storageKey()+":history")||"[]");return Array.isArray(x)?x:[];}catch{return[];}}
   function writeHistory(rows){try{localStorage.setItem(storageKey()+":history",JSON.stringify(rows));}catch{}}
   function renderHistory(){
@@ -296,7 +277,6 @@
     $("bot-run-now")?.addEventListener("click",()=>scan("手動チェック"));
     $("bot-export-csv")?.addEventListener("click",()=>exportAlerts("csv"));
     $("bot-export-json")?.addEventListener("click",()=>exportAlerts("json"));
-    $("bot-notify-discord")?.addEventListener("click",notifyDiscord);
     $("bot-filter-level")?.addEventListener("change",renderAlertList);
     $("bot-filter-source")?.addEventListener("change",renderAlertList);
     $("bot-policy-save")?.addEventListener("click",savePolicy);
