@@ -54,7 +54,7 @@ function exportVisibleCsv(){
  if(!visible.length){alert("出力できるユーザーがいません。絞り込み条件を確認してください。");return}
  const quote=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
  const data=[["ユーザーID","ユーザー名","表示名","権限","状態","登録日","BAN解除日時","制限理由"],...visible.map(x=>[x.id,x.username,x.name,labels[x.role]||x.role,labels[x.status]||x.status,x.registered,x.expiry?fmt(x.expiry):(x.status==="banned"?"無期限":""),x.reason])];
- const csv="\\uFEFF"+data.map(row=>row.map(quote).join(",")).join("\\r\\n");
+ const csv="\uFEFF"+data.map(row=>row.map(quote).join(",")).join("\r\n");
  const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
  const a=document.createElement("a");a.href=url;a.download="kizimin-users-"+new Date().toISOString().slice(0,10)+".csv";document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
 }
