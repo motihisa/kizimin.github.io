@@ -118,13 +118,54 @@
     if(error) throw new Error(error.message || table+"の読み込みに失敗しました");
     return data||[];
   }
+  // Lightweight availability scan: checks public pages only; it does not generate load.
+  const SITE_PAGES = ["/account.html","/ai-assistant.html","/article.html","/contact.html","/dm.html","/edit-article.html","/index.html","/inquiry.html","/login.html","/my-articles.html","/new-article.html","/notifications.html","/oauth/consent.html","/organization.html","/pentest.html","/privacy.html","/profile.html","/terms.html","/write.html"];
+  async function scanSiteAvailability(alerts, stats) {
+    const results = [];
+    const queue = [...SITE_PAGES];
+    const worker = async () => {
+      while (queue.length) {
+        const path = queue.shift();
+        const started = performance.now();
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+        try {
+          const response = await fetch(new URL(path, location.origin).toString(), {
+            method: "HEAD", cache: "no-store", credentials: "same-origin", signal: controller.signal
+          });
+          const ms = Math.round(performance.now() - started);
+          results.push({path, status: response.status, ms});
+          if (!response.ok) {
+            addAlert(alerts, response.status >= 500 ? "high" : "review", "サイト監視",
+              "ページ応答エラー", path + " · HTTP " + response.status + " · " + ms + "ms", path);
+          } else if (ms >= 5000) {
+            addAlert(alerts, "review", "サイト監視", "ページ応答が遅い",
+              path + " · " + ms + "ms", path);
+          }
+        } catch (error) {
+          const ms = Math.round(performance.now() - started);
+          results.push({path, status: 0, ms, timeout: error.name === "AbortError"});
+          addAlert(alerts, "high", "サイト監視", error.name === "AbortError" ? "ページ応答タイムアウト" : "ページ取得失敗",
+            path + " · " + (error.name === "AbortError" ? "8秒以内に応答なし" : String(error.message || error)) , path);
+        } finally { clearTimeout(timeout); }
+      }
+    };
+    await Promise.all(Array.from({length: Math.min(4, queue.length)}, worker));
+    stats.sitePagesChecked = results.length;
+    stats.sitePageErrors = results.filter(x => x.status === 0 || x.status >= 400).length;
+    const slowOrUnavailable = results.filter(x => x.status === 0 || x.status === 429 || x.status === 503 || x.status >= 500 || x.ms >= 8000).length;
+    if (results.length >= 5 && slowOrUnavailable >= Math.max(3, Math.ceil(results.length * 0.4))) {
+      addAlert(alerts, "high", "サイト監視", "サイト可用性の異常を検出",
+        slowOrUnavailable + "/" + results.length + " ページで応答異常。DoS/DDoSの可能性を含みますが、障害・ホスティング停止・通信問題でも発生します。サーバー/CDN側のアクセスログ確認が必要です。");
+    }
+  }
   async function scan(reason="手動チェック") {
     if(scanInProgress) { setStatus("前回のチェックがまだ実行中です。完了を待っています。"); return; }
     scanInProgress=true;
     const button=$("bot-run-now"); if(button) button.disabled=true;
     try {
     setStatus(reason+"を実行しています…");
-    const config=readConfig(), alerts=[], stats={reports:0,inquiries:0,suspiciousComments:0,suspiciousArticles:0,errors:[]};
+    const config=readConfig(), alerts=[], stats={reports:0,inquiries:0,suspiciousComments:0,suspiciousArticles:0,sitePagesChecked:0,sitePageErrors:0,errors:[]};
     const tasks=[];
     if(config.reports) tasks.push((async()=>{try{
       const rows=await safeRead("reports","id,reason,status,created_at",100);
@@ -159,6 +200,7 @@
       }
     }catch(e){stats.errors.push("記事: "+e.message);}})());
     await Promise.all(tasks);
+    try { await scanSiteAvailability(alerts, stats); } catch(e) { stats.errors.push("サイト監視: "+e.message); }
     lastRunAt=new Date().toISOString();
     lastAlerts=alerts.sort((a,b)=>({high:0,medium:1,review:2}[a.level]-({high:0,medium:1,review:2}[b.level])));
     renderResults(stats,alerts,reason);
@@ -214,12 +256,12 @@
   function renderResults(stats,alerts,reason) {
     const kpis=[
       ["未処理の通報",stats.reports,"high"],["未対応の問い合わせ",stats.inquiries,"medium"],
-      ["要確認コメント",stats.suspiciousComments,"review"],["要確認記事",stats.suspiciousArticles,"review"]
+      ["要確認コメント",stats.suspiciousComments,"review"],["要確認記事",stats.suspiciousArticles,"review"],["サイト応答異常",stats.sitePageErrors,"high"],["確認したページ",stats.sitePagesChecked,"medium"]
     ];
     if($("bot-kpis")) $("bot-kpis").innerHTML=kpis.map(([label,value,kind])=>'<div class="bot-kpi '+kind+'"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong></div>').join("");
     renderAlertList();
     if($("bot-last-run")) $("bot-last-run").textContent=fmt(lastRunAt);
-    if($("bot-run-summary")) $("bot-run-summary").textContent=reason+"：アラート "+alerts.length+" 件 / 読み込み失敗 "+stats.errors.length+" 件";
+    if($("bot-run-summary")) $("bot-run-summary").textContent=reason+"：アラート "+alerts.length+" 件 / サイト確認 "+(stats.sitePagesChecked||0)+" ページ（応答異常 "+(stats.sitePageErrors||0)+" 件） / 読み込み失敗 "+stats.errors.length+" 件";
     renderHistory();
   }
   function renderAlertList() {
