@@ -58,7 +58,6 @@ function exportVisibleCsv(){
  const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
  const a=document.createElement("a");a.href=url;a.download="kizimin-users-"+new Date().toISOString().slice(0,10)+".csv";document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
 }
-}
 async function details(id){
  const x=rows.find(a=>a.id===id);if(!x)return;
  const row=x.row;
