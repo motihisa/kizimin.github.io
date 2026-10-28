@@ -154,16 +154,37 @@
 <script>
 const sb=supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf");
 const escapeHtml=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+function fallbackArticleMarkdown(value){
+  const escape=escapeHtml;
+  const inline=s=>s
+    .replace(/`([^`]+)`/g,"<code>$1</code>")
+    .replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>")
+    .replace(/__(.+?)__/g,"<strong>$1</strong>")
+    .replace(/\*(?!\s)(.+?)\*/g,"<em>$1</em>")
+    .replace(/_(?!\s)(.+?)_/g,"<em>$1</em>");
+  return String(value??"").split("\n").map(line=>{
+    const raw=line.trim();
+    if(!raw)return "";
+    if(/^---+$|^\*\*\*+$|^___+$/.test(raw))return "<hr>";
+    const heading=raw.match(/^(#{1,3})\s+(.+)$/);
+    if(heading){const level=heading[1].length;return "<h"+level+">"+inline(escape(heading[2]))+"</h"+level+">";}
+    if(/^>\s?/.test(raw))return "<blockquote>"+inline(escape(raw.replace(/^>\s?/,"")))+"</blockquote>";
+    if(/^[-*+]\s+/.test(raw))return "<p>• "+inline(escape(raw.replace(/^[-*+]\s+/,"")))+"</p>";
+    const numbered=raw.match(/^\d+\.\s+(.+)$/);
+    if(numbered)return "<p>"+raw.match(/^\d+/)[0]+". "+inline(escape(numbered[1]))+"</p>";
+    return "<p>"+inline(escape(raw))+"</p>";
+  }).join("");
+}
 function renderArticleContent(v){
   const colorTokens=[];
-  const source=String(v??"").replace(/\{\{color:(#[0-9a-fA-F]{6})\|([\s\S]*?)\}\}/g,(_,color,text)=>{
+  const source=String(v??"").replace(/\\{\\{color:(#[0-9a-fA-F]{6})\\|([\\s\\S]*?)\\}\\}/g,(_,color,text)=>{
     const token="KIZIMINCOLOR"+colorTokens.length+"TOKEN";
     colorTokens.push({token,color,text});
     return token;
   });
   const options={gfm:true,breaks:true};
-  let html=window.marked?marked.parse(source,options):escapeHtml(source).replace(/\n/g,"<br>");
-  html=window.DOMPurify?DOMPurify.sanitize(html,{USE_PROFILES:{html:true}}):escapeHtml(source).replace(/\n/g,"<br>");
+  let html=window.marked?marked.parse(source,options):fallbackArticleMarkdown(source);
+  html=window.DOMPurify?DOMPurify.sanitize(html,{USE_PROFILES:{html:true}}):fallbackArticleMarkdown(source);
   for(const item of colorTokens){
     let inner=window.marked?marked.parseInline(item.text,options):escapeHtml(item.text);
     if(window.DOMPurify)inner=DOMPurify.sanitize(inner,{USE_PROFILES:{html:true}});
