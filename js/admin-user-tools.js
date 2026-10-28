@@ -25,7 +25,7 @@ function read(r){
  const cells=Array.from(r.cells||r.children||[]);
  const cellText=index=>cells[index]?.textContent?.trim()||"";
  const s=r.querySelector(".account-status"),ro=r.querySelector(".user-role-select"),ex=r.querySelector(".ban-expires");
- return {row:r,id:s?.dataset.id||ro?.dataset.id||ex?.dataset.id,status:s?.value||(cellText(3).includes("BAN")?"banned":"active"),role:ro?.value||(cellText(2).includes("オーナー")?"owner":cellText(2).includes("管理者")?"admin":cellText(2).includes("モデレーター")?"moderator":cellText(2).includes("デバッカー")?"debugger":"user"),expiry:ex?.value||"",name:cellText(1)||cellText(0)||"ユーザー",username:cellText(0),registered:cellText(4)||"-",reason:cells[3]?.querySelector(".admin-muted")?.textContent||""};
+ return {row:r,id:s?.dataset.id||ro?.dataset.id||ex?.dataset.id,status:s?.value||(cellText(3).includes("BAN")?"banned":"active"),role:ro?.value||(cellText(2).includes("オーナー")?"owner":cellText(2).includes("管理者")?"admin":cellText(2).includes("モデレーター")?"moderator":cellText(2).includes("デバッカー")?"debugger":"user"),expiry:ex?.value||"",name:cellText(1)||cellText(0)||"ユーザー",username:cellText(0),registered:cellText(4)||"-",registeredAt:r.dataset.createdAt||"",reason:cells[3]?.querySelector(".admin-muted")?.textContent||""};
 }
 function decorate(){
  const b=$("users-body");if(!b)return;rows=[...b.querySelectorAll("tr")].filter(r=>r.querySelector(".account-status")||r.querySelector(".user-role-select")).map(read);
@@ -45,7 +45,7 @@ function filterRows(){
  rows.forEach(x=>{const t=x.expiry?new Date(x.expiry).getTime():null,expiryOk=mode==="all"||(mode==="soon"&&x.status==="banned"&&t!==null&&t>now&&t<=week)||(mode==="expired"&&x.status==="banned"&&t!==null&&t<=now)||(mode==="indefinite"&&x.status==="banned"&&!x.expiry);const match=x.row.textContent.toLowerCase().includes(q)&&(status==="all"||x.status===status)&&(role==="all"||x.role===role)&&expiryOk;x.row.hidden=!match;if(match)visible.push(x)});
  const sort=$("user-sort-mode")?.value||"newest";
  const roleOrder={owner:0,admin:1,moderator:2,debugger:3,user:4},statusOrder={banned:0,suspended:1,active:2};
- visible.sort((a,b)=>sort==="oldest"?(Date.parse(a.row.querySelector("td:nth-child(5)")?.textContent||"")||0)-(Date.parse(b.row.querySelector("td:nth-child(5)")?.textContent||"")||0):sort==="name"?a.name.localeCompare(b.name,"ja"):sort==="role"?(roleOrder[a.role]??9)-(roleOrder[b.role]??9):sort==="status"?(statusOrder[a.status]??9)-(statusOrder[b.status]??9):(Date.parse(b.row.querySelector("td:nth-child(5)")?.textContent||"")||0)-(Date.parse(a.row.querySelector("td:nth-child(5)")?.textContent||"")||0));
+ visible.sort((a,b)=>sort==="oldest"?(Date.parse(a.registeredAt)||0)-(Date.parse(b.registeredAt)||0):sort==="name"?a.name.localeCompare(b.name,"ja"):sort==="role"?(roleOrder[a.role]??9)-(roleOrder[b.role]??9):sort==="status"?(statusOrder[a.status]??9)-(statusOrder[b.status]??9):(Date.parse(b.registeredAt)||0)-(Date.parse(a.registeredAt)||0));
  const body=$("users-body");visible.forEach(x=>body.appendChild(x.row));
  if($("user-result-count"))$("user-result-count").textContent="表示中 "+visible.length+" / "+rows.length+" 人";
 }
