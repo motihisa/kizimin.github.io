@@ -101,3 +101,85 @@ footer,.footer{border-color:var(--kz-line)}
   .header-actions .login { padding: 0 9px; font-size: 12px; }
   .nav { max-width: 100%; }
 }
+
+
+/* Accessibility contrast pass for the redesigned admin UI */
+.admin-page {
+  --kz-muted: #514b68;
+  color: #292544;
+}
+.admin-page .admin-sidebar,
+.admin-page .admin-sidebar * {
+  opacity: 1;
+}
+.admin-page .admin-nav-label {
+  color: #625b7b !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+}
+.admin-page .admin-nav button,
+.admin-page .admin-sidebar a,
+.admin-page .admin-sidebar-bottom a {
+  color: #39334f !important;
+  font-weight: 650;
+}
+.admin-page .admin-nav button:hover,
+.admin-page .admin-sidebar a:hover,
+.admin-page .admin-nav button.active {
+  color: #34278f !important;
+  background: #e8e3ff !important;
+}
+.admin-page .admin-nav button:disabled,
+.admin-page .admin-sidebar a[aria-disabled="true"] {
+  color: #625b7b !important;
+  opacity: 1 !important;
+}
+.admin-page .admin-brand,
+.admin-page .admin-brand small {
+  color: #292544 !important;
+}
+.admin-page .admin-topbar p,
+.admin-page .admin-muted,
+.admin-page .admin-panel .admin-muted,
+.admin-page .admin-panel label,
+.admin-page .admin-panel small,
+.admin-page .stat-label {
+  color: #514b68 !important;
+}
+.admin-page .admin-table th {
+  color: #39334f !important;
+  background: #efedfa !important;
+  font-weight: 800;
+}
+.admin-page .admin-table td {
+  color: #292544 !important;
+}
+.admin-page .admin-badge {
+  color: #243b70 !important;
+  background: #e4edff !important;
+  font-weight: 750;
+}
+.admin-page input,
+.admin-page select,
+.admin-page textarea {
+  color: #292544 !important;
+  background: #fff !important;
+}
+.admin-page input::placeholder,
+.admin-page textarea::placeholder {
+  color: #625b7b !important;
+  opacity: 1;
+}
+.admin-page .admin-btn {
+  color: #292544;
+}
+.admin-page .admin-btn.primary {
+  color: #fff !important;
+}
+.admin-page .admin-alert,
+.admin-page .admin-ok {
+  font-weight: 650;
+}
+@media (max-width: 900px) {
+  .admin-page .admin-sidebar { background: #fff !important; }
+}
