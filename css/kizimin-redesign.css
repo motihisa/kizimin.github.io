@@ -71,3 +71,33 @@ footer,.footer{border-color:var(--kz-line)}
 @media(max-width:900px){.admin-shell{grid-template-columns:1fr}.admin-sidebar{position:relative;top:auto;height:auto;padding:12px;border-right:0;border-bottom:1px solid var(--kz-line)}.admin-brand{padding:8px 10px 12px}.admin-nav{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.admin-nav-label{grid-column:1/-1}.admin-sidebar-bottom{margin-top:12px}.dashboard-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-main{padding:14px}}
 @media(max-width:560px){.header-inner{width:calc(100% - 22px);flex-wrap:wrap;padding:10px 0}.hero{width:calc(100% - 22px);padding:28px 22px;border-radius:22px}.admin-nav{grid-template-columns:1fr 1fr}.admin-topbar{align-items:flex-start;flex-direction:column;padding:17px}.admin-panel{padding:15px}.dashboard-stats{grid-template-columns:1fr 1fr}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{transition:none!important;animation:none!important}}
+
+
+/* Header layout repair: keep desktop actions on one line and use a deliberate mobile layout. */
+@media (min-width: 1001px) {
+  .header-inner { gap: 12px; width: min(100% - 28px, 1400px); }
+  .logo { flex: 0 0 auto; font-size: 23px; }
+  .nav { flex: 1 1 auto; min-width: 0; justify-content: space-evenly; gap: 2px; font-size: 12px; }
+  .nav a { padding: 8px 5px; }
+  .header-actions { flex: 0 0 auto; gap: 6px; min-width: 0; }
+  .header-actions .search { width: clamp(130px, 15vw, 200px); min-width: 0; }
+  .header-actions .search:focus { width: clamp(130px, 15vw, 200px); }
+  .header-actions .login { white-space: nowrap; padding: 0 11px; }
+}
+@media (max-width: 1000px) {
+  .header-inner { width: calc(100% - 24px); padding: 10px 0; min-height: 0; flex-wrap: wrap; gap: 10px 14px; }
+  .nav { order: 3; flex: 1 0 100%; justify-content: space-between; gap: 4px; overflow-x: auto; }
+  .nav a { flex: 0 0 auto; padding: 8px 9px; }
+  .header-actions { flex: 1 1 auto; margin-left: auto; gap: 7px; }
+  .header-actions .search { flex: 1 1 140px; width: auto; min-width: 0; }
+  .header-actions .search:focus { width: auto; }
+  .header-actions .login { white-space: nowrap; padding: 0 10px; }
+}
+@media (max-width: 560px) {
+  .header-inner { gap: 9px; }
+  .logo { font-size: 22px; }
+  .header-actions { flex-basis: 100%; width: 100%; }
+  .header-actions .search { min-width: 90px; }
+  .header-actions .login { padding: 0 9px; font-size: 12px; }
+  .nav { max-width: 100%; }
+}
