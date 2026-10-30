@@ -616,8 +616,37 @@
     const status = select ? select.value : "active";
 
     if (status !== "active") {
-      const reason = prompt("BAN・一時停止の理由を入力してください。");
-      if (reason === null) return;
+      const reasonTemplates = status === "banned"
+        ? [
+            "利用規約に違反したため",
+            "スパム・迷惑行為を確認したため",
+            "荒らし行為を確認したため",
+            "不正な方法でサービスを利用したため",
+            "他の利用者への嫌がらせを確認したため"
+          ]
+        : [
+            "警告後も違反行為が続いたため",
+            "他の利用者への迷惑行為を確認したため",
+            "スパム行為を確認したため",
+            "アカウントの利用状況を確認するため",
+            "安全確認のため一時的に利用を制限するため"
+          ];
+      const actionLabel = status === "banned" ? "BAN" : "一時停止";
+      const choice = prompt(
+        actionLabel + "の理由を選択してください。\n" +
+        reasonTemplates.map((item, index) => (index + 1) + ". " + item).join("\n") +
+        "\n0. 自由入力\n\n番号を入力するか、理由を直接入力してください。"
+      );
+      if (choice === null) return;
+      const trimmedChoice = choice.trim();
+      let reason = "";
+      if (/^[1-5]$/.test(trimmedChoice)) {
+        reason = reasonTemplates[Number(trimmedChoice) - 1];
+      } else if (trimmedChoice === "0" || trimmedChoice === "") {
+        reason = prompt("理由を入力してください。") || "";
+      } else {
+        reason = trimmedChoice;
+      }
       if (!reason.trim()) {
         alert("理由を入力してください。");
         return;
