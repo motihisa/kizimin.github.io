@@ -111,7 +111,7 @@ async function handleSignal(row){
  try{
   if(s.type==="offer"){
    $("ac-call-panel").classList.remove("hidden");$("ac-call-video").dataset.mode=s.video?"video":"audio";$("ac-call-target").value=row.sender_id;
-   if(!confirm("管理者から"+(s.video?"ビデオ":"音声")+"通話の着信です。応答しますか？")){await sendSignal(row.sender_id,{type:"reject"});return;}
+   if(!confirm("管理者から音声通話の着信です。応答しますか？")){await sendSignal(row.sender_id,{type:"reject"});return;}
    await makePeer(row.sender_id,!!s.video);await pc.setRemoteDescription({type:"offer",sdp:s.sdp}); for(const candidate of pendingIce.splice(0)) await pc.addIceCandidate(candidate);
    const answer=await pc.createAnswer();await pc.setLocalDescription(answer);await sendSignal(row.sender_id,{type:"answer",sdp:answer.sdp});status("通話中");
   }else if(s.type==="answer"&&pc){await pc.setRemoteDescription({type:"answer",sdp:s.sdp}); for(const candidate of pendingIce.splice(0)) await pc.addIceCandidate(candidate); status("通話中");}
