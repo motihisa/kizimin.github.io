@@ -124,7 +124,7 @@
       return;
     }
 
-    const metadata = session.user?.user_metadata || {};
+    const metadata = session.user?.app_metadata || {};
     if (metadata.must_change_password === true && !/\/password-change\.html$/.test(location.pathname)) {
       location.replace("password-change.html");
       return;
