@@ -174,8 +174,8 @@
       const id=String(authorId), entry=activityByAuthor.get(id)||{count:0,categories:new Set()};
       entry.count++;entry.categories.add(category);activityByAuthor.set(id,entry);
     };
-    const collectUrls=(authorId,text)=> {
-      if(!authorId)return;
+    const collectUrls=(authorId,text,createdAt)=> {
+      if(!authorId||!createdAt||new Date(createdAt).getTime()<oneHourAgo)return;
       const urls=String(text||"").match(/https?:\/\/[^\s<>"']+/gi)||[];
       for(const raw of urls){let normalized;try{const u=new URL(raw);normalized=u.hostname.toLowerCase()+u.pathname.replace(/\/$/,"");}catch{continue;}
         const authors=urlAuthors.get(normalized)||new Set();authors.add(String(authorId));urlAuthors.set(normalized,authors);
@@ -202,7 +202,7 @@
       const seen=new Map();
       for(const r of rows){
         recordActivity(r.author_id,r.created_at,"コメント");
-        collectUrls(r.author_id,r.content);
+        collectUrls(r.author_id,r.content,r.created_at);
         const text=String(r.content||"");
         const reasonText=inspectText(text);
         const fingerprint=text.toLowerCase().replace(/\s+/g," ").trim();
@@ -218,7 +218,7 @@
       const rows=await safeRead("articles","id,title,excerpt,content,status,created_at",100,{status:"visible"});
       for(const r of rows){
         recordActivity(r.author_id,r.created_at,"記事");
-        collectUrls(r.author_id,[r.title,r.excerpt,r.content].filter(Boolean).join("\n"));
+        collectUrls(r.author_id,[r.title,r.excerpt,r.content].filter(Boolean).join("\n"),r.created_at);
         const reasonText=inspectText([r.title,r.excerpt,r.content].filter(Boolean).join("\n"));
         if(reasonText){stats.suspiciousArticles++;addAlert(alerts,"review","記事","確認が必要な記事",reasonText+" · "+String(r.title||"タイトルなし").slice(0,120)+" · "+fmt(r.created_at),String(r.id));}
       }
