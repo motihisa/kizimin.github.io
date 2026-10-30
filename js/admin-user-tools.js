@@ -128,7 +128,7 @@ async function details(id){
  if($("user-detail-reset-password"))$("user-detail-reset-password").onclick=async()=>{
    if(!confirm(x.name+" の登録メールアドレスにパスワード再設定メールを送信しますか？"))return;
    const button=$("user-detail-reset-password");button.disabled=true;
-   try{const r=await client.functions.invoke("secure-content",{body:{action:"admin_send_password_reset",user_id:id}});if(r.error||!r.data?.ok)throw new Error(r.data?.error||r.error?.message||"送信失敗");alert("パスワード再設定メールを送信しました。\\n送信先: "+(r.data.email||"登録メールアドレス"));dialog.close();}
+   try{const r=await client.functions.invoke("secure-content",{body:{action:"admin_send_password_reset",user_id:id}});if(r.error||!r.data?.ok)throw new Error(r.data?.error||r.error?.message||"送信失敗");alert("パスワード再設定メールを送信しました。\n送信先: "+(r.data.email||"登録メールアドレス"));dialog.close();}
    catch(e){console.error(e);alert("再設定メールを送信できませんでした: "+(e.message||"不明なエラー"));button.disabled=false;}
  };
  if(deleteButton)$("user-detail-delete").onclick=()=>{deleteButton.click();dialog.close()};
