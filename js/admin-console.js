@@ -36,7 +36,7 @@ async function execute(raw){
  const t=tokenize(raw.trim().replace(/^\/kizimin\s*/i,""));if(!t.length)return;
  const [a,b,c,...rest]=t, target=b, value=c, extra=rest.join(" ");
  if(a==="help"){out("利用可能なコマンド:");[
- "/kizimin help","/kizimin status","/kizimin users [検索語]","/kizimin user <名前|ID>",
+ "/kizimin help","/kizimin status"," /kizimin whoami","/kizimin activity [件数]","/kizimin filter history [件数]","/kizimin room info <ルームID>","/kizimin users [検索語]","/kizimin user <名前|ID>",
  "/kizimin user ban <名前|ID> <理由>","/kizimin user suspend <名前|ID> <30m|24h|7d> <理由>","/kizimin user unban <名前|ID>","/kizimin user role <名前|ID> <user|moderator|admin|debugger>",
  "/kizimin articles [検索語]","/kizimin article status <記事ID> <draft|published|archived>","/kizimin article delete <記事ID>",
  "/kizimin comments [検索語]","/kizimin comment status <コメントID> <visible|hidden|deleted>","/kizimin comment delete <コメントID>",
@@ -264,6 +264,24 @@ async function execute(raw){
   if(error)throw error;out("過去のお題 "+data.length+" 件");data.forEach(x=>out(x.topic_date+" | "+x.title+" | "+String(x.description||"").slice(0,100)));return;
  }
  if(a==="whoami"){out("現在の権限: "+role);out("オーナー権限: "+(owner?"あり":"なし"));return;}
+
+ if(a==="activity"){
+  const n=Math.max(1,Math.min(100,Number(target)||25));
+  const {data,error}=await db.from("admin_audit_events").select("event_type,target_type,target_id,summary,created_at,actor_id").order("created_at",{ascending:false}).limit(n);
+  if(error)throw error;out("管理操作履歴 "+data.length+" 件");data.forEach(x=>out(fmt(x.created_at)+" | "+x.event_type+" | "+x.summary+" | "+(x.target_type||"-")+":"+ (x.target_id||"-")));return;
+ }
+ if(a==="filter"&&b==="history"){
+  const n=Math.max(1,Math.min(100,Number(c)||25));
+  const {data,error}=await db.from("admin_abuse_filter_logs").select("filter_id,actor_id,target_type,target_id,action,matched_term,created_at").order("created_at",{ascending:false}).limit(n);
+  if(error)throw error;out("フィルター実行履歴 "+data.length+" 件");data.forEach(x=>out(fmt(x.created_at)+" | filter#"+x.filter_id+" | "+x.action+" | "+(x.matched_term||"-")+" | "+(x.target_type||"-")+":"+ (x.target_id||"-")));return;
+ }
+ if(a==="room"&&b==="info"){
+  if(!c)throw Error("ルームIDを指定してください。");
+  const {data,error}=await db.from("admin_connect_rooms").select("id,name,room_type,created_by,created_at").eq("id",c).maybeSingle();
+  if(error)throw error;if(!data)throw Error("ルームが見つかりません。");
+  const {count,error:ce}=await db.from("admin_connect_messages").select("id",{count:"exact",head:true}).eq("room_id",c);
+  if(ce)throw ce;out("ルーム: "+data.name);out("種別: "+data.room_type);out("作成日時: "+fmt(data.created_at));out("メッセージ数: "+count);out("ID: "+data.id);return;
+ }
  throw Error("不明なコマンドです。/kizimin help で一覧を確認してください。");
 }
 function bind(){
