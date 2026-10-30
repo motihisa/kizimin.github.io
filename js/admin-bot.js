@@ -9,17 +9,21 @@
   if (!$("view-bot") || !window.supabase?.createClient) return;
   const db = window.supabase.createClient(SUPABASE_URL, PUBLISHABLE_KEY);
   let userId = null, intervalId = null, running = false, scanInProgress = false, pendingRealtimeScan = false, realtimeChannel = null, realtimeTimer = null, lastAlerts = [], lastRunAt = null;
-  const defaults = { enabled:false, intervalMinutes:5, reports:true, inquiries:true, comments:true, articles:true };
-  const defaultPolicy = { mode:"detect_only", threshold:3, window_hours:24, suspend_minutes:60, url_threshold:4, repeat_char_threshold:12, max_suspensions_per_run:3 };
+  const defaultPolicy = { mode:"detect_only", threshold:3, window_hours:24, suspend_minutes:60, url_threshold:4, repeat_char_threshold:12, max_suspensions_per_run:3, enabled:false, interval_minutes:5, reports:true, inquiries:true, comments:true, articles:true };
   let policy = {...defaultPolicy}, policyLoaded = false;
   const storageKey = () => STORAGE_PREFIX + (userId || "unknown");
   function readConfig() {
-    try { return {...defaults, ...JSON.parse(localStorage.getItem(storageKey()) || "{}")}; }
-    catch { return {...defaults}; }
+    return {enabled:!!policy.enabled, intervalMinutes:Number(policy.interval_minutes)||5, reports:policy.reports!==false, inquiries:policy.inquiries!==false, comments:policy.comments!==false, articles:policy.articles!==false};
   }
-  function writeConfig(config) {
-    try { localStorage.setItem(storageKey(), JSON.stringify(config)); return true; }
-    catch { setStatus("設定を保存できません。ブラウザーの保存領域を確認してください。", "error"); return false; }
+  async function writeConfig(config) {
+    if(!policyLoaded || !userId) { setStatus("Supabase設定の読み込み完了後に変更してください。","error"); return false; }
+    policy={...policy,enabled:!!config.enabled,interval_minutes:Math.max(1,Math.min(60,Number(config.intervalMinutes)||5)),reports:!!config.reports,inquiries:!!config.inquiries,comments:!!config.comments,articles:!!config.articles};
+    try {
+      const {data,error}=await db.from("kizimin_bot_settings").update({settings:policy,updated_by:userId,updated_at:new Date().toISOString()}).eq("id",true).select("settings,updated_at").maybeSingle();
+      if(error) throw error;
+      if(!data) throw new Error("設定行が見つからないか、更新権限がありません。");
+      policy={...defaultPolicy,...data.settings}; renderPolicy(); setStatus("設定をSupabaseに保存しました。","success"); return true;
+    } catch(error) { setStatus("Supabaseへの設定保存に失敗しました: "+error.message,"error"); return false; }
   }
   function setStatus(message, type="info") {
     const el=$("bot-status"); if(!el)return;
@@ -33,7 +37,9 @@
     policy={...defaultPolicy,...data.settings};
     policyLoaded=true;
     renderPolicy();
-    setStatus("Supabaseから保存済みのバックグラウンドBot設定を読み込みました。","success");
+    renderConfig();
+    const updated=data.updated_at ? fmt(data.updated_at) : "更新日時不明";
+    setStatus("Supabaseから保存済み設定を読み込みました（最終更新: "+updated+"）。","success");
   }
   function renderPolicy() {
     if(policyLoaded) {
@@ -44,8 +50,12 @@
       if($("bot-url-threshold")) $("bot-url-threshold").value=String(Math.max(2,Math.min(6,Number(policy.url_threshold)||4)));
       if($("bot-repeat-char-threshold")) $("bot-repeat-char-threshold").value=String(Math.max(8,Math.min(30,Number(policy.repeat_char_threshold)||12)));
       if($("bot-max-suspensions")) $("bot-max-suspensions").value=String(Math.max(1,Math.min(10,Number(policy.max_suspensions_per_run)||3)));
+      if($("bot-enabled")) $("bot-enabled").checked=!!policy.enabled;
+      if($("bot-interval")) $("bot-interval").value=String(Math.max(1,Math.min(60,Number(policy.interval_minutes)||5)));
+      for(const key of ["reports","inquiries","comments","articles"]) if($("bot-source-"+key)) $("bot-source-"+key).checked=policy[key]!==false;
+      if($("bot-policy-summary")) $("bot-policy-summary").textContent="Supabase保存値: "+(policy.mode==="auto_suspend"?"自動一時停止":"検知のみ")+" / 判定 "+policy.threshold+"件 / "+policy.window_hours+"時間 / 停止 "+policy.suspend_minutes+"分 / URL "+policy.url_threshold+"件 / 連続文字 "+policy.repeat_char_threshold+"文字 / 1回上限 "+policy.max_suspensions_per_run+"件 / 管理画面自動チェック "+(policy.enabled?"ON":"OFF")+" / 間隔 "+(policy.interval_minutes||5)+"分 / 対象 "+["reports","inquiries","comments","articles"].filter(k=>policy[k]!==false).join("・"));
     }
-    for(const id of ["bot-mode","bot-threshold","bot-window-hours","bot-suspend-minutes","bot-url-threshold","bot-repeat-char-threshold","bot-max-suspensions"]) if($(id)) $(id).disabled=!policyLoaded;
+    for(const id of ["bot-mode","bot-threshold","bot-window-hours","bot-suspend-minutes","bot-url-threshold","bot-repeat-char-threshold","bot-max-suspensions","bot-enabled","bot-interval","bot-source-reports","bot-source-inquiries","bot-source-comments","bot-source-articles"]) if($(id)) $(id).disabled=!policyLoaded;
     if($("bot-policy-save")) $("bot-policy-save").disabled=!policyLoaded;
   }
   async function savePolicy() {
@@ -60,7 +70,13 @@
         suspend_minutes:Math.max(15,Math.min(1440,Number($("bot-suspend-minutes")?.value)||60)),
         url_threshold:Math.max(2,Math.min(6,Number($("bot-url-threshold")?.value)||4)),
         repeat_char_threshold:Math.max(8,Math.min(30,Number($("bot-repeat-char-threshold")?.value)||12)),
-        max_suspensions_per_run:Math.max(1,Math.min(10,Number($("bot-max-suspensions")?.value)||3))
+        max_suspensions_per_run:Math.max(1,Math.min(10,Number($("bot-max-suspensions")?.value)||3)),
+        enabled:!!$("bot-enabled")?.checked,
+        interval_minutes:Math.max(1,Math.min(60,Number($("bot-interval")?.value)||5)),
+        reports:!!$("bot-source-reports")?.checked,
+        inquiries:!!$("bot-source-inquiries")?.checked,
+        comments:!!$("bot-source-comments")?.checked,
+        articles:!!$("bot-source-articles")?.checked
       };
       if(mode==="auto_suspend"&&!confirm("自動一時停止を有効にします。条件に該当する一般ユーザーは自動で一時停止されます。続行しますか？")) { setStatus("保存をキャンセルしました。設定は変更されていません。"); return; }
       if(!userId) throw new Error("ログイン状態を確認できません。管理画面に再ログインしてください。");
@@ -75,7 +91,7 @@
       if(error) throw error;
       if(!data) throw new Error("保存対象が見つからないか、保存権限がありません。Supabaseの管理者ポリシーを確認してください。");
       policy={...defaultPolicy,...(data.settings||next)};
-      setStatus(mode==="auto_suspend"?"管理画面の設定を保存しました。実際の自動一時停止にはRender環境変数 BOT_AUTO_SUSPEND=true も必要です。":"設定を保存しました。現在は検知のみで、一時停止は行いません。","success");
+      setStatus(mode==="auto_suspend"?"Supabaseに自動一時停止設定を保存しました。実際の動作にはRender側の許可設定も必要です。":"Supabaseに検知のみ設定を保存しました。","success");
       renderPolicy();
     } catch(error) {
       const message="Bot設定を保存できませんでした: "+(error.message||"権限または通信状態を確認してください");
@@ -85,6 +101,7 @@
     } finally { if(button) button.disabled=false; }
   }
   function renderConfig() {
+    if(!policyLoaded) { for(const id of ["bot-enabled","bot-interval","bot-source-reports","bot-source-inquiries","bot-source-comments","bot-source-articles"]) if($(id)) $(id).disabled=true; return; }
     const c=readConfig();
     if($("bot-enabled")) $("bot-enabled").checked=!!c.enabled;
     if($("bot-interval")) $("bot-interval").value=String(c.intervalMinutes);
@@ -365,24 +382,24 @@
     $("bot-filter-source")?.addEventListener("change",renderAlertList);
     $("bot-policy-save")?.addEventListener("click",savePolicy);
     $("bot-stop")?.addEventListener("click",()=>{
-      const c=readConfig();c.enabled=false;writeConfig(c);setRunning(false);renderConfig();
+      const c=readConfig();c.enabled=false;void writeConfig(c);setRunning(false);renderConfig();
       setStatus("Botを停止しました。自動チェックは行いません。","success");
     });
     $("bot-enabled")?.addEventListener("change",()=>{
       const c=readConfig();c.enabled=$("bot-enabled").checked;
-      if(!writeConfig(c)){renderConfig();return;}
+      void writeConfig(c);
       setRunning(c.enabled);
       setStatus(c.enabled?"Botを有効にしました。この管理画面を開いている間、自動チェックを行います。":"Botを停止しました。","success");
       if(c.enabled) scan("起動時チェック");
     });
     $("bot-interval")?.addEventListener("change",()=>{
       const c=readConfig();c.intervalMinutes=Math.max(1,Math.min(60,Number($("bot-interval").value)||5));
-      writeConfig(c);if(running)setRunning(true);
+      void writeConfig(c);if(running)setRunning(true);
       setStatus("自動チェック間隔を保存しました。","success");
     });
     for(const key of ["reports","inquiries","comments","articles"]) $("bot-source-"+key)?.addEventListener("change",()=>{
       const c=readConfig();c[key]=$("bot-source-"+key).checked;
-      writeConfig(c);setStatus("チェック対象を保存しました。","success");
+      void writeConfig(c);
     });
     $("bot-clear-history")?.addEventListener("click",()=>{
       if(!confirm("このブラウザーに保存したBot履歴を削除しますか？"))return;
