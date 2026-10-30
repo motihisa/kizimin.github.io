@@ -367,3 +367,97 @@ footer,.footer{border-color:var(--kz-line)}
   background: #3a4660 !important;
 }
 .admin-page[data-site-theme="dark"] a:not(.admin-nav-link) { color: #c4b5fd; }
+
+
+/* 2026-10-30: explicit contrast fixes for standalone admin tools and hero panels. */
+.admin-page .ops-intro,
+.admin-page .email-checker-hero {
+  background: #24324a !important;
+  color: #ffffff !important;
+  border: 1px solid #53627a !important;
+}
+.admin-page .ops-intro h2,
+.admin-page .ops-intro p,
+.admin-page .email-checker-hero h1,
+.admin-page .email-checker-hero p,
+.admin-page .email-checker-hero .email-checker-eyebrow {
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+.admin-page .ops-card,
+.admin-page .email-checker-shell > .admin-panel,
+.admin-page #email-checker-app > .admin-panel {
+  color: #24213b !important;
+  background: #ffffff !important;
+  border: 1px solid #d8d3e8 !important;
+}
+.admin-page .ops-card h2,
+.admin-page .ops-card p,
+.admin-page .ops-card .ops-note,
+.admin-page .ops-card .ops-kpi span,
+.admin-page .ops-card .ops-item small,
+.admin-page .email-checker-footnote,
+.admin-page .email-checker-results,
+.admin-page .email-check-result span,
+.admin-page .email-checker-note {
+  color: #514b68 !important;
+  opacity: 1 !important;
+}
+.admin-page .ops-card .ops-kpi strong,
+.admin-page .ops-card .ops-result,
+.admin-page .ops-card .ops-item,
+.admin-page .email-checker-results h2,
+.admin-page .email-check-result strong {
+  color: #24213b !important;
+}
+.admin-page .email-checker-head a { color: #34278f !important; }
+.admin-page .email-checker-input-row input {
+  color: #24213b !important;
+  background: #ffffff !important;
+  border: 1px solid #aaa3bf !important;
+}
+.admin-page .email-checker-input-row input::placeholder {
+  color: #625c78 !important;
+  opacity: 1 !important;
+}
+.admin-page .ops-form input,
+.admin-page .ops-form select,
+.admin-page .ops-form textarea {
+  color: #24213b !important;
+  background: #ffffff !important;
+  border: 1px solid #aaa3bf !important;
+}
+.admin-page .ops-form input::placeholder { color: #625c78 !important; opacity: 1 !important; }
+.admin-page .ops-card .ops-status {
+  color: #34278f !important;
+  background: #e8e3ff !important;
+}
+.admin-page[data-site-theme="dark"] .ops-card,
+.admin-page[data-site-theme="dark"] .email-checker-shell > .admin-panel,
+.admin-page[data-site-theme="dark"] #email-checker-app > .admin-panel {
+  color: #f1f3f8 !important;
+  background: #202a3a !important;
+  border-color: #536078 !important;
+}
+.admin-page[data-site-theme="dark"] .ops-card h2,
+.admin-page[data-site-theme="dark"] .ops-card p,
+.admin-page[data-site-theme="dark"] .ops-card .ops-note,
+.admin-page[data-site-theme="dark"] .ops-card .ops-kpi strong,
+.admin-page[data-site-theme="dark"] .ops-card .ops-kpi span,
+.admin-page[data-site-theme="dark"] .ops-card .ops-result,
+.admin-page[data-site-theme="dark"] .ops-card .ops-item,
+.admin-page[data-site-theme="dark"] .ops-card .ops-item small,
+.admin-page[data-site-theme="dark"] .email-checker-results h2,
+.admin-page[data-site-theme="dark"] .email-check-result strong,
+.admin-page[data-site-theme="dark"] .email-check-result span,
+.admin-page[data-site-theme="dark"] .email-checker-footnote {
+  color: #e8edf5 !important;
+}
+.admin-page[data-site-theme="dark"] .email-checker-input-row input,
+.admin-page[data-site-theme="dark"] .ops-form input,
+.admin-page[data-site-theme="dark"] .ops-form select,
+.admin-page[data-site-theme="dark"] .ops-form textarea {
+  color: #f1f3f8 !important;
+  background: #202a3a !important;
+  border-color: #59677f !important;
+}
