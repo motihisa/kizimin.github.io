@@ -167,20 +167,42 @@
     setStatus(reason+"を実行しています…");
     const config=readConfig(), alerts=[], stats={reports:0,inquiries:0,suspiciousComments:0,suspiciousArticles:0,sitePagesChecked:0,sitePageErrors:0,errors:[]};
     const tasks=[];
+    const activityByAuthor=new Map(), urlAuthors=new Map();
+    const oneHourAgo=Date.now()-60*60*1000;
+    const recordActivity=(authorId,createdAt,category)=> {
+      if(!authorId||!createdAt||new Date(createdAt).getTime()<oneHourAgo)return;
+      const id=String(authorId), entry=activityByAuthor.get(id)||{count:0,categories:new Set()};
+      entry.count++;entry.categories.add(category);activityByAuthor.set(id,entry);
+    };
+    const collectUrls=(authorId,text)=> {
+      if(!authorId)return;
+      const urls=String(text||"").match(/https?:\/\/[^\s<>"']+/gi)||[];
+      for(const raw of urls){let normalized;try{const u=new URL(raw);normalized=u.hostname.toLowerCase()+u.pathname.replace(/\/$/,"");}catch{continue;}
+        const authors=urlAuthors.get(normalized)||new Set();authors.add(String(authorId));urlAuthors.set(normalized,authors);
+      }
+    };
     if(config.reports) tasks.push((async()=>{try{
       const rows=await safeRead("reports","id,reason,status,created_at",100);
       stats.reports=rows.filter(r=>isOpen(r.status)).length;
+      const stale=rows.filter(r=>isOpen(r.status)&&r.created_at&&Date.now()-new Date(r.created_at).getTime()>48*60*60*1000);
+      stats.staleReports=stale.length;
+      for(const r of stale.slice(0,10)) addAlert(alerts,"high","長期未対応","48時間以上未対応の通報",String(r.reason||"理由未記入").slice(0,140)+" · "+fmt(r.created_at),String(r.id));
       for(const r of rows.filter(r=>isOpen(r.status)).slice(0,15)) addAlert(alerts,"high","通報","未処理の通報があります",String(r.reason||"理由未記入").slice(0,180)+" · "+fmt(r.created_at),String(r.id));
     }catch(e){stats.errors.push("通報: "+e.message);}})());
     if(config.inquiries) tasks.push((async()=>{try{
       const rows=await safeRead("inquiries","id,subject,message,status,created_at",100);
       stats.inquiries=rows.filter(r=>isOpen(r.status)).length;
+      const stale=rows.filter(r=>isOpen(r.status)&&r.created_at&&Date.now()-new Date(r.created_at).getTime()>48*60*60*1000);
+      stats.staleInquiries=stale.length;
+      for(const r of stale.slice(0,10)) addAlert(alerts,"medium","長期未対応","48時間以上未対応の問い合わせ",String(r.subject||"件名なし")+" · "+fmt(r.created_at),String(r.id));
       for(const r of rows.filter(r=>isOpen(r.status)).slice(0,15)) addAlert(alerts,"medium","問い合わせ","未対応の問い合わせ",String(r.subject||"件名なし")+" · "+String(r.message||"").slice(0,100)+" · "+fmt(r.created_at),String(r.id));
     }catch(e){stats.errors.push("問い合わせ: "+e.message);}})());
     if(config.comments) tasks.push((async()=>{try{
       const rows=await safeRead("comments","id,author_id,content,status,created_at",100);
       const seen=new Map();
       for(const r of rows){
+        recordActivity(r.author_id,r.created_at,"コメント");
+        collectUrls(r.author_id,r.content);
         const text=String(r.content||"");
         const reasonText=inspectText(text);
         const fingerprint=text.toLowerCase().replace(/\s+/g," ").trim();
@@ -195,11 +217,25 @@
     if(config.articles) tasks.push((async()=>{try{
       const rows=await safeRead("articles","id,title,excerpt,content,status,created_at",100,{status:"visible"});
       for(const r of rows){
+        recordActivity(r.author_id,r.created_at,"記事");
+        collectUrls(r.author_id,[r.title,r.excerpt,r.content].filter(Boolean).join("\n"));
         const reasonText=inspectText([r.title,r.excerpt,r.content].filter(Boolean).join("\n"));
         if(reasonText){stats.suspiciousArticles++;addAlert(alerts,"review","記事","確認が必要な記事",reasonText+" · "+String(r.title||"タイトルなし").slice(0,120)+" · "+fmt(r.created_at),String(r.id));}
       }
     }catch(e){stats.errors.push("記事: "+e.message);}})());
+    tasks.push((async()=>{try{
+      const {data,error}=await db.from("profiles").select("id,created_at").gte("created_at",new Date(Date.now()-60*60*1000).toISOString()).order("created_at",{ascending:false}).limit(200);
+      if(error)throw error;
+      stats.newAccountsLastHour=(data||[]).length;
+      if(stats.newAccountsLastHour>=5)addAlert(alerts,"review","アカウント監視","短時間の新規登録増加","過去1時間に"+stats.newAccountsLastHour+"件のアカウント登録がありました。正規の利用増加か確認してください。");
+    }catch(e){stats.errors.push("アカウント監視: "+e.message);}})());
     await Promise.all(tasks);
+    const frequentAuthors=[...activityByAuthor.entries()].filter(([,v])=>v.count>=8);
+    stats.highActivityAuthors=frequentAuthors.length;
+    for(const [authorId,v] of frequentAuthors.slice(0,10))addAlert(alerts,"review","投稿頻度監視","短時間の投稿集中", "過去1時間に"+v.count+"件の投稿（"+[...v.categories].join("・")+"）。自動処分せず確認してください。",authorId);
+    const repeatedUrls=[...urlAuthors.entries()].filter(([,authors])=>authors.size>=3);
+    stats.repeatedUrls=repeatedUrls.length;
+    for(const [url,authors] of repeatedUrls.slice(0,10))addAlert(alerts,"review","URL監視","複数アカウントで同じURLを検出",url+" · "+authors.size+"アカウント");
     try { await scanSiteAvailability(alerts, stats); } catch(e) { stats.errors.push("サイト監視: "+e.message); }
     lastRunAt=new Date().toISOString();
     lastAlerts=alerts.sort((a,b)=>({high:0,medium:1,review:2}[a.level]-({high:0,medium:1,review:2}[b.level])));
@@ -256,7 +292,7 @@
   function renderResults(stats,alerts,reason) {
     const kpis=[
       ["未処理の通報",stats.reports,"high"],["未対応の問い合わせ",stats.inquiries,"medium"],
-      ["要確認コメント",stats.suspiciousComments,"review"],["要確認記事",stats.suspiciousArticles,"review"],["サイト応答異常",stats.sitePageErrors,"high"],["確認したページ",stats.sitePagesChecked,"medium"]
+      ["要確認コメント",stats.suspiciousComments,"review"],["要確認記事",stats.suspiciousArticles,"review"],["長期未対応",Number(stats.staleReports||0)+Number(stats.staleInquiries||0),"high"],["投稿集中",stats.highActivityAuthors||0,"review"],["同一URLの共有",stats.repeatedUrls||0,"review"],["新規登録（1時間）",stats.newAccountsLastHour||0,"medium"],["サイト応答異常",stats.sitePageErrors,"high"],["確認したページ",stats.sitePagesChecked,"medium"]
     ];
     if($("bot-kpis")) $("bot-kpis").innerHTML=kpis.map(([label,value,kind])=>'<div class="bot-kpi '+kind+'"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong></div>').join("");
     renderAlertList();
