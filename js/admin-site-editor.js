@@ -165,7 +165,7 @@
     if(profileError){denied("管理者権限の確認に失敗しました。");return false;}
     const {data:ownerFlag,error:ownerError}=await db.rpc("is_site_owner");
     const isOwner=!ownerError && ownerFlag===true;
-    if(!isOwner || (profile?.account_status && profile.account_status!=="active")){denied("サイトエディターを利用できるのはオーナーのみです。");return false;}
+    if(!isOwner){denied("サイトエディターを利用できるのはオーナーのみです。");return false;}
     $("editor-loading").classList.add("hidden"); $("editor-app").classList.remove("hidden");
     return true;
   }
