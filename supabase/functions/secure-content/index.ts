@@ -422,14 +422,23 @@ async function main(req: Request) {
     const articleId = String(body.article_id || "");
     if (!articleId) return json({error:"INVALID_ARTICLE_ID"},400);
     if (!isOwner && (profile?.account_status || "active") !== "active") return json({error:"ACCOUNT_INACTIVE"},403);
-    const {data:ownerRow,error:ownerError}=await admin.from("site_owners").select("user_id").eq("user_id",userId).maybeSingle();
-    const isOwner=!ownerError && !!ownerRow;
+    // Reuse the verified owner lookup performed before action dispatch.
+    // Redeclaring isOwner here would shadow the outer binding and trigger a TDZ ReferenceError.
     if (!isOwner && profile?.role !== "admin") return json({error:"PERMISSION_DENIED"},403);
     const {data:article,error:findError}=await admin.from("articles").select("id,title").eq("id",articleId).maybeSingle();
     if (findError) return json({error:"ARTICLE_LOOKUP_FAILED"},500);
     if (!article) return json({error:"ARTICLE_NOT_FOUND"},404);
     const {data:deleted,error}=await admin.from("articles").delete().eq("id",articleId).select("id").maybeSingle();
-    if (error) return json({error:"ARTICLE_DELETE_FAILED"},500);
+    if (error) {
+      console.error("article_delete database operation failed:", {
+        articleId,
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      });
+      return json({error:"ARTICLE_DELETE_FAILED"},500);
+    }
     if (!deleted) return json({error:"ARTICLE_NOT_DELETED"},500);
     return json({ok:true});
   }
