@@ -42,7 +42,13 @@ async function execute(raw){
  "/kizimin comments [検索語]","/kizimin comment status <コメントID> <visible|hidden|deleted>","/kizimin comment delete <コメントID>",
  "/kizimin reports [open|all]","/kizimin report status <通報ID> <open|reviewing|resolved|dismissed>",
  "/kizimin inquiries [open|all]","/kizimin inquiry status <問い合わせID> <open|reviewing|resolved|closed|dismissed>",
- "/kizimin maintenance status|on|off|reason <理由>","/kizimin bot status|run|stop"
+ "/kizimin maintenance status|on|off|reason <理由>","/kizimin bot status|run|stop",
+ "/kizimin categories","/kizimin topic","/kizimin access [ユーザーID|パス]",
+ "/kizimin audit [件数]","/kizimin roles [ユーザーID]",
+ "/kizimin orgs [検索語]","/kizimin orgapps [pending|all]","/kizimin orgmembers <団体ID>",
+ "/kizimin ops incidents|schedules|approvals","/kizimin filters",
+ "/kizimin article pin <記事ID> <on|off>","/kizimin article protect <記事ID> <理由>","/kizimin article unprotect <記事ID>",
+ "/kizimin site settings","/kizimin bot config"
  ].forEach(x=>out("  "+x));return;}
  if(a==="status"){
   const [dash,maint]=await Promise.all([db.rpc("admin_dashboard_stats"),db.from("site_settings").select("maintenance_mode,maintenance_type,maintenance_reason").eq("id",true).maybeSingle()]);
@@ -116,6 +122,19 @@ async function execute(raw){
   if(b==="status"){out("Bot: "+($("bot-running-state")?.textContent||"状態不明"));out("最終実行: "+($("bot-last-run")?.textContent||"未実行"));out("状態: "+($("bot-status")?.textContent||""));return;}
   const btn=$(b==="run"?"bot-run-now":b==="stop"?"bot-stop":null);if(!btn)throw Error("bot status / run / stop を指定してください。");btn.click();out(b==="run"?"Botチェックを開始しました。":"Bot停止を要求しました。","success");return;
  }
+
+ if(a==="categories"){const {data,error}=await db.from("categories").select("id,name,slug,admin_only").order("name").limit(100);if(error)throw error;out("カテゴリ "+data.length+" 件");data.forEach(x=>out(x.name+" | "+x.slug+" | admin_only="+x.admin_only+" | "+x.id));return;}
+ if(a==="topic"){const today=new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Tokyo"});const {data,error}=await db.from("daily_topics").select("topic_date,title,description").eq("topic_date",today).maybeSingle();if(error)throw error;if(!data){out("今日のお題は未設定です。");return;}out(data.topic_date+" | "+data.title);out(data.description||"");return;}
+ if(a==="access"){let q=db.from("access_logs").select("id,path,visited_at,user_id").order("visited_at",{ascending:false}).limit(30);if(target){if(/^[0-9a-f-]{36}$/i.test(target))q=q.eq("user_id",target);else q=q.ilike("path","%"+target+"%");}const {data,error}=await q;if(error)throw error;out("アクセスログ "+data.length+" 件");data.forEach(x=>out(fmt(x.visited_at)+" | "+x.path+" | "+(x.user_id||"匿名")+" | "+x.id));return;}
+ if(a==="audit"){const n=Math.max(1,Math.min(100,Number(target)||30));const {data,error}=await db.from("admin_audit_events").select("event_type,target_type,target_id,summary,created_at").order("created_at",{ascending:false}).limit(n);if(error)throw error;out("管理操作ログ "+data.length+" 件");data.forEach(x=>out(fmt(x.created_at)+" | "+x.event_type+" | "+x.summary+" | "+(x.target_type||"")+" "+(x.target_id||"")));return;}
+ if(a==="roles"){let q=db.from("role_change_audit").select("target_user_id,old_role,new_role,changed_at,changed_by").order("changed_at",{ascending:false}).limit(30);if(target)q=q.eq("target_user_id",target);const {data,error}=await q;if(error)throw error;out("権限変更履歴 "+data.length+" 件");data.forEach(x=>out(fmt(x.changed_at)+" | "+x.old_role+" → "+x.new_role+" | "+x.target_user_id));return;}
+ if(a==="orgs"){let q=db.from("organizations").select("id,name,organization_type,status,created_at").order("created_at",{ascending:false}).limit(50);if(target)q=q.ilike("name","%"+target+"%");const {data,error}=await q;if(error)throw error;out("団体 "+data.length+" 件");data.forEach(x=>out(x.name+" | "+x.organization_type+" | "+x.status+" | "+x.id));return;}
+ if(a==="orgapps"){let q=db.from("organization_applications").select("id,organization_name,organization_type,status,applicant_id,review_reason").order("created_at",{ascending:false}).limit(50);if(target&&target!=="all")q=q.eq("status",target);const {data,error}=await q;if(error)throw error;out("団体申請 "+data.length+" 件");data.forEach(x=>out(x.organization_name+" | "+x.status+" | "+x.applicant_id+" | "+x.id));return;}
+ if(a==="orgmembers"){if(!target)throw Error("団体IDを指定してください。");const {data,error}=await db.from("organization_members").select("id,user_id,role,status").eq("organization_id",target).order("created_at",{ascending:false}).limit(100);if(error)throw error;out("団体メンバー "+data.length+" 人");data.forEach(x=>out(x.user_id+" | "+x.role+" | "+x.status+" | "+x.id));return;}
+ if(a==="ops"){const table=b==="incidents"?"kizimin_ops_incidents":b==="schedules"?"kizimin_ops_schedules":b==="approvals"?"kizimin_ops_approvals":null;if(!table)throw Error("ops incidents / schedules / approvals を指定してください。");const {data,error}=await db.from(table).select("*").order("created_at",{ascending:false}).limit(30);if(error)throw error;out("運営 "+b+" "+data.length+" 件");data.forEach(x=>out(b==="incidents"?(x.severity+" | "+x.title+" | "+(x.resolved_at?"解決済":"未解決")+" | "+x.id):b==="schedules"?(x.name+" | "+x.task_type+" | "+(x.enabled?"有効":"停止")+" | "+x.last_status+" | "+x.id):(x.status+" | "+x.title+" | "+x.action_type+" | "+x.id)));return;}
+ if(a==="filters"){const {data,error}=await db.from("admin_abuse_filters").select("id,name,term,applies_to,action,enabled").order("id",{ascending:false}).limit(100);if(error)throw error;out("不正利用フィルター "+data.length+" 件");data.forEach(x=>out("#"+x.id+" "+x.name+" | "+x.term+" | "+x.applies_to+" | "+x.action+" | "+(x.enabled?"ON":"OFF")));return;}
+ if(a==="site"&&b==="settings"){if(!owner)throw Error("サイト設定の閲覧はオーナー専用です。");const {data,error}=await db.from("site_editor_settings").select("setting_key,updated_at").order("setting_key").limit(100);if(error)throw error;out("サイト編集設定 "+data.length+" 件（値は非表示）");data.forEach(x=>out(x.setting_key+" | "+fmt(x.updated_at)));return;}
+ if(a==="bot"&&b==="config"){if(!owner)throw Error("Bot設定の確認はオーナー専用です。");const {data,error}=await db.from("kizimin_bot_settings").select("id,updated_at,settings").limit(1).maybeSingle();if(error)throw error;if(!data){out("Bot設定は未登録です。");return;}out("Bot設定キー: "+Object.keys(data.settings||{}).join(", "));out("最終更新: "+fmt(data.updated_at));out("秘密値は表示していません。");return;}
  throw Error("不明なコマンドです。/kizimin help で一覧を確認してください。");
 }
 function bind(){
