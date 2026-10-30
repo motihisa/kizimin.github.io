@@ -53,7 +53,7 @@
       if($("bot-enabled")) $("bot-enabled").checked=!!policy.enabled;
       if($("bot-interval")) $("bot-interval").value=String(Math.max(1,Math.min(60,Number(policy.interval_minutes)||5)));
       for(const key of ["reports","inquiries","comments","articles"]) if($("bot-source-"+key)) $("bot-source-"+key).checked=policy[key]!==false;
-      if($("bot-policy-summary")) $("bot-policy-summary").textContent="Supabase保存値: "+(policy.mode==="auto_suspend"?"自動一時停止":"検知のみ")+" / 判定 "+policy.threshold+"件 / "+policy.window_hours+"時間 / 停止 "+policy.suspend_minutes+"分 / URL "+policy.url_threshold+"件 / 連続文字 "+policy.repeat_char_threshold+"文字 / 1回上限 "+policy.max_suspensions_per_run+"件 / 管理画面自動チェック "+(policy.enabled?"ON":"OFF")+" / 間隔 "+(policy.interval_minutes||5)+"分 / 対象 "+["reports","inquiries","comments","articles"].filter(k=>policy[k]!==false).join("・")+"。自動一時停止の実動作にはRenderのBOT_AUTO_SUSPEND=trueも必要です。");
+      if($("bot-policy-summary")) $("bot-policy-summary").textContent="Supabase保存値: "+(policy.mode==="auto_suspend"?"自動一時停止":"検知のみ")+" / 判定 "+policy.threshold+"件 / "+policy.window_hours+"時間 / 停止 "+policy.suspend_minutes+"分 / URL "+policy.url_threshold+"件 / 連続文字 "+policy.repeat_char_threshold+"文字 / 1回上限 "+policy.max_suspensions_per_run+"件 / 管理画面自動チェック "+(policy.enabled?"ON":"OFF")+" / 間隔 "+(policy.interval_minutes||5)+"分 / 対象 "+["reports","inquiries","comments","articles"].filter(k=>policy[k]!==false).join("・")+"。自動一時停止の実動作にはRenderのBOT_AUTO_SUSPEND=trueも必要です。";
     }
     for(const id of ["bot-mode","bot-threshold","bot-window-hours","bot-suspend-minutes","bot-url-threshold","bot-repeat-char-threshold","bot-max-suspensions","bot-enabled","bot-interval","bot-source-reports","bot-source-inquiries","bot-source-comments","bot-source-articles"]) if($(id)) $(id).disabled=!policyLoaded;
     if($("bot-policy-save")) $("bot-policy-save").disabled=!policyLoaded;
@@ -261,7 +261,7 @@
     for(const [url,authors] of repeatedUrls.slice(0,10))addAlert(alerts,"review","URL監視","複数アカウントで同じURLを検出",url+" · "+authors.size+"アカウント");
     try { await scanSiteAvailability(alerts, stats); } catch(e) { stats.errors.push("サイト監視: "+e.message); }
     lastRunAt=new Date().toISOString();
-    lastAlerts=alerts.sort((a,b)=>({high:0,medium:1,review:2}[a.level]-({high:0,medium:1,review:2}[b.level])));
+    lastAlerts=alerts.sort((a,b)=>{const order={high:0,medium:1,review:2};return (order[a.level]??9)-(order[b.level]??9);});
     renderResults(stats,alerts,reason);
     const history=readHistory();
     history.unshift({at:lastRunAt,reason,alerts:alerts.length,errors:stats.errors.length,summary:stats});
