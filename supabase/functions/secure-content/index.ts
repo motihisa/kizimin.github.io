@@ -155,7 +155,7 @@ async function main(req: Request) {
     const response = await fetch(url + "/auth/v1/recover", {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: publishableKey },
-      body: JSON.stringify({ email: targetAuth.user.email })
+      body: JSON.stringify({ email: targetAuth.user.email, redirect_to: "https://kizimin-site.onrender.com/password-change.html" })
     });
     if (!response.ok) {
       console.error("Password reset email request failed:", response.status, await response.text());
