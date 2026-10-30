@@ -371,7 +371,7 @@ async function main(req: Request) {
   if (action === "comment_like_toggle") {
     const commentId = String(body.comment_id || "");
     if (!commentId) return json({ error: "INVALID_COMMENT_ID" }, 400);
-    if (!profile || (profile.account_status || "active") !== "active") return json({ error: "ACCOUNT_INACTIVE" }, 403);
+    if (!profile || (!isOwner && (profile.account_status || "active") !== "active")) return json({ error: "ACCOUNT_INACTIVE" }, 403);
     const { data: comment, error: commentError } = await admin.from("comments")
       .select("id,article_id,status").eq("id", commentId).maybeSingle();
     if (commentError) return json({ error: "COMMENT_LOOKUP_FAILED" }, 500);
@@ -421,7 +421,7 @@ async function main(req: Request) {
   if (action === "article_delete") {
     const articleId = String(body.article_id || "");
     if (!articleId) return json({error:"INVALID_ARTICLE_ID"},400);
-    if ((profile?.account_status || "active") !== "active") return json({error:"ACCOUNT_INACTIVE"},403);
+    if (!isOwner && (profile?.account_status || "active") !== "active") return json({error:"ACCOUNT_INACTIVE"},403);
     const {data:ownerRow,error:ownerError}=await admin.from("site_owners").select("user_id").eq("user_id",userId).maybeSingle();
     const isOwner=!ownerError && !!ownerRow;
     if (!isOwner && profile?.role !== "admin") return json({error:"PERMISSION_DENIED"},403);
