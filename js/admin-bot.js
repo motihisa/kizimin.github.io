@@ -51,6 +51,10 @@
       if(!data?.settings || typeof data.settings !== "object" || Array.isArray(data.settings)) throw new Error("SupabaseのBot設定行が見つかりません。初期値で上書きせず、保存を停止しました。");
       policy={...defaultPolicy,...data.settings};
       policyLoaded=true;
+      // Remove the loading placeholder so the saved value is always visibly selected.
+      for(const id of ["bot-interval","bot-mode","bot-threshold","bot-window-hours","bot-suspend-minutes","bot-url-threshold","bot-repeat-char-threshold","bot-max-suspensions"]) {
+        $(id)?.querySelector('option[disabled][value=""]')?.remove();
+      }
       renderPolicy();
       renderConfig();
       // Apply the persisted automatic-check setting only after Supabase has loaded it.
