@@ -474,3 +474,15 @@ footer,.footer{border-color:var(--kz-line)}
 .admin-page[data-site-theme="dark"] .abuse-filter-form label,.admin-page[data-site-theme="dark"] .abuse-filter-row strong,.admin-page[data-site-theme="dark"] .abuse-filter-row p,.admin-page[data-site-theme="dark"] .abuse-filter-row small{color:#e8edf5}
 .admin-page[data-site-theme="dark"] .abuse-filter-form input,.admin-page[data-site-theme="dark"] .abuse-filter-form select{background:#202a3a;color:#f1f3f8;border-color:#59677f}
 @media(max-width:700px){.admin-page .abuse-filter-form{grid-template-columns:1fr}.admin-page .abuse-filter-row{align-items:flex-start;flex-direction:column}}
+
+/* Meta-Wiki style admin activity explorer and high-contrast controls */
+.admin-page .admin-log-toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+.admin-page .admin-log-toolbar input{flex:1;min-width:220px}
+.admin-page .admin-log-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 14px;padding:12px 14px;border-bottom:1px solid #d5d9e2;background:#fff;color:#20283a}
+.admin-page .admin-log-row strong{color:#20283a}
+.admin-page .admin-log-row span,.admin-page .admin-log-row small{color:#4b5568}
+.admin-page .admin-log-toolbar select,.admin-page .admin-log-toolbar input{background:#fff!important;color:#20283a!important;border:1px solid #8c96a8!important}
+.admin-page .admin-log-toolbar input::placeholder{color:#596579!important;opacity:1}
+.admin-page[data-site-theme="dark"] .admin-log-row{background:#202a3a;color:#f1f3f8;border-color:#536078}
+.admin-page[data-site-theme="dark"] .admin-log-row strong,.admin-page[data-site-theme="dark"] .admin-log-row span,.admin-page[data-site-theme="dark"] .admin-log-row small{color:#e8edf5}
+.admin-page[data-site-theme="dark"] .admin-log-toolbar select,.admin-page[data-site-theme="dark"] .admin-log-toolbar input{background:#202a3a!important;color:#f1f3f8!important;border-color:#65738b!important}
