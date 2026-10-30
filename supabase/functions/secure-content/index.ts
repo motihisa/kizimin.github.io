@@ -83,7 +83,9 @@ async function main(req: Request) {
   if ((profile.account_status || "active") !== "active" && !isOwner) {
     return json({ error: "ACCOUNT_RESTRICTED" }, 403);
   }
-  if (authData.user.user_metadata?.must_change_password === true) {
+  const body = await req.json().catch(() => ({}));
+  const action = String(body.action || "");
+  if (authData.user.app_metadata?.must_change_password === true && action !== "complete_forced_password_change") {
     return json({ error: "PASSWORD_CHANGE_REQUIRED" }, 403);
   }
   const isStaff = !!profile
@@ -108,8 +110,15 @@ async function main(req: Request) {
     return !error && data?.allowed === true;
   };
 
-  const body = await req.json().catch(() => ({}));
-  const action = String(body.action || "");
+  if (action === "complete_forced_password_change") {
+    if (authData.user.app_metadata?.must_change_password !== true) return json({ ok: true });
+    const { error: metadataError } = await admin.auth.admin.updateUserById(userId, {
+      app_metadata: { ...(authData.user.app_metadata || {}), must_change_password: false }
+    });
+    if (metadataError) return json({ error: "PASSWORD_POLICY_CLEAR_FAILED" }, 500);
+    return json({ ok: true });
+  }
+
   if (action === "admin_force_password_change" || action === "admin_send_password_reset") {
     const targetId = String(body.user_id || "");
     if (!targetId) return json({ error: "INVALID_USER" }, 400);
@@ -134,15 +143,18 @@ async function main(req: Request) {
 
     if (action === "admin_force_password_change") {
       const { error: updateError } = await admin.auth.admin.updateUserById(targetId, {
-        user_metadata: { ...(targetAuth.user.user_metadata || {}), must_change_password: true }
+        app_metadata: { ...(targetAuth.user.app_metadata || {}), must_change_password: true }
       });
       if (updateError) return json({ error: "PASSWORD_POLICY_UPDATE_FAILED" }, 500);
       return json({ ok: true, email: targetAuth.user.email });
     }
 
+    const publishableKeys = JSON.parse(Deno.env.get("SUPABASE_PUBLISHABLE_KEYS") || "{}");
+    const publishableKey = publishableKeys.default || Deno.env.get("SUPABASE_ANON_KEY");
+    if (!publishableKey) return json({ error: "PUBLISHABLE_KEY_NOT_CONFIGURED" }, 500);
     const response = await fetch(url + "/auth/v1/recover", {
       method: "POST",
-      headers: { "Content-Type": "application/json", apikey: sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf },
+      headers: { "Content-Type": "application/json", apikey: publishableKey },
       body: JSON.stringify({ email: targetAuth.user.email })
     });
     if (!response.ok) {
