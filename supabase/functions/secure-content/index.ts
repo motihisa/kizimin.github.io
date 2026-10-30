@@ -68,17 +68,24 @@ async function main(req: Request) {
     .eq("id", userId)
     .maybeSingle();
 
-  // Enforce account restrictions before any privileged content or DM action.
   if (profileError) {
     console.error("secure-content account status lookup failed:", profileError.message);
     return json({ error: "ACCOUNT_STATUS_CHECK_FAILED" }, 500);
   }
-  if (!profile || (profile.account_status || "active") !== "active") {
-    return json({ error: "ACCOUNT_RESTRICTED" }, 403);
-  }
+  if (!profile) return json({ error: "ACCOUNT_RESTRICTED" }, 403);
+
+  // Only a verified site_owners row grants the account-status exception.
+  // The admin role alone never bypasses BAN or suspension.
   const { data: actorOwnerRow, error: actorOwnerError } = await admin.from("site_owners")
     .select("user_id").eq("user_id", userId).maybeSingle();
-  const isOwner = !actorOwnerError && !!actorOwnerRow;
+  if (actorOwnerError) return json({ error: "OWNER_CHECK_FAILED" }, 500);
+  const isOwner = !!actorOwnerRow;
+  if ((profile.account_status || "active") !== "active" && !isOwner) {
+    return json({ error: "ACCOUNT_RESTRICTED" }, 403);
+  }
+  if (authData.user.user_metadata?.must_change_password === true) {
+    return json({ error: "PASSWORD_CHANGE_REQUIRED" }, 403);
+  }
   const isStaff = !!profile
     && (isOwner || ["admin","moderator"].includes(profile.role))
     && (profile.account_status || "active") === "active";
@@ -103,6 +110,48 @@ async function main(req: Request) {
 
   const body = await req.json().catch(() => ({}));
   const action = String(body.action || "");
+  if (action === "admin_force_password_change" || action === "admin_send_password_reset") {
+    const targetId = String(body.user_id || "");
+    if (!targetId) return json({ error: "INVALID_USER" }, 400);
+    if (targetId === userId && action === "admin_force_password_change") {
+      return json({ error: "SELF_FORCE_CHANGE_NOT_ALLOWED" }, 400);
+    }
+    if (action === "admin_send_password_reset" && !isOwner) {
+      return json({ error: "OWNER_REQUIRED" }, 403);
+    }
+    if (action === "admin_force_password_change" && !isOwner && profile.role !== "admin") {
+      return json({ error: "ADMIN_REQUIRED" }, 403);
+    }
+    const { data: targetProfile, error: targetProfileError } = await admin
+      .from("profiles").select("id,role").eq("id", targetId).maybeSingle();
+    if (targetProfileError) return json({ error: "USER_LOOKUP_FAILED" }, 500);
+    if (!targetProfile) return json({ error: "USER_NOT_FOUND" }, 404);
+    if (!isOwner && ["admin", "owner"].includes(targetProfile.role)) {
+      return json({ error: "TARGET_ROLE_PROTECTED" }, 403);
+    }
+    const { data: targetAuth, error: targetAuthError } = await admin.auth.admin.getUserById(targetId);
+    if (targetAuthError || !targetAuth.user?.email) return json({ error: "EMAIL_LOOKUP_FAILED" }, 500);
+
+    if (action === "admin_force_password_change") {
+      const { error: updateError } = await admin.auth.admin.updateUserById(targetId, {
+        user_metadata: { ...(targetAuth.user.user_metadata || {}), must_change_password: true }
+      });
+      if (updateError) return json({ error: "PASSWORD_POLICY_UPDATE_FAILED" }, 500);
+      return json({ ok: true, email: targetAuth.user.email });
+    }
+
+    const response = await fetch(url + "/auth/v1/recover", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf },
+      body: JSON.stringify({ email: targetAuth.user.email })
+    });
+    if (!response.ok) {
+      console.error("Password reset email request failed:", response.status, await response.text());
+      return json({ error: "PASSWORD_RESET_EMAIL_FAILED" }, 502);
+    }
+    return json({ ok: true, email: targetAuth.user.email });
+  }
+
   if (action === "admin_user_details") {
     const { data: ownerRow, error: ownerError } = await admin.from("site_owners").select("user_id").eq("user_id", userId).maybeSingle();
     if (ownerError) return json({ error: "ADMIN_CHECK_FAILED" }, 500);
