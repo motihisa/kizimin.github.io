@@ -41,11 +41,11 @@ async function openRoom(id){
  $("ac-room-title").textContent=room.name;$("ac-room-subtitle").textContent="管理者間のリアルタイム連絡";
  $("ac-rooms").querySelectorAll(".ac-room").forEach(b=>b.classList.toggle("active",b.dataset.id===id));
  if(channel) await db.removeChannel(channel);
- const {data,error}=await db.from("admin_connect_messages").select("id,room_id,sender_id,body,attachment_path,attachment_type,created_at,profiles:sender_id(display_name,username)").eq("room_id",id).order("created_at").limit(150);
+ const {data,error}=await db.from("admin_connect_messages").select("id,room_id,sender_id,body,attachment_path,attachment_type,created_at,profiles:profiles!admin_connect_messages_sender_profile_fkey(display_name,username)").eq("room_id",id).order("created_at").limit(150);
  if(error){$("ac-messages").textContent="メッセージを取得できません: "+error.message;return;}
  renderMessages(data||[]);
  channel=db.channel("admin-connect-room-"+id).on("postgres_changes",{event:"INSERT",schema:"public",table:"admin_connect_messages",filter:"room_id=eq."+id},async payload=>{
-  const {data:msg}=await db.from("admin_connect_messages").select("id,room_id,sender_id,body,attachment_path,attachment_type,created_at,profiles:sender_id(display_name,username)").eq("id",payload.new.id).maybeSingle();
+  const {data:msg}=await db.from("admin_connect_messages").select("id,room_id,sender_id,body,attachment_path,attachment_type,created_at,profiles:profiles!admin_connect_messages_sender_profile_fkey(display_name,username)").eq("id",payload.new.id).maybeSingle();
   if(msg){appendMessage(msg);if(msg.sender_id!==uid&&$("ac-tts").checked&&msg.body) speak(msg.body);}
  }).subscribe();
 }
