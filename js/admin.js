@@ -726,6 +726,9 @@
         .order("created_at", { ascending:false });
       if (error) throw error;
       const rows = data || [];
+      const { data: protectionRows, error: protectionError } = await supabase.from("article_protections").select("article_id,reason,expires_at");
+      if (protectionError) console.warn("記事保護状態の取得に失敗:", protectionError);
+      const protectedIds = new Map((protectionRows || []).map(p => [p.article_id,p]));
       const authorIds = [...new Set(rows.map(a => a.author_id).filter(Boolean))];
       const { data: profiles, error: profilesError } = authorIds.length
         ? await supabase.from("profiles").select("id,display_name,username").in("id", authorIds)
@@ -745,7 +748,7 @@
               ${["draft","published","archived"].map(s => `<option value="${s}" ${s===a.status?"selected":""}>${statusLabel(s)}</option>`).join("")}
             </select>
             ${["admin","owner"].includes(currentAdminRole) ? `<button type="button" class="article-pin admin-btn" data-id="${esc(a.id)}" data-pinned="${a.is_pinned ? "true" : "false"}">${a.is_pinned ? "固定を解除" : "ホーム上部に固定"}</button>` : '<span class="admin-muted">固定操作は管理者のみ</span>'}
-            ${`<button type="button" class="article-history admin-btn" data-id="${esc(a.id)}" data-title="${esc(a.title)}">変更履歴</button>`}${["admin","owner"].includes(currentAdminRole) ? `<button type="button" class="article-delete admin-btn danger" data-id="${esc(a.id)}" data-title="${esc(a.title)}">記事を削除</button>` : ""}
+            ${`<button type="button" class="article-history admin-btn" data-id="${esc(a.id)}" data-title="${esc(a.title)}">変更履歴</button>`}${["admin","owner"].includes(currentAdminRole) ? `<button type="button" class="article-protect admin-btn" data-id="${esc(a.id)}" data-title="${esc(a.title)}" data-protected="${protectedIds.has(a.id)?"true":"false"}" data-reason="${esc(protectedIds.get(a.id)?.reason||"")}">${protectedIds.has(a.id)?"保護解除":"ページ保護"}</button><button type="button" class="article-delete admin-btn danger" data-id="${esc(a.id)}" data-title="${esc(a.title)}">記事を削除</button>` : ""}
           </td>
         </tr>`;
       }).join("") : '<tr><td colspan="5">記事はありません。</td></tr>';
@@ -757,6 +760,7 @@
       });
       document.querySelectorAll(".article-delete").forEach(b => { b.onclick = () => deleteArticle(b.dataset.id, b.dataset.title, b); });
       document.querySelectorAll(".article-history").forEach(b => { b.onclick = () => showArticleHistory(b.dataset.id,b.dataset.title); });
+      document.querySelectorAll(".article-protect").forEach(b => { b.onclick = () => toggleArticleProtection(b); });
     } catch (error) {
       console.error("記事一覧の読み込みに失敗しました:", error);
       body.innerHTML = '<tr><td colspan="5"><div class="admin-alert">記事を読み込めませんでした。権限または通信状態を確認してください。</div></td></tr>';
@@ -764,6 +768,20 @@
   }
 
 
+
+
+  async function toggleArticleProtection(button) {
+    const enabled=button.dataset.protected!=="true";
+    let reason=button.dataset.reason||"";
+    if(enabled){reason=prompt("ページ保護の理由を入力してください（最大1000文字）","荒らし防止のため");if(reason===null)return;if(!reason.trim()||reason.length>1000){alert("理由は1〜1000文字で入力してください。");return;}}
+    if(!enabled&&!confirm("この記事のページ保護を解除しますか？"))return;
+    button.disabled=true;
+    try{
+      const {data,error}=await supabase.rpc("admin_set_article_protection",{p_article_id:button.dataset.id,p_enabled:enabled,p_reason:enabled?reason.trim():null,p_expires_at:null});
+      if(error)throw error;if(!data?.ok)throw new Error("保護設定を変更できませんでした。");
+      await loadArticles();await loadRecentActivity();
+    }catch(e){alert("ページ保護の変更に失敗しました: "+errorMessage(e));button.disabled=false;}
+  }
 
   async function showArticleHistory(articleId,title) {
     let panel=document.getElementById("article-history-dialog");
