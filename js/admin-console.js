@@ -54,7 +54,8 @@ async function execute(raw){
  "/kizimin polls","/kizimin poll options <投票ID>","/kizimin challenges","/kizimin challenge entries <企画ID>",
  "/kizimin orgboard <団体ID>","/kizimin orgevents <団体ID>","/kizimin orgaudit <団体ID>",
  "/kizimin notifications [ユーザーID]","/kizimin ai usage [ユーザーID]","/kizimin site history [設定キー]",
- "/kizimin filterlogs [件数]","/kizimin connect rooms","/kizimin connect messages <ルームID>"
+ "/kizimin filterlogs [件数]","/kizimin connect rooms","/kizimin connect messages <ルームID>",
+ "/kizimin article likes <記事ID>","/kizimin poll results <投票ID>","/kizimin org info <団体ID>"
  ].forEach(x=>out("  "+x));return;}
  if(a==="status"){
   const [dash,maint]=await Promise.all([db.rpc("admin_dashboard_stats"),db.from("site_settings").select("maintenance_mode,maintenance_type,maintenance_reason").eq("id",true).maybeSingle()]);
@@ -179,6 +180,10 @@ async function execute(raw){
  if(a==="filterlogs"){const n=Math.max(1,Math.min(100,Number(target)||30));const {data,error}=await db.from("admin_abuse_filter_logs").select("id,filter_id,actor_id,target_type,target_id,action,matched_term,created_at").order("created_at",{ascending:false}).limit(n);if(error)throw error;out("フィルター検出ログ "+data.length+" 件");data.forEach(x=>out(fmt(x.created_at)+" | filter="+x.filter_id+" | "+x.action+" | "+x.target_type+" "+x.target_id+" | term="+x.matched_term));return;}
  if(a==="connect"&&b==="rooms"){const {data,error}=await db.from("admin_connect_rooms").select("id,name,room_type,created_by,created_at").order("created_at",{ascending:false}).limit(50);if(error)throw error;out("Admin Connectルーム "+data.length+" 件");data.forEach(x=>out(x.name+" | "+x.room_type+" | "+x.id));return;}
  if(a==="connect"&&b==="messages"){if(!c)throw Error("ルームIDを指定してください。");const {data,error}=await db.from("admin_connect_messages").select("id,sender_id,body,attachment_type,created_at").eq("room_id",c).order("created_at",{ascending:false}).limit(50);if(error)throw error;out("運営チャットメッセージ "+data.length+" 件");data.forEach(x=>out(fmt(x.created_at)+" | "+x.sender_id+" | "+String(x.body||"").slice(0,160)+" | "+(x.attachment_type||"")+" | "+x.id));return;}
+
+ if(a==="article"&&b==="likes"){if(!c)throw Error("記事IDを指定してください。");const {data,error}=await db.from("article_likes").select("user_id,created_at").eq("article_id",c).order("created_at",{ascending:false}).limit(100);if(error)throw error;out("いいね "+data.length+" 件（最大100件）");data.forEach(x=>out(x.user_id+" | "+fmt(x.created_at)));return;}
+ if(a==="poll"&&b==="results"){if(!c)throw Error("投票IDを指定してください。");const {data,error}=await db.from("community_poll_options").select("id,label,sort_order").eq("poll_id",c).order("sort_order");if(error)throw error;out("投票結果");for(const opt of data){const {count,error:ce}=await db.from("community_poll_votes").select("poll_id",{count:"exact",head:true}).eq("option_id",opt.id);if(ce)throw ce;out(opt.label+" : "+count+" 票");}return;}
+ if(a==="org"&&b==="info"){if(!c)throw Error("団体IDを指定してください。");const {data,error}=await db.from("organizations").select("id,name,organization_type,description,website,status,created_by,created_at,updated_at").eq("id",c).maybeSingle();if(error)throw error;if(!data)throw Error("団体が見つかりません。");Object.entries(data).forEach(([k,v])=>out(k+": "+(v??"-")));return;}
  throw Error("不明なコマンドです。/kizimin help で一覧を確認してください。");
 }
 function bind(){
