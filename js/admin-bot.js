@@ -458,11 +458,19 @@
     const nav=document.querySelector('.admin-nav [data-view="bot"]');
     try {
       const allowed=await authorize();
-      if(!allowed){nav?.classList.add("hidden");$("view-bot")?.classList.add("hidden");return;}
+      if(!allowed){
+        setPolicyLoadingLabel("管理者権限がありません");
+        renderPolicy();
+        nav?.classList.add("hidden");
+        $("view-bot")?.classList.add("hidden");
+        return;
+      }
       bind();
     } catch(error) {
       console.error("Bot権限確認失敗",error);
-      setStatus("Botの権限確認に失敗しました: "+(error?.message||String(error)),"error");
+      setPolicyLoadingLabel("権限確認失敗：Botステータスを確認");
+      renderPolicy();
+      setStatus("Botの権限確認に失敗しました: "+(error?.message||String(error))+"。権限確認が完了していないため、Supabase設定の読み込みとRealtime接続を開始していません。","error");
       if(nav) nav.title="権限確認エラー。画面のBotステータスを確認してください。";
     }
   })();
