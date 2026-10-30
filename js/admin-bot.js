@@ -53,6 +53,9 @@
       policyLoaded=true;
       renderPolicy();
       renderConfig();
+      // Apply the persisted automatic-check setting only after Supabase has loaded it.
+      // This also keeps the timer synchronized when settings arrive through Realtime.
+      setRunning(!!policy.enabled);
       const updated=data.updated_at ? fmt(data.updated_at) : "更新日時不明";
       setStatus("Supabaseから保存済み設定を読み込みました（最終更新: "+updated+"）。","success");
       return true;
@@ -405,7 +408,6 @@
     throw new Error("このアカウントには複合型Botを利用する管理者権限がありません。");
   }
   function bind() {
-    const config=readConfig();
     $("bot-run-now")?.addEventListener("click",()=>scan("手動チェック"));
     $("bot-export-csv")?.addEventListener("click",()=>exportAlerts("csv"));
     $("bot-export-json")?.addEventListener("click",()=>exportAlerts("json"));
@@ -449,10 +451,10 @@
     }));
     renderConfig();renderHistory();
     renderPolicy();
-    loadPolicy().catch(error=>{console.error("[Kizimin Bot] initial settings load failed",error);});
+    loadPolicy()
+      .then(()=>scan(policy.enabled ? "保存済み設定による起動時チェック" : "初回チェック"))
+      .catch(error=>{console.error("[Kizimin Bot] initial settings load failed",error);});
     startRealtime();
-    if(config.enabled) { setRunning(true); scan("起動時チェック"); }
-    else scan("初回チェック");
   }
   (async()=>{
     const nav=document.querySelector('.admin-nav [data-view="bot"]');
