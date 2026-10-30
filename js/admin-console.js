@@ -263,6 +263,7 @@ async function execute(raw){
   const {data,error}=await db.from("daily_topics").select("topic_date,title,description").order("topic_date",{ascending:false}).limit(n);
   if(error)throw error;out("過去のお題 "+data.length+" 件");data.forEach(x=>out(x.topic_date+" | "+x.title+" | "+String(x.description||"").slice(0,100)));return;
  }
+ if(a==="whoami"){out("現在の権限: "+role);out("オーナー権限: "+(owner?"あり":"なし"));return;}
  throw Error("不明なコマンドです。/kizimin help で一覧を確認してください。");
 }
 function bind(){
