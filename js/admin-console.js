@@ -55,7 +55,12 @@ async function execute(raw){
  "/kizimin orgboard <団体ID>","/kizimin orgevents <団体ID>","/kizimin orgaudit <団体ID>",
  "/kizimin notifications [ユーザーID]","/kizimin ai usage [ユーザーID]","/kizimin site history [設定キー]",
  "/kizimin filterlogs [件数]","/kizimin connect rooms","/kizimin connect messages <ルームID>",
- "/kizimin article likes <記事ID>","/kizimin poll results <投票ID>","/kizimin org info <団体ID>"
+ "/kizimin article likes <記事ID>","/kizimin poll results <投票ID>","/kizimin org info <団体ID>",
+ "/kizimin insights","/kizimin articles popular","/kizimin articles recent",
+ "/kizimin user interests <名前|ID>","/kizimin collections [ユーザーID]","/kizimin collection articles <コレクションID>",
+ "/kizimin permissions [ロール]","/kizimin permission users <権限キー>",
+ "/kizimin conversations [ユーザーID]","/kizimin conversation stats <会話ID>",
+ "/kizimin topics [件数]","/kizimin role summary"
  ].forEach(x=>out("  "+x));return;}
  if(a==="status"){
   const [dash,maint]=await Promise.all([db.rpc("admin_dashboard_stats"),db.from("site_settings").select("maintenance_mode,maintenance_type,maintenance_reason").eq("id",true).maybeSingle()]);
@@ -184,6 +189,80 @@ async function execute(raw){
  if(a==="article"&&b==="likes"){if(!c)throw Error("記事IDを指定してください。");const {data,error}=await db.from("article_likes").select("user_id,created_at").eq("article_id",c).order("created_at",{ascending:false}).limit(100);if(error)throw error;out("いいね "+data.length+" 件（最大100件）");data.forEach(x=>out(x.user_id+" | "+fmt(x.created_at)));return;}
  if(a==="poll"&&b==="results"){if(!c)throw Error("投票IDを指定してください。");const {data,error}=await db.from("community_poll_options").select("id,label,sort_order").eq("poll_id",c).order("sort_order");if(error)throw error;out("投票結果");for(const opt of data){const {count,error:ce}=await db.from("community_poll_votes").select("poll_id",{count:"exact",head:true}).eq("option_id",opt.id);if(ce)throw ce;out(opt.label+" : "+count+" 票");}return;}
  if(a==="org"&&b==="info"){if(!c)throw Error("団体IDを指定してください。");const {data,error}=await db.from("organizations").select("id,name,organization_type,description,website,status,created_by,created_at,updated_at").eq("id",c).maybeSingle();if(error)throw error;if(!data)throw Error("団体が見つかりません。");Object.entries(data).forEach(([k,v])=>out(k+": "+(v??"-")));return;}
+
+ if(a==="insights"){
+  const [u,ar,co,re,inq,org]=await Promise.all([
+   db.from("profiles").select("id",{count:"exact",head:true}),
+   db.from("articles").select("id",{count:"exact",head:true}),
+   db.from("comments").select("id",{count:"exact",head:true}),
+   db.from("reports").select("id",{count:"exact",head:true}).in("status",["open","reviewing"]),
+   db.from("inquiries").select("id",{count:"exact",head:true}).in("status",["open","reviewing"]),
+   db.from("organizations").select("id",{count:"exact",head:true})
+  ]);
+  for(const x of [u,ar,co,re,inq,org])if(x.error)throw x.error;
+  out("Kizimin 全体サマリー");
+  out("ユーザー "+u.count+" | 記事 "+ar.count+" | コメント "+co.count);
+  out("未処理通報 "+re.count+" | 未対応問い合わせ "+inq.count+" | 団体 "+org.count);return;
+ }
+ if(a==="articles"&&b==="popular"){
+  const {data,error}=await db.from("articles").select("id,title,view_count,like_count,status,created_at").order("view_count",{ascending:false}).limit(20);
+  if(error)throw error;out("閲覧数ランキング（上位20件）");data.forEach((x,i)=>out((i+1)+". "+x.title+" | views="+x.view_count+" | likes="+x.like_count+" | "+x.status+" | "+x.id));return;
+ }
+ if(a==="articles"&&b==="recent"){
+  const {data,error}=await db.from("articles").select("id,title,status,updated_at,author_id").order("updated_at",{ascending:false}).limit(30);
+  if(error)throw error;out("最近更新された記事 "+data.length+" 件");data.forEach(x=>out(fmt(x.updated_at)+" | "+x.title+" | "+x.status+" | "+x.author_id+" | "+x.id));return;
+ }
+ if(a==="user"&&b==="interests"){
+  if(!c)throw Error("ユーザー名またはIDを指定してください。");const u=await profile(c);
+  const {data,error}=await db.from("user_interest_tags").select("tag,created_at").eq("user_id",u.id).order("created_at",{ascending:false});
+  if(error)throw error;out(u.username+" の興味タグ "+data.length+" 件");data.forEach(x=>out(x.tag+" | "+fmt(x.created_at)));return;
+ }
+ if(a==="collections"){
+  let q=db.from("saved_collections").select("id,user_id,name,created_at").order("created_at",{ascending:false}).limit(50);
+  if(target)q=q.eq("user_id",target);const {data,error}=await q;if(error)throw error;
+  out("保存コレクション "+data.length+" 件");data.forEach(x=>out(x.name+" | user="+x.user_id+" | "+x.id));return;
+ }
+ if(a==="collection"&&b==="articles"){
+  if(!c)throw Error("コレクションIDを指定してください。");
+  const {data,error}=await db.from("saved_collection_articles").select("article_id,created_at").eq("collection_id",c).order("created_at",{ascending:false}).limit(100);
+  if(error)throw error;out("コレクション内の記事 "+data.length+" 件");data.forEach(x=>out(x.article_id+" | "+fmt(x.created_at)));return;
+ }
+ if(a==="permissions"){
+  if(!owner)throw Error("権限一覧はオーナー専用です。");
+  let q=db.from("role_permissions").select("role,permission_key,allowed,updated_at").order("role").limit(200);
+  if(target)q=q.eq("role",target);const {data,error}=await q;if(error)throw error;
+  out("ロール権限 "+data.length+" 件");data.forEach(x=>out(x.role+" | "+x.permission_key+" = "+(x.allowed?"許可":"拒否")+" | "+fmt(x.updated_at)));return;
+ }
+ if(a==="permission"&&b==="users"){
+  if(!owner)throw Error("個別権限の確認はオーナー専用です。");if(!c)throw Error("権限キーを指定してください。");
+  const {data,error}=await db.from("user_permission_overrides").select("user_id,permission_key,allowed,updated_at").eq("permission_key",c).order("updated_at",{ascending:false}).limit(100);
+  if(error)throw error;out("個別権限上書き "+data.length+" 件");data.forEach(x=>out(x.user_id+" | "+(x.allowed?"許可":"拒否")+" | "+fmt(x.updated_at)));return;
+ }
+ if(a==="role"&&b==="summary"){
+  if(!owner)throw Error("ロール集計はオーナー専用です。");
+  const {data,error}=await db.from("profiles").select("role");if(error)throw error;
+  const counts={};data.forEach(x=>counts[x.role||"未設定"]=(counts[x.role||"未設定"]||0)+1);
+  out("ロール別ユーザー数");Object.entries(counts).sort((x,y)=>y[1]-x[1]).forEach(([k,v])=>out(k+" : "+v+" 人"));return;
+ }
+ if(a==="conversations"){
+  let q=db.from("conversations").select("id,created_by,created_at,updated_at").order("updated_at",{ascending:false}).limit(50);
+  if(target)q=q.eq("created_by",target);const {data,error}=await q;if(error)throw error;
+  out("会話メタデータ "+data.length+" 件（メッセージ本文は表示しません）");
+  for(const x of data){const {count,error:ce}=await db.from("messages").select("id",{count:"exact",head:true}).eq("conversation_id",x.id);if(ce)throw ce;out(x.id+" | owner="+x.created_by+" | messages="+count+" | "+fmt(x.updated_at));}return;
+ }
+ if(a==="conversation"&&b==="stats"){
+  if(!c)throw Error("会話IDを指定してください。");
+  const [m,last]=await Promise.all([
+   db.from("messages").select("id",{count:"exact",head:true}).eq("conversation_id",c),
+   db.from("messages").select("created_at").eq("conversation_id",c).order("created_at",{ascending:false}).limit(1).maybeSingle()
+  ]);
+  if(m.error)throw m.error;if(last.error)throw last.error;out("会話 "+c);out("メッセージ数: "+m.count);out("最終メッセージ日時: "+fmt(last.data?.created_at));return;
+ }
+ if(a==="topics"){
+  const n=Math.max(1,Math.min(90,Number(target)||14));
+  const {data,error}=await db.from("daily_topics").select("topic_date,title,description").order("topic_date",{ascending:false}).limit(n);
+  if(error)throw error;out("過去のお題 "+data.length+" 件");data.forEach(x=>out(x.topic_date+" | "+x.title+" | "+String(x.description||"").slice(0,100)));return;
+ }
  throw Error("不明なコマンドです。/kizimin help で一覧を確認してください。");
 }
 function bind(){
