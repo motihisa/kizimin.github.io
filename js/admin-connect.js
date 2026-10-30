@@ -5,7 +5,7 @@ const KEY="sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf";
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const db=window.supabase?.createClient?.(URL,KEY);
-let uid=null, roomId=null, channel=null, rooms=[], admins=[], selectedFile=null, pc=null, localStream=null, audioContext=null;
+let uid=null, roomId=null, channel=null, rooms=[], admins=[], selectedFile=null, pc=null, localStream=null, audioContext=null, pendingIce=[];
 const status=(s)=>$("ac-call-status").textContent=s;
 function showDenied(){ $("ac-loading").classList.add("hidden"); $("ac-denied").classList.remove("hidden"); }
 async function init(){
@@ -107,20 +107,20 @@ $("ac-call-start").onclick=async()=>{
 $("ac-call-audio").onclick=()=>{$("ac-call-panel").classList.remove("hidden");$("ac-call-video").dataset.mode="audio";status("音声通話の相手を選択してください");};
 $("ac-call-video").onclick=()=>{$("ac-call-panel").classList.remove("hidden");$("ac-call-video").dataset.mode="video";status("ビデオ通話の相手を選択してください");};
 async function handleSignal(row){
- const s=row.signal;if(!s)return;
+ const s=row.signal;if(!s)return; roomId=row.room_id;
  try{
   if(s.type==="offer"){
    $("ac-call-panel").classList.remove("hidden");$("ac-call-video").dataset.mode=s.video?"video":"audio";$("ac-call-target").value=row.sender_id;
    if(!confirm("管理者から"+(s.video?"ビデオ":"音声")+"通話の着信です。応答しますか？")){await sendSignal(row.sender_id,{type:"reject"});return;}
-   await makePeer(row.sender_id,!!s.video);await pc.setRemoteDescription({type:"offer",sdp:s.sdp});
+   await makePeer(row.sender_id,!!s.video);await pc.setRemoteDescription({type:"offer",sdp:s.sdp}); for(const candidate of pendingIce.splice(0)) await pc.addIceCandidate(candidate);
    const answer=await pc.createAnswer();await pc.setLocalDescription(answer);await sendSignal(row.sender_id,{type:"answer",sdp:answer.sdp});status("通話中");
-  }else if(s.type==="answer"&&pc){await pc.setRemoteDescription({type:"answer",sdp:s.sdp});status("通話中");}
-  else if(s.type==="ice"&&pc){await pc.addIceCandidate(s.candidate);}
+  }else if(s.type==="answer"&&pc){await pc.setRemoteDescription({type:"answer",sdp:s.sdp}); for(const candidate of pendingIce.splice(0)) await pc.addIceCandidate(candidate); status("通話中");}
+  else if(s.type==="ice"&&pc){if(pc.remoteDescription) await pc.addIceCandidate(s.candidate); else pendingIce.push(s.candidate);}
   else if(s.type==="reject"){status("相手が応答しませんでした");cleanupCall();}
   else if(s.type==="hangup"){status("相手が通話を終了しました");cleanupCall();}
  }catch(e){console.error(e);status("通話接続エラー: "+e.message);cleanupCall();}
 }
-function cleanupCall(){if(pc){pc.close();pc=null;}if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null;}if(audioContext){audioContext.close();audioContext=null;}$("ac-local-video").srcObject=null;$("ac-remote-video").srcObject=null;$("ac-remote-audio").srcObject=null;}
+function cleanupCall(){pendingIce=[];if(pc){pc.close();pc=null;}if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null;}if(audioContext){audioContext.close();audioContext=null;}$("ac-local-video").srcObject=null;$("ac-remote-video").srcObject=null;$("ac-remote-audio").srcObject=null;}
 $("ac-call-hangup").onclick=async()=>{const target=$("ac-call-target").value;if(target)await sendSignal(target,{type:"hangup"}).catch(()=>{});cleanupCall();status("通話を終了しました");};
 init();
 })();
