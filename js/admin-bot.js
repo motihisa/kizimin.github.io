@@ -29,17 +29,39 @@
     const el=$("bot-status"); if(!el)return;
     el.textContent=message; el.dataset.state=type;
   }
+  function setPolicyLoadingLabel(label) {
+    for(const id of ["bot-interval","bot-mode","bot-threshold","bot-window-hours","bot-suspend-minutes","bot-url-threshold","bot-repeat-char-threshold","bot-max-suspensions"]) {
+      const select=$(id);
+      const option=select?.querySelector('option[disabled][value=""]');
+      if(option) option.textContent=label;
+    }
+  }
   async function loadPolicy() {
-    setStatus("SupabaseからバックグラウンドBot設定を読み込んでいます…");
-    const {data,error}=await db.from("kizimin_bot_settings").select("settings,updated_at").eq("id",true).maybeSingle();
-    if(error) throw new Error("Bot設定の読み込みに失敗しました: "+error.message);
-    if(!data?.settings || typeof data.settings !== "object") throw new Error("SupabaseのBot設定行が見つかりません。初期値で上書きせず、保存を停止しました。");
-    policy={...defaultPolicy,...data.settings};
-    policyLoaded=true;
+    policyLoaded=false;
+    setPolicyLoadingLabel("Supabaseから読み込み中...");
     renderPolicy();
-    renderConfig();
-    const updated=data.updated_at ? fmt(data.updated_at) : "更新日時不明";
-    setStatus("Supabaseから保存済み設定を読み込みました（最終更新: "+updated+"）。","success");
+    setStatus("SupabaseからバックグラウンドBot設定を読み込んでいます…");
+    try {
+      const result=await withTimeout(
+        db.from("kizimin_bot_settings").select("settings,updated_at").eq("id",true).maybeSingle(),
+        "Bot設定の読み込み"
+      );
+      const {data,error}=result;
+      if(error) throw new Error("Bot設定の読み込みに失敗しました: "+error.message);
+      if(!data?.settings || typeof data.settings !== "object" || Array.isArray(data.settings)) throw new Error("SupabaseのBot設定行が見つかりません。初期値で上書きせず、保存を停止しました。");
+      policy={...defaultPolicy,...data.settings};
+      policyLoaded=true;
+      renderPolicy();
+      renderConfig();
+      const updated=data.updated_at ? fmt(data.updated_at) : "更新日時不明";
+      setStatus("Supabaseから保存済み設定を読み込みました（最終更新: "+updated+"）。","success");
+      return true;
+    } catch(error) {
+      setPolicyLoadingLabel("読み込み失敗：エラー内容を確認");
+      renderPolicy();
+      setStatus((error?.message||String(error))+" 保存済み設定を確認できないため、設定変更を無効にしました。","error");
+      throw error;
+    }
   }
   function renderPolicy() {
     if(policyLoaded) {
@@ -298,14 +320,12 @@
     }
     realtimeChannel.on("postgres_changes",{event:"*",schema:"public",table:"kizimin_bot_settings"},()=>{
       loadPolicy().catch(error=>{
-        policyLoaded=false;
-        renderPolicy();
-        setStatus("Bot設定のリアルタイム更新に失敗しました: "+error.message,"error");
+        console.error("[Kizimin Bot] realtime settings reload failed",error);
       });
     });
     realtimeChannel.subscribe(status=>{
       if(status==="SUBSCRIBED") {
-        setStatus("Supabase Realtime接続済み。通報・問い合わせ・コメント・記事の変更を自動反映します。","success");
+        if(policyLoaded) setStatus("Supabase Realtime接続済み。通報・問い合わせ・コメント・記事の変更を自動反映します。","success");
       } else if(status==="CHANNEL_ERROR" || status==="TIMED_OUT" || status==="CLOSED") {
         setStatus("Supabase Realtimeに接続できません。Supabase側のRealtime公開設定と権限を確認してください。手動チェックは引き続き利用できます。","error");
         console.warn("[Kizimin Bot] Realtime subscription status:",status);
@@ -429,7 +449,7 @@
     }));
     renderConfig();renderHistory();
     renderPolicy();
-    loadPolicy().catch(error=>{policyLoaded=false;renderPolicy();setStatus(error.message+" 保存済み設定を確認できないため、設定変更を無効にしました。","error");});
+    loadPolicy().catch(error=>{console.error("[Kizimin Bot] initial settings load failed",error);});
     startRealtime();
     if(config.enabled) { setRunning(true); scan("起動時チェック"); }
     else scan("初回チェック");
