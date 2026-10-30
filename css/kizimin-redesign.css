@@ -461,3 +461,16 @@ footer,.footer{border-color:var(--kz-line)}
   background: #202a3a !important;
   border-color: #59677f !important;
 }
+
+/* Meta-Wiki style moderation controls */
+.admin-page .abuse-filter-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:16px;background:#f4f2fb;border:1px solid #d8d3e8;border-radius:12px}
+.admin-page .abuse-filter-form label{display:grid;gap:6px;font-weight:700;color:#24213b}
+.admin-page .abuse-filter-form input,.admin-page .abuse-filter-form select{width:100%;min-width:0;padding:10px;border:1px solid #aaa3bf;border-radius:8px;background:#fff;color:#24213b}
+.admin-page .abuse-filter-wide{grid-column:1/-1}
+.admin-page .abuse-filter-row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:14px 4px;border-bottom:1px solid #d8d3e8}
+.admin-page .abuse-filter-row p{margin:5px 0;color:#514b68}.admin-page .abuse-filter-row small{color:#625c78}
+.admin-page .abuse-filter-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.admin-page[data-site-theme="dark"] .abuse-filter-form{background:#202a3a;border-color:#536078}
+.admin-page[data-site-theme="dark"] .abuse-filter-form label,.admin-page[data-site-theme="dark"] .abuse-filter-row strong,.admin-page[data-site-theme="dark"] .abuse-filter-row p,.admin-page[data-site-theme="dark"] .abuse-filter-row small{color:#e8edf5}
+.admin-page[data-site-theme="dark"] .abuse-filter-form input,.admin-page[data-site-theme="dark"] .abuse-filter-form select{background:#202a3a;color:#f1f3f8;border-color:#59677f}
+@media(max-width:700px){.admin-page .abuse-filter-form{grid-template-columns:1fr}.admin-page .abuse-filter-row{align-items:flex-start;flex-direction:column}}
