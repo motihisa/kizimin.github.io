@@ -82,6 +82,8 @@ async function details(id){
  if(officialButton)actions.push('<button type="button" class="admin-btn user-detail-official" id="user-detail-official">'+esc(officialButton.textContent.trim())+'</button>');
  if(identityButton)actions.push('<button type="button" class="admin-btn" id="user-detail-identity">ユーザー名・表示名を変更</button>');
  if(warningButton)actions.push('<button type="button" class="admin-btn" id="user-detail-warning">警告を送信</button>');
+ if(["admin","owner"].includes(window.__kiziminCurrentUserRole))actions.push('<button type="button" class="admin-btn" id="user-detail-force-password">次回ログイン時にパスワード変更を必須にする</button>');
+ if(window.__kiziminCurrentUserRole==="owner")actions.push('<button type="button" class="admin-btn" id="user-detail-reset-password">パスワード再設定メールを送信</button>');
  if(deleteButton)actions.push('<button type="button" class="admin-btn danger" id="user-detail-delete">アカウントを強制削除</button>');
  $("user-detail-title").textContent=x.name;
  $("user-detail-subtitle").textContent="ユーザーID: "+id;
@@ -116,8 +118,20 @@ async function details(id){
  if(officialButton)$("user-detail-official").onclick=()=>{officialButton.click();dialog.close()};
  if(identityButton)$("user-detail-identity").onclick=()=>{identityButton.click();dialog.close()};
  if(warningButton)$("user-detail-warning").onclick=()=>{warningButton.click();dialog.close()};
- if(deleteButton)$("user-detail-delete").onclick=()=>{deleteButton.click();dialog.close()};
  const client=window.supabase.createClient("https://bimddapbkdakspjaemsm.supabase.co","sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf");
+ if($("user-detail-force-password"))$("user-detail-force-password").onclick=async()=>{
+   if(!confirm(x.name+" に次回ログイン時のパスワード変更を必須にしますか？"))return;
+   const button=$("user-detail-force-password");button.disabled=true;
+   try{const r=await client.functions.invoke("secure-content",{body:{action:"admin_force_password_change",user_id:id}});if(r.error||!r.data?.ok)throw new Error(r.data?.error||r.error?.message||"更新失敗");alert("次回ログイン時にパスワード変更が必要になりました。");dialog.close();}
+   catch(e){console.error(e);alert("強制変更を設定できませんでした: "+(e.message||"不明なエラー"));button.disabled=false;}
+ };
+ if($("user-detail-reset-password"))$("user-detail-reset-password").onclick=async()=>{
+   if(!confirm(x.name+" の登録メールアドレスにパスワード再設定メールを送信しますか？"))return;
+   const button=$("user-detail-reset-password");button.disabled=true;
+   try{const r=await client.functions.invoke("secure-content",{body:{action:"admin_send_password_reset",user_id:id}});if(r.error||!r.data?.ok)throw new Error(r.data?.error||r.error?.message||"送信失敗");alert("パスワード再設定メールを送信しました。\\n送信先: "+(r.data.email||"登録メールアドレス"));dialog.close();}
+   catch(e){console.error(e);alert("再設定メールを送信できませんでした: "+(e.message||"不明なエラー"));button.disabled=false;}
+ };
+ if(deleteButton)$("user-detail-delete").onclick=()=>{deleteButton.click();dialog.close()};
  try{
    const emailResult=await client.functions.invoke("secure-content",{body:{action:"admin_user_details",user_id:id}});
    const emailEl=$("user-detail-email");
