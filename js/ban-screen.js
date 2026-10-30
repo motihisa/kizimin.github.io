@@ -109,6 +109,22 @@
 
     // The site owner is the only account-status exception. Admins and moderators
     // remain subject to BAN/suspension like every other account.
+    let metadata = session.user?.app_metadata || {};
+    try {
+      const authUserResponse = await originalFetch(SUPABASE_URL + "/auth/v1/user", {
+        headers: { apikey: SUPABASE_KEY, Authorization: "Bearer " + token },
+        cache: "no-store"
+      });
+      if (authUserResponse.ok) {
+        const authUser = await authUserResponse.json();
+        metadata = authUser.app_metadata || metadata;
+      }
+    } catch (_) {}
+    if (metadata.must_change_password === true && !/\/password-change\.html$/.test(location.pathname)) {
+      location.replace("password-change.html");
+      return;
+    }
+
     let isOwner = false;
     try {
       const ownerResponse = await originalFetch(SUPABASE_URL + "/rest/v1/rpc/is_site_owner", {
@@ -121,12 +137,6 @@
     } catch (_) {}
     if (isOwner) {
       setGate(null);
-      return;
-    }
-
-    const metadata = session.user?.app_metadata || {};
-    if (metadata.must_change_password === true && !/\/password-change\.html$/.test(location.pathname)) {
-      location.replace("password-change.html");
       return;
     }
 
