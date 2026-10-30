@@ -311,7 +311,7 @@
     const isOwner=!ownerError && ownerFlag===true;
     if(profileError) return false;
     if(!profile && !isOwner) return false;
-    if(profile?.account_status && profile.account_status!=="active") return false;
+    if(!isOwner && profile?.account_status && profile.account_status!=="active") return false;
     return isOwner || profile?.role==="admin";
   }
   function bind() {
