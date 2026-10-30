@@ -745,7 +745,7 @@
               ${["draft","published","archived"].map(s => `<option value="${s}" ${s===a.status?"selected":""}>${statusLabel(s)}</option>`).join("")}
             </select>
             ${["admin","owner"].includes(currentAdminRole) ? `<button type="button" class="article-pin admin-btn" data-id="${esc(a.id)}" data-pinned="${a.is_pinned ? "true" : "false"}">${a.is_pinned ? "固定を解除" : "ホーム上部に固定"}</button>` : '<span class="admin-muted">固定操作は管理者のみ</span>'}
-            ${["admin","owner"].includes(currentAdminRole) ? `<button type="button" class="article-delete admin-btn danger" data-id="${esc(a.id)}" data-title="${esc(a.title)}">記事を削除</button>` : ""}
+            ${`<button type="button" class="article-history admin-btn" data-id="${esc(a.id)}" data-title="${esc(a.title)}">変更履歴</button>`}${["admin","owner"].includes(currentAdminRole) ? `<button type="button" class="article-delete admin-btn danger" data-id="${esc(a.id)}" data-title="${esc(a.title)}">記事を削除</button>` : ""}
           </td>
         </tr>`;
       }).join("") : '<tr><td colspan="5">記事はありません。</td></tr>';
@@ -756,12 +756,45 @@
         b.onclick = () => updateArticlePin(b.dataset.id, b.dataset.pinned === "true", b);
       });
       document.querySelectorAll(".article-delete").forEach(b => { b.onclick = () => deleteArticle(b.dataset.id, b.dataset.title, b); });
+      document.querySelectorAll(".article-history").forEach(b => { b.onclick = () => showArticleHistory(b.dataset.id,b.dataset.title); });
     } catch (error) {
       console.error("記事一覧の読み込みに失敗しました:", error);
       body.innerHTML = '<tr><td colspan="5"><div class="admin-alert">記事を読み込めませんでした。権限または通信状態を確認してください。</div></td></tr>';
     }
   }
 
+
+
+  async function showArticleHistory(articleId,title) {
+    let panel=document.getElementById("article-history-dialog");
+    if(!panel){
+      panel=document.createElement("div"); panel.id="article-history-dialog"; panel.className="admin-panel";
+      panel.style.cssText="position:fixed;z-index:10000;inset:8% 5%;overflow:auto;max-width:900px;margin:auto;box-shadow:0 12px 48px #0004";
+      document.body.appendChild(panel);
+    }
+    panel.innerHTML='<div class="admin-panel-head"><div><h2>変更履歴</h2><p class="admin-muted">'+esc(title)+'</p></div><button type="button" id="article-history-close" class="admin-btn">閉じる</button></div><div id="article-history-content" class="admin-muted">履歴を読み込んでいます...</div>';
+    panel.hidden=false;
+    panel.querySelector("#article-history-close").onclick=()=>{panel.hidden=true;};
+    const {data,error}=await supabase.from("article_revisions").select("id,editor_id,title,status,created_at").eq("article_id",articleId).order("created_at",{ascending:false}).limit(50);
+    const target=panel.querySelector("#article-history-content");
+    if(error){target.innerHTML='<div class="admin-alert">履歴を読み込めません。ログ閲覧権限を確認してください。</div>';return;}
+    if(!data?.length){target.textContent="保存された過去版はまだありません。今後の記事編集から自動保存されます。";return;}
+    target.innerHTML='<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>保存日時</th><th>タイトル</th><th>状態</th><th>操作</th></tr></thead><tbody>'+data.map(r=>'<tr><td>'+esc(date(r.created_at))+'</td><td>'+esc(r.title||"（無題）")+'</td><td>'+esc(statusLabel(r.status))+'</td><td><button type="button" class="admin-btn revision-restore" data-id="'+esc(r.id)+'">この版を復元</button></td></tr>').join("")+'</tbody></table></div>';
+    target.querySelectorAll(".revision-restore").forEach(button=>button.onclick=async()=>{
+      if(!["admin","owner"].includes(currentAdminRole)){alert("復元できるのは管理者またはオーナーのみです。");return;}
+      if(!confirm("選択した過去版で現在の記事を置き換えます。現在の内容も履歴に保存されます。続行しますか？"))return;
+      button.disabled=true;
+      try{const {data:result,error:restoreError}=await supabase.rpc("admin_restore_article_revision",{p_revision_id:Number(button.dataset.id)});if(restoreError)throw restoreError;if(!result?.ok)throw new Error("復元できませんでした");await loadArticles();await loadRecentActivity();alert("過去版を復元しました。");panel.hidden=true;}
+      catch(e){alert("復元に失敗しました: "+errorMessage(e));button.disabled=false;}
+    });
+  }
+
+  async function loadRecentActivity() {
+    const target=$("recent-activity-list"); if(!target)return;
+    const {data,error}=await supabase.from("admin_audit_events").select("id,event_type,target_type,target_id,summary,created_at,actor_id").order("created_at",{ascending:false}).limit(30);
+    if(error){target.textContent="最近の変更を読み込めません。ログ閲覧権限が必要です。";return;}
+    target.innerHTML=data?.length?'<div class="admin-log">'+data.map(e=>esc(date(e.created_at)+" / "+e.summary+" / 対象: "+(e.target_id||"-")+" / 実行者: "+(e.actor_id||"不明"))).join("\n")+'</div>':'最近の変更はありません。';
+  }
 
   async function deleteArticle(id, title, button) {
     if (!["admin","owner"].includes(currentAdminRole)) { alert("記事を削除できるのは管理者またはオーナーのみです。"); return; }
@@ -1280,10 +1313,12 @@
 
     $("admin-refresh")?.addEventListener("click", async () => {
       const button = $("admin-refresh");
+    $("recent-activity-refresh")?.addEventListener("click",loadRecentActivity);
       button.disabled = true;
       button.textContent = "↻ 更新中";
       const loaders = [
         ["ダッシュボード", loadDashboard],
+      ["最近の変更", loadRecentActivity],
         ["ユーザー", loadUsers],
         ["記事", loadArticles],
         ["コメント", loadComments],
