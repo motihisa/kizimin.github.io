@@ -138,7 +138,12 @@ function spamReason(value) {
   if (!text) return null;
   const links = (text.match(/https?:\/\//gi) || []).length;
   if (links >= urlThreshold) return `URLが${urlThreshold}件以上含まれています`;
-  if (new RegExp(`(.)\\\\1{${Math.max(1, repeatCharThreshold - 1)},}`, "u").test(text)) return "同じ文字が過度に連続しています";
+  const chars = Array.from(text);
+  const hasLongRepeat = chars.some((char, index) =>
+    index >= repeatCharThreshold - 1 &&
+    chars.slice(index - repeatCharThreshold + 1, index + 1).every(value => value === char)
+  );
+  if (hasLongRepeat) return "同じ文字が過度に連続しています";
   if (/(?:無料で稼げる|必ず儲かる|当選しました|投資で確実|アカウント停止を回避|パスワードを送信)/i.test(text)) return "迷惑投稿で使われやすい表現を検出しました";
   if (text.length > 1800 && links >= 2) return "長文かつ複数URLを含みます";
   return null;
