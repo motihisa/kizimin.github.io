@@ -1283,6 +1283,34 @@
     await loadSelectedUserPermissions();
   }
 
+
+  async function loadAbuseFilters() {
+    if (!["admin","owner"].includes(currentAdminRole)) return;
+    const list=$("abuse-filter-list"), logs=$("abuse-filter-logs");
+    if(list) list.textContent="読み込み中...";
+    const [{data:filters,error:filterError},{data:events,error:logError}] = await Promise.all([
+      supabase.from("admin_abuse_filters").select("*").order("created_at",{ascending:false}),
+      supabase.from("admin_abuse_filter_logs").select("id,filter_id,actor_id,target_type,target_id,action,matched_term,created_at").order("created_at",{ascending:false}).limit(100)
+    ]);
+    if(filterError) throw filterError;
+    if(list) list.innerHTML=(filters||[]).length ? (filters||[]).map(f=>'<article class="abuse-filter-row"><div><strong>'+esc(f.name)+'</strong><p>'+esc(f.term)+' · '+esc(f.applies_to==='both'?'記事・コメント':f.applies_to==='article'?'記事':'コメント')+' · '+esc(f.action==='block'?'投稿をブロック':'記録のみ')+'</p><small>'+esc(f.reason||'理由なし')+'</small></div><div class="abuse-filter-actions"><label><input type="checkbox" class="abuse-filter-enabled" data-id="'+f.id+'" '+(f.enabled?'checked':'')+'> 有効</label><button type="button" class="admin-btn danger abuse-filter-delete" data-id="'+f.id+'">削除</button></div></article>').join("") : '<p class="admin-muted">フィルターはまだありません。</p>';
+    list?.querySelectorAll(".abuse-filter-enabled").forEach(el=>el.addEventListener("change",async()=>{const {error}=await supabase.from("admin_abuse_filters").update({enabled:el.checked,updated_at:new Date().toISOString()}).eq("id",el.dataset.id);if(error){alert("設定を更新できませんでした: "+errorMessage(error));el.checked=!el.checked;}else await loadAbuseFilters();}));
+    list?.querySelectorAll(".abuse-filter-delete").forEach(el=>el.addEventListener("click",async()=>{if(!confirm("このフィルターを削除しますか？"))return;const {error}=await supabase.from("admin_abuse_filters").delete().eq("id",el.dataset.id);if(error)alert("削除できませんでした: "+errorMessage(error));else await loadAbuseFilters();}));
+    if(logError){if(logs)logs.textContent="検出ログを読み込めませんでした: "+errorMessage(logError);return;}
+    if(logs)logs.innerHTML=(events||[]).length?'<table class="admin-table"><thead><tr><th>日時</th><th>対象</th><th>検出語句</th><th>動作</th><th>対象ID</th></tr></thead><tbody>'+(events||[]).map(e=>'<tr><td>'+esc(date(e.created_at))+'</td><td>'+esc(e.target_type==='article'?'記事':'コメント')+'</td><td>'+esc(e.matched_term)+'</td><td>'+esc(e.action==='block'?'ブロック':'記録')+'</td><td><code>'+esc(e.target_id||'-')+'</code></td></tr>').join("")+'</tbody></table>':'<p class="admin-muted">検出ログはありません。</p>';
+  }
+  async function createAbuseFilter(event) {
+    event.preventDefault();
+    if(!["admin","owner"].includes(currentAdminRole)){alert("管理者権限が必要です。");return;}
+    const name=$("abuse-filter-name").value.trim(), term=$("abuse-filter-term").value.trim();
+    if(name.length<1||term.length<2){$("abuse-filter-status").textContent="ルール名と2文字以上の検出語句を入力してください。";return;}
+    const {data:{user}}=await supabase.auth.getUser();
+    const {error}=await supabase.from("admin_abuse_filters").insert({name,term,applies_to:$("abuse-filter-target").value,action:$("abuse-filter-action").value,reason:$("abuse-filter-reason").value.trim(),created_by:user?.id||null});
+    if(error){$("abuse-filter-status").textContent="保存できませんでした: "+errorMessage(error);return;}
+    $("abuse-filter-form").reset();$("abuse-filter-status").textContent="フィルターを保存しました。";
+    await loadAbuseFilters();
+  }
+
   const viewMeta = {
     dashboard: ["ダッシュボード","Kiziminの状態をまとめて確認します。"],
     users: ["ユーザー管理","権限とアカウント状態を管理します。"],
@@ -1292,6 +1320,7 @@
     inquiries: ["問い合わせ管理","問い合わせの対応状況を管理します。"],
     notifications: ["通知送信","管理者から全ユーザーへサイト内通知を送信し、送信履歴と実行者を確認します。"],
     permissions: ["権限設定","ロールごとに機能の許可・禁止を設定します。"],
+    "abuse-filters": ["不正利用フィルター","投稿内容にルールを適用し、検出ログを確認します。"],
   };
 
   function setupAdminNavigation() {
@@ -1306,7 +1335,7 @@
         $("admin-view-title").textContent = meta[0];
         $("admin-view-subtitle").textContent = meta[1];
         history.replaceState(null, "", "#" + key);
-        const loaders = {dashboard: loadDashboard, users: loadUsers, articles: loadArticles, comments: loadComments, reports: loadReports, inquiries: loadInquiries, notifications: loadNotificationHistory, permissions: loadPermissions};
+        const loaders = {dashboard: loadDashboard, users: loadUsers, articles: loadArticles, comments: loadComments, reports: loadReports, inquiries: loadInquiries, notifications: loadNotificationHistory, permissions: loadPermissions, "abuse-filters": loadAbuseFilters};
         const loader = loaders[key];
         if (loader) loader().catch(e => {
           console.error("管理セクション読み込みエラー", key, e);
@@ -1316,6 +1345,8 @@
       });
     });
 
+    $("abuse-filter-form")?.addEventListener("submit",createAbuseFilter);
+    $("abuse-filter-refresh")?.addEventListener("click",()=>loadAbuseFilters().catch(e=>alert(errorMessage(e))));
     $("access-details-toggle")?.addEventListener("click", () => {
       const panel = $("access-details");
       if (panel && !panel.hidden) { panel.hidden = true; return; }
