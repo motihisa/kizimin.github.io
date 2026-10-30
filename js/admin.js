@@ -88,13 +88,17 @@
       return false;
     }
 
-    if (profile.account_status && profile.account_status !== "active") {
+    const { data: ownerFlag, error: ownerFlagError } = await supabase.rpc("is_site_owner");
+    if (ownerFlagError) {
+      console.error("オーナー権限の確認に失敗しました", ownerFlagError);
+      forbidden("オーナー権限の確認に失敗しました。", "安全のため管理画面へのアクセスを停止しました。");
+      return false;
+    }
+    const isOwner = ownerFlag === true;
+    if (!isOwner && profile.account_status && profile.account_status !== "active") {
       forbidden("このアカウントは管理画面を利用できません。", "アカウント状態: " + profile.account_status);
       return false;
     }
-
-    const { data: ownerFlag, error: ownerFlagError } = await supabase.rpc("is_site_owner");
-    const isOwner = !ownerFlagError && ownerFlag === true;
 
     const { data: effectiveRows, error: effectiveError } = await supabase.rpc("get_my_effective_permissions");
     if (effectiveError) {
