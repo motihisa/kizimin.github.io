@@ -183,3 +183,187 @@ footer,.footer{border-color:var(--kz-line)}
 @media (max-width: 900px) {
   .admin-page .admin-sidebar { background: #fff !important; }
 }
+
+
+/* Admin readability fix: keep foreground/background contrast consistent across every panel. */
+.admin-page {
+  --admin-ink: #24213b;
+  --admin-secondary: #514b68;
+  --admin-muted-strong: #625c78;
+  --admin-surface: #ffffff;
+  --admin-surface-soft: #f4f2fb;
+  --admin-border-strong: #d8d3e8;
+  color: var(--admin-ink) !important;
+  background: #f7f6fc !important;
+}
+.admin-page .admin-main,
+.admin-page .admin-view,
+.admin-page .admin-panel,
+.admin-page .admin-panel-head,
+.admin-page .admin-table-wrap,
+.admin-page .admin-log,
+.admin-page .admin-card,
+.admin-page .stat-card,
+.admin-page .ops-card,
+.admin-page .org-admin-card {
+  color: var(--admin-ink);
+}
+.admin-page .admin-panel,
+.admin-page .admin-table-wrap,
+.admin-page .admin-card,
+.admin-page .ops-card,
+.admin-page .org-admin-card {
+  background-color: var(--admin-surface);
+}
+.admin-page h1,
+.admin-page h2,
+.admin-page h3,
+.admin-page h4,
+.admin-page p,
+.admin-page li,
+.admin-page td,
+.admin-page th,
+.admin-page label,
+.admin-page legend,
+.admin-page summary,
+.admin-page .admin-log,
+.admin-page .admin-table,
+.admin-page .stat-number,
+.admin-page .chart-total {
+  color: var(--admin-ink);
+}
+.admin-page .admin-muted,
+.admin-page .admin-topbar p,
+.admin-page .admin-panel small,
+.admin-page .stat-label,
+.admin-page .chart-head span,
+.admin-page .chart-total small,
+.admin-page .admin-nav-label,
+.admin-page .access-user-handle,
+.admin-page .dm-admin-conv-meta,
+.admin-page .dm-admin-message-meta {
+  color: var(--admin-secondary) !important;
+}
+.admin-page .admin-table th {
+  color: #38334e !important;
+  background: #eeebf7 !important;
+}
+.admin-page .admin-table td {
+  color: #29253e !important;
+  background: #fff;
+}
+.admin-page input:not([type="checkbox"]):not([type="radio"]),
+.admin-page select,
+.admin-page textarea {
+  color: #24213b !important;
+  background-color: #fff !important;
+  border-color: #cfc9df !important;
+}
+.admin-page input::placeholder,
+.admin-page textarea::placeholder {
+  color: #625c78 !important;
+  opacity: 1 !important;
+}
+.admin-page .admin-btn:not(.primary):not(.danger),
+.admin-page button:not(.admin-nav button):not(.admin-btn.primary):not(.admin-btn.danger) {
+  color: #29253e;
+}
+.admin-page a:not(.admin-nav-link) {
+  color: #5140a8;
+}
+.admin-page :focus-visible {
+  outline: 3px solid #6855d6;
+  outline-offset: 2px;
+}
+.admin-page .admin-nav-label { color: #625c78 !important; }
+
+/* Dark admin theme: switch both sides of every text/surface pair together. */
+.admin-page[data-site-theme="dark"] {
+  --admin-ink: #f1f3f8;
+  --admin-secondary: #c1c8d6;
+  --admin-muted-strong: #b5bed0;
+  --admin-surface: #202a3a;
+  --admin-surface-soft: #29364a;
+  --admin-border-strong: #536078;
+  color: var(--admin-ink) !important;
+  background: #111827 !important;
+}
+.admin-page[data-site-theme="dark"] .admin-main,
+.admin-page[data-site-theme="dark"] .admin-view { color: var(--admin-ink); }
+.admin-page[data-site-theme="dark"] .admin-panel,
+.admin-page[data-site-theme="dark"] .admin-table-wrap,
+.admin-page[data-site-theme="dark"] .admin-card,
+.admin-page[data-site-theme="dark"] .ops-card,
+.admin-page[data-site-theme="dark"] .org-admin-card,
+.admin-page[data-site-theme="dark"] .stat-card {
+  color: var(--admin-ink) !important;
+  background: var(--admin-surface) !important;
+  border-color: #46536a !important;
+}
+.admin-page[data-site-theme="dark"] h1,
+.admin-page[data-site-theme="dark"] h2,
+.admin-page[data-site-theme="dark"] h3,
+.admin-page[data-site-theme="dark"] h4,
+.admin-page[data-site-theme="dark"] p,
+.admin-page[data-site-theme="dark"] li,
+.admin-page[data-site-theme="dark"] td,
+.admin-page[data-site-theme="dark"] th,
+.admin-page[data-site-theme="dark"] label,
+.admin-page[data-site-theme="dark"] legend,
+.admin-page[data-site-theme="dark"] summary,
+.admin-page[data-site-theme="dark"] .admin-log,
+.admin-page[data-site-theme="dark"] .admin-table,
+.admin-page[data-site-theme="dark"] .stat-number,
+.admin-page[data-site-theme="dark"] .chart-total {
+  color: var(--admin-ink);
+}
+.admin-page[data-site-theme="dark"] .admin-muted,
+.admin-page[data-site-theme="dark"] .admin-topbar p,
+.admin-page[data-site-theme="dark"] .admin-panel small,
+.admin-page[data-site-theme="dark"] .stat-label,
+.admin-page[data-site-theme="dark"] .chart-head span,
+.admin-page[data-site-theme="dark"] .chart-total small,
+.admin-page[data-site-theme="dark"] .admin-nav-label {
+  color: var(--admin-secondary) !important;
+}
+.admin-page[data-site-theme="dark"] .admin-topbar {
+  background: #202a3a !important;
+  border-color: #46536a !important;
+}
+.admin-page[data-site-theme="dark"] .admin-table th {
+  color: #f1f3f8 !important;
+  background: #29364a !important;
+}
+.admin-page[data-site-theme="dark"] .admin-table td {
+  color: #e8edf5 !important;
+  background: #202a3a !important;
+}
+.admin-page[data-site-theme="dark"] input:not([type="checkbox"]):not([type="radio"]),
+.admin-page[data-site-theme="dark"] select,
+.admin-page[data-site-theme="dark"] textarea {
+  color: #f1f3f8 !important;
+  background-color: #202a3a !important;
+  border-color: #59677f !important;
+}
+.admin-page[data-site-theme="dark"] input::placeholder,
+.admin-page[data-site-theme="dark"] textarea::placeholder {
+  color: #c1c8d6 !important;
+}
+.admin-page[data-site-theme="dark"] .admin-btn:not(.primary):not(.danger) {
+  color: #f1f3f8 !important;
+  background: #29364a !important;
+  border-color: #59677f !important;
+}
+.admin-page[data-site-theme="dark"] .admin-nav button,
+.admin-page[data-site-theme="dark"] .admin-sidebar a,
+.admin-page[data-site-theme="dark"] .admin-brand,
+.admin-page[data-site-theme="dark"] .admin-brand small {
+  color: #e8edf5 !important;
+}
+.admin-page[data-site-theme="dark"] .admin-nav button:hover,
+.admin-page[data-site-theme="dark"] .admin-nav button.active,
+.admin-page[data-site-theme="dark"] .admin-sidebar a:hover {
+  color: #fff !important;
+  background: #3a4660 !important;
+}
+.admin-page[data-site-theme="dark"] a:not(.admin-nav-link) { color: #c4b5fd; }
