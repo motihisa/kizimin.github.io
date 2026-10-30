@@ -76,9 +76,38 @@ const counts = {
   suspiciousComments: 0,
   suspiciousArticles: 0,
   suspensionCandidates: 0,
-  suspendedUsers: 0
+  suspendedUsers: 0,
+  staleReports: 0,
+  staleInquiries: 0,
+  newAccountsLastHour: 0,
+  highActivityAuthors: 0,
+  repeatedUrls: 0
 };
 const suspiciousByAuthor = new Map();
+const activityByAuthor = new Map();
+const urlAuthors = new Map();
+const oneHourAgo = Date.now() - 60 * 60 * 1000;
+function trackActivity(authorId, createdAt, category) {
+  if (!authorId || !createdAt || new Date(createdAt).getTime() < oneHourAgo) return;
+  const id = String(authorId);
+  const entry = activityByAuthor.get(id) || { count: 0, categories: new Set() };
+  entry.count++;
+  entry.categories.add(category);
+  activityByAuthor.set(id, entry);
+}
+function trackUrls(authorId, value) {
+  if (!authorId) return;
+  const matches = String(value || "").match(/https?:\/\/[^\s<>"']+/gi) || [];
+  for (const raw of matches) {
+    try {
+      const parsed = new URL(raw);
+      const key = parsed.hostname.toLowerCase() + parsed.pathname.replace(/\/$/, "");
+      const authors = urlAuthors.get(key) || new Set();
+      authors.add(String(authorId));
+      urlAuthors.set(key, authors);
+    } catch { /* Ignore malformed URLs. */ }
+  }
+}
 
 async function readTable(table, columns, filters = {}) {
   const url = new URL(`${baseUrl}/rest/v1/${table}`);
@@ -173,12 +202,20 @@ await Promise.all([
   safeScan("reports", "id,reason,status,created_at", rows => {
     for (const row of rows.filter(r => isOpen(r.status))) {
       counts.openReports++;
+      if (row.created_at && Date.now() - new Date(row.created_at).getTime() > 48 * 60 * 60 * 1000) {
+        counts.staleReports++;
+        add("high", "stale-report", row.id, `48時間以上未対応の通報: ${row.reason || "理由未記入"}`);
+      }
       add("high", "report", row.id, `未処理の通報: ${row.reason || "理由未記入"}`);
     }
   }),
   safeScan("inquiries", "id,subject,message,status,created_at", rows => {
     for (const row of rows.filter(r => isOpen(r.status))) {
       counts.openInquiries++;
+      if (row.created_at && Date.now() - new Date(row.created_at).getTime() > 48 * 60 * 60 * 1000) {
+        counts.staleInquiries++;
+        add("medium", "stale-inquiry", row.id, `48時間以上未対応の問い合わせ: ${row.subject || "件名なし"}`);
+      }
       add("medium", "inquiry", row.id, `未対応の問い合わせ: ${row.subject || "件名なし"}`);
     }
   }),
@@ -186,6 +223,8 @@ await Promise.all([
     const seen = new Set();
     for (const row of rows) {
       if (row.status !== "visible" || !row.created_at || row.created_at < windowStart) continue;
+      trackActivity(row.author_id, row.created_at, "comment");
+      trackUrls(row.author_id, row.content);
       const text = String(row.content || "");
       const reason = spamReason(text);
       const fingerprint = text.toLowerCase().replace(/\s+/g, " ").trim();
@@ -201,6 +240,8 @@ await Promise.all([
   safeScan("articles", "id,author_id,title,excerpt,content,status,created_at", rows => {
     for (const row of rows) {
       if (row.status !== "visible" || !row.created_at || row.created_at < windowStart) continue;
+      trackActivity(row.author_id, row.created_at, "article");
+      trackUrls(row.author_id, [row.title, row.excerpt, row.content].filter(Boolean).join("\n"));
       const reason = spamReason([row.title, row.excerpt, row.content].filter(Boolean).join("\n"));
       if (reason) {
         counts.suspiciousArticles++;
@@ -210,6 +251,33 @@ await Promise.all([
   }, { created_at: `gte.${windowStart}`, status: "eq.visible" })
 ]);
 
+// Read-only operational signals: no automatic punishment is based on these checks.
+for (const [authorId, entry] of activityByAuthor.entries()) {
+  if (entry.count >= 8) {
+    counts.highActivityAuthors++;
+    add("review", "posting-burst", authorId,
+      `過去1時間に${entry.count}件の投稿（${[...entry.categories].join("/")})。正規の活動か確認してください。`);
+  }
+}
+for (const [url, authors] of urlAuthors.entries()) {
+  if (authors.size >= 3) {
+    counts.repeatedUrls++;
+    add("review", "shared-url", url,
+      `同じURLが${authors.size}アカウントの投稿で確認されました。`);
+  }
+}
+try {
+  const recentProfiles = await readTable("profiles", "id,created_at", {
+    created_at: `gte.${new Date(Date.now() - 60 * 60 * 1000).toISOString()}`
+  });
+  counts.newAccountsLastHour = recentProfiles.length;
+  if (recentProfiles.length >= 5) {
+    add("review", "signup-burst", "profiles",
+      `過去1時間に${recentProfiles.length}件の新規登録がありました。正規の利用増加か確認してください。`);
+  }
+} catch (error) {
+  errors.push(`アカウント監視: ${error.message}`);
+}
 await suspendEligibleUsers();
 const result = {
   bot: "kizimin-composite",
