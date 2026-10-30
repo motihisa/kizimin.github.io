@@ -88,13 +88,15 @@ async function main(req: Request) {
   if (authData.user.app_metadata?.must_change_password === true && action !== "complete_forced_password_change") {
     return json({ error: "PASSWORD_CHANGE_REQUIRED" }, 403);
   }
-  const isStaff = !!profile
-    && (isOwner || ["admin","moderator"].includes(profile.role))
-    && (profile.account_status || "active") === "active";
+  const isStaff = !!profile && (isOwner || (
+    ["admin","moderator"].includes(profile.role) &&
+    (profile.account_status || "active") === "active"
+  ));
 
   const hasPermission = async (permissionKey: string) => {
-    if (!profile || (profile.account_status || "active") !== "active") return false;
+    if (!profile) return false;
     if (isOwner) return true;
+    if ((profile.account_status || "active") !== "active") return false;
     const { data: override, error: overrideError } = await admin.from("user_permission_overrides")
       .select("allowed")
       .eq("user_id", userId)
