@@ -10,7 +10,7 @@
   const db = window.supabase.createClient(SUPABASE_URL, PUBLISHABLE_KEY);
   let userId = null, intervalId = null, running = false, scanInProgress = false, pendingRealtimeScan = false, realtimeChannel = null, realtimeTimer = null, lastAlerts = [], lastRunAt = null;
   const defaults = { enabled:false, intervalMinutes:5, reports:true, inquiries:true, comments:true, articles:true };
-  const defaultPolicy = { mode:"detect_only", threshold:3, window_hours:24, suspend_minutes:60 };
+  const defaultPolicy = { mode:"detect_only", threshold:3, window_hours:24, suspend_minutes:60, url_threshold:4, repeat_char_threshold:12, max_suspensions_per_run:3 };
   let policy = {...defaultPolicy}, policyLoaded = false;
   const storageKey = () => STORAGE_PREFIX + (userId || "unknown");
   function readConfig() {
@@ -41,8 +41,11 @@
       if($("bot-threshold")) $("bot-threshold").value=String(Math.max(2,Math.min(10,Number(policy.threshold)||3)));
       if($("bot-window-hours")) $("bot-window-hours").value=String(Math.max(1,Math.min(168,Number(policy.window_hours)||24)));
       if($("bot-suspend-minutes")) $("bot-suspend-minutes").value=String(Math.max(15,Math.min(1440,Number(policy.suspend_minutes)||60)));
+      if($("bot-url-threshold")) $("bot-url-threshold").value=String(Math.max(2,Math.min(6,Number(policy.url_threshold)||4)));
+      if($("bot-repeat-char-threshold")) $("bot-repeat-char-threshold").value=String(Math.max(8,Math.min(30,Number(policy.repeat_char_threshold)||12)));
+      if($("bot-max-suspensions")) $("bot-max-suspensions").value=String(Math.max(1,Math.min(10,Number(policy.max_suspensions_per_run)||3)));
     }
-    for(const id of ["bot-mode","bot-threshold","bot-window-hours","bot-suspend-minutes"]) if($(id)) $(id).disabled=!policyLoaded;
+    for(const id of ["bot-mode","bot-threshold","bot-window-hours","bot-suspend-minutes","bot-url-threshold","bot-repeat-char-threshold","bot-max-suspensions"]) if($(id)) $(id).disabled=!policyLoaded;
     if($("bot-policy-save")) $("bot-policy-save").disabled=!policyLoaded;
   }
   async function savePolicy() {
@@ -54,7 +57,10 @@
         mode,
         threshold:Math.max(2,Math.min(10,Number($("bot-threshold")?.value)||3)),
         window_hours:Math.max(1,Math.min(168,Number($("bot-window-hours")?.value)||24)),
-        suspend_minutes:Math.max(15,Math.min(1440,Number($("bot-suspend-minutes")?.value)||60))
+        suspend_minutes:Math.max(15,Math.min(1440,Number($("bot-suspend-minutes")?.value)||60)),
+        url_threshold:Math.max(2,Math.min(6,Number($("bot-url-threshold")?.value)||4)),
+        repeat_char_threshold:Math.max(8,Math.min(30,Number($("bot-repeat-char-threshold")?.value)||12)),
+        max_suspensions_per_run:Math.max(1,Math.min(10,Number($("bot-max-suspensions")?.value)||3))
       };
       if(mode==="auto_suspend"&&!confirm("自動一時停止を有効にします。条件に該当する一般ユーザーは自動で一時停止されます。続行しますか？")) { setStatus("保存をキャンセルしました。設定は変更されていません。"); return; }
       if(!userId) throw new Error("ログイン状態を確認できません。管理画面に再ログインしてください。");
