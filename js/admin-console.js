@@ -44,7 +44,7 @@ async function execute(raw){
  "/kizimin inquiries [open|all]","/kizimin inquiry status <問い合わせID> <open|reviewing|resolved|closed|dismissed>",
  "/kizimin maintenance status|on|off|reason <理由>","/kizimin bot status|run|stop",
  "/kizimin categories","/kizimin topic","/kizimin access [ユーザーID|パス]",
- "/kizimin audit [件数]","/kizimin roles [ユーザーID]",
+ "/kizimin audit [件数]","/kizimin audit page <ページ> [件数]","/kizimin export audit [件数]","/kizimin roles [ユーザーID]",
  "/kizimin orgs [検索語]","/kizimin orgapps [pending|all]","/kizimin orgmembers <団体ID>",
  "/kizimin ops incidents|schedules|approvals","/kizimin filters","/kizimin filter toggle <ID> <on|off>",
  "/kizimin article pin <記事ID> <on|off>","/kizimin article protect <記事ID> <理由>","/kizimin article unprotect <記事ID>",
@@ -154,6 +154,24 @@ async function execute(raw){
  if(a==="categories"){const {data,error}=await db.from("categories").select("id,name,slug,admin_only").order("name").limit(100);if(error)throw error;out("カテゴリ "+data.length+" 件");data.forEach(x=>out(x.name+" | "+x.slug+" | admin_only="+x.admin_only+" | "+x.id));return;}
  if(a==="topic"){const today=new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Tokyo"});const {data,error}=await db.from("daily_topics").select("topic_date,title,description").eq("topic_date",today).maybeSingle();if(error)throw error;if(!data){out("今日のお題は未設定です。");return;}out(data.topic_date+" | "+data.title);out(data.description||"");return;}
  if(a==="access"){let q=db.from("access_logs").select("id,path,visited_at,user_id").order("visited_at",{ascending:false}).limit(30);if(target){if(/^[0-9a-f-]{36}$/i.test(target))q=q.eq("user_id",target);else q=q.ilike("path","%"+target+"%");}const {data,error}=await q;if(error)throw error;out("アクセスログ "+data.length+" 件");data.forEach(x=>out(fmt(x.visited_at)+" | "+x.path+" | "+(x.user_id||"匿名")+" | "+x.id));return;}
+ 
+ if(a==="audit"&&b==="page"){
+  const page=Math.max(1,Number(c)||1),size=Math.max(1,Math.min(100,Number(rest[0])||20)),from=(page-1)*size,to=from+size-1;
+  const {data,error,count}=await db.from("admin_audit_events").select("event_type,target_type,target_id,summary,created_at,actor_id",{count:"exact"}).order("created_at",{ascending:false}).range(from,to);
+  if(error)throw error;out("管理操作ログ "+(count||0)+" 件中 "+page+" ページ目（"+data.length+" 件）");
+  data.forEach(x=>out(fmt(x.created_at)+" | "+x.event_type+" | "+x.summary+" | "+(x.target_type||"-")+":"+(x.target_id||"-")));return;
+ }
+ if(a==="export"&&b==="audit"){
+  if(!["admin","owner"].includes(role))throw Error("監査ログ出力は管理者・オーナー専用です。");
+  const n=Math.max(1,Math.min(500,Number(c)||100));
+  const {data,error}=await db.from("admin_audit_events").select("event_type,target_type,target_id,summary,created_at,actor_id").order("created_at",{ascending:false}).limit(n);
+  if(error)throw error;if(!data?.length)throw Error("出力対象のログがありません。");
+  const cols=["created_at","event_type","summary","target_type","target_id","actor_id"];
+  const csv=[cols.join(","),...data.map(row=>cols.map(k=>'"'+String(row[k]??"").replace(/"/g,'""')+'"').join(","))].join("\r\n");
+  const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),link=document.createElement("a");
+  link.href=url;link.download="kizimin-admin-audit-"+new Date().toISOString().slice(0,10)+".csv";document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
+  out("監査ログを "+data.length+" 件CSV出力しました。","success");return;
+ }
  if(a==="audit"){const n=Math.max(1,Math.min(100,Number(target)||30));const {data,error}=await db.from("admin_audit_events").select("event_type,target_type,target_id,summary,created_at").order("created_at",{ascending:false}).limit(n);if(error)throw error;out("管理操作ログ "+data.length+" 件");data.forEach(x=>out(fmt(x.created_at)+" | "+x.event_type+" | "+x.summary+" | "+(x.target_type||"")+" "+(x.target_id||"")));return;}
  if(a==="roles"){let q=db.from("role_change_audit").select("target_user_id,old_role,new_role,changed_at,changed_by").order("changed_at",{ascending:false}).limit(30);if(target)q=q.eq("target_user_id",target);const {data,error}=await q;if(error)throw error;out("権限変更履歴 "+data.length+" 件");data.forEach(x=>out(fmt(x.changed_at)+" | "+x.old_role+" → "+x.new_role+" | "+x.target_user_id));return;}
  if(a==="orgs"){let q=db.from("organizations").select("id,name,organization_type,status,created_at").order("created_at",{ascending:false}).limit(50);if(target)q=q.ilike("name","%"+target+"%");const {data,error}=await q;if(error)throw error;out("団体 "+data.length+" 件");data.forEach(x=>out(x.name+" | "+x.organization_type+" | "+x.status+" | "+x.id));return;}
@@ -288,7 +306,12 @@ function bind(){
  const form=$("kcmd-form"),input=$("kcmd-input");if(!form||form.dataset.bound)return;form.dataset.bound="1";
  form.addEventListener("submit",async e=>{e.preventDefault();const raw=input.value.trim();if(!raw)return;out("> "+raw,"command");input.value="";try{await execute(raw);}catch(err){console.error("[Kizimin Console]",err);out("エラー: "+(err?.message||String(err)),"error");}});
  $("kcmd-clear")?.addEventListener("click",()=>{$("kcmd-output").innerHTML="";});
- input.addEventListener("keydown",e=>{if(e.key==="ArrowUp"){e.preventDefault();input.value="/kizimin help";input.select();}});
+ const history=[];let historyIndex=0;
+ input.addEventListener("keydown",e=>{
+  if(e.key==="ArrowUp"){e.preventDefault();if(!history.length)return;historyIndex=Math.max(0,historyIndex-1);input.value=history[historyIndex];}
+  else if(e.key==="ArrowDown"){e.preventDefault();if(!history.length)return;historyIndex=Math.min(history.length,historyIndex+1);input.value=history[historyIndex]||"";}
+ });
+ form.addEventListener("submit",()=>{const raw=input.value.trim();if(raw&&history[history.length-1]!==raw){history.push(raw);if(history.length>100)history.shift();}historyIndex=history.length;});
 }
 document.addEventListener("DOMContentLoaded",()=>{bind();init().catch(e=>{console.error(e);$("kcmd-auth").textContent="認証失敗: "+(e.message||e);$("kcmd-auth").classList.add("error");});});
 })();
