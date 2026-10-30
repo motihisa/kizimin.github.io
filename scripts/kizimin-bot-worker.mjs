@@ -26,6 +26,9 @@ let autoSuspend = false; // Both Render environment and saved admin policy must 
 const batchLimit = Math.max(10, Math.min(500, Number(process.env.BOT_BATCH_LIMIT) || 100));
 let suspendThreshold = Math.max(2, Math.min(10, Number(process.env.BOT_SUSPEND_THRESHOLD) || 3));
 let suspendMinutes = Math.max(15, Math.min(1440, Number(process.env.BOT_SUSPEND_MINUTES) || 60));
+let urlThreshold = 4;
+let repeatCharThreshold = 12;
+let maxSuspensionsPerRun = 3;
 let windowHours = 24;
 const nowDate = new Date();
 const now = nowDate.toISOString();
@@ -63,6 +66,9 @@ try {
   autoSuspend = envAllowsAutoSuspend && settings.mode === "auto_suspend";
   suspendThreshold = Math.max(2, Math.min(10, Number(settings.threshold) || 3));
   suspendMinutes = Math.max(15, Math.min(1440, Number(settings.suspend_minutes) || 60));
+  urlThreshold = Math.max(2, Math.min(6, Number(settings.url_threshold) || 4));
+  repeatCharThreshold = Math.max(8, Math.min(30, Number(settings.repeat_char_threshold) || 12));
+  maxSuspensionsPerRun = Math.max(1, Math.min(10, Number(settings.max_suspensions_per_run) || 3));
   windowHours = Math.max(1, Math.min(168, Number(settings.window_hours) || 24));
 } catch (error) {
   // If policy retrieval fails, remain in detect-only mode.
@@ -131,8 +137,8 @@ function spamReason(value) {
   const text = String(value || "").trim();
   if (!text) return null;
   const links = (text.match(/https?:\/\//gi) || []).length;
-  if (links >= 4) return "URLが4件以上含まれています";
-  if (/(.)\1{11,}/u.test(text)) return "同じ文字が過度に連続しています";
+  if (links >= urlThreshold) return `URLが${urlThreshold}件以上含まれています`;
+  if (new RegExp(`(.)\\\\1{${Math.max(1, repeatCharThreshold - 1)},}`, "u").test(text)) return "同じ文字が過度に連続しています";
   if (/(?:無料で稼げる|必ず儲かる|当選しました|投資で確実|アカウント停止を回避|パスワードを送信)/i.test(text)) return "迷惑投稿で使われやすい表現を検出しました";
   if (text.length > 1800 && links >= 2) return "長文かつ複数URLを含みます";
   return null;
@@ -157,7 +163,8 @@ async function suspendEligibleUsers() {
   const candidates = [...suspiciousByAuthor.entries()]
     .filter(([, entry]) => entry.ids.length >= suspendThreshold);
   counts.suspensionCandidates = candidates.length;
-  for (const [userId, entry] of candidates) {
+  for (const [userId, entry] of candidates.slice(0, maxSuspensionsPerRun)) {
+    if (counts.suspendedUsers >= maxSuspensionsPerRun) break;
     try {
       const url = new URL(`${baseUrl}/rest/v1/profiles`);
       url.searchParams.set("id", `eq.${userId}`);
@@ -284,7 +291,7 @@ const result = {
   status: errors.length ? "partial" : "ok",
   at: now,
   autoSuspend,
-  policy: { mode: autoSuspend ? "auto_suspend" : "detect_only", threshold: suspendThreshold, windowHours, suspensionMinutes: suspendMinutes },
+  policy: { mode: autoSuspend ? "auto_suspend" : "detect_only", threshold: suspendThreshold, windowHours, suspensionMinutes: suspendMinutes, urlThreshold, repeatCharThreshold, maxSuspensionsPerRun },
   counts,
   findingCount: findings.length,
   findings: findings.slice(0, 100),
