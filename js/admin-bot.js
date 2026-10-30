@@ -359,19 +359,30 @@
     const rows=readHistory();
     el.innerHTML=rows.length?rows.slice(0,12).map(r=>'<div class="bot-history-row"><span>'+esc(fmt(r.at))+'</span><strong>'+esc(r.reason)+'</strong><span>アラート '+esc(r.alerts)+' 件</span><span>エラー '+esc(r.errors)+' 件</span></div>').join(""):'<p class="bot-muted">まだ実行履歴はありません。</p>';
   }
+  const withTimeout=(promise,label,ms=10000)=>Promise.race([
+    promise,
+    new Promise((_,reject)=>setTimeout(()=>reject(new Error(label+"が10秒以内に応答しませんでした。通信・Supabase認証・RLSを確認してください。")),ms))
+  ]);
   async function authorize() {
-    const {data:{session},error:sessionError}=await db.auth.getSession();
-    if(sessionError||!session?.user?.id) return false;
+    setStatus("Botのログイン状態を確認しています…");
+    const sessionResult=await withTimeout(db.auth.getSession(),"Supabaseログイン確認");
+    const session=sessionResult?.data?.session;
+    if(sessionResult?.error) throw sessionResult.error;
+    if(!session?.user?.id) throw new Error("ログインセッションがありません。管理画面に再ログインしてください。");
     userId=session.user.id;
-    const [{data:profile,error:profileError},{data:ownerFlag,error:ownerError}]=await Promise.all([
+    setStatus("Botの管理者権限を確認しています…");
+    const profileResult=await withTimeout(
       db.from("profiles").select("role,account_status").eq("id",userId).maybeSingle(),
-      db.rpc("is_site_owner")
-    ]);
-    const isOwner=!ownerError && ownerFlag===true;
-    if(profileError) return false;
-    if(!profile && !isOwner) return false;
-    if(!isOwner && profile?.account_status && profile.account_status!=="active") return false;
-    return isOwner || profile?.role==="admin";
+      "profiles権限確認"
+    );
+    if(profileResult.error) throw profileResult.error;
+    const profile=profileResult.data;
+    if(profile?.account_status && profile.account_status!=="active") throw new Error("このアカウントは現在利用停止中です。");
+    if(profile?.role==="admin") return true;
+    const ownerResult=await withTimeout(db.rpc("is_site_owner"),"オーナー権限RPC");
+    if(ownerResult.error) throw ownerResult.error;
+    if(ownerResult.data===true) return true;
+    throw new Error("このアカウントには複合型Botを利用する管理者権限がありません。");
   }
   function bind() {
     const config=readConfig();
@@ -424,10 +435,16 @@
     else scan("初回チェック");
   }
   (async()=>{
-    const allowed=await authorize();
     const nav=document.querySelector('.admin-nav [data-view="bot"]');
-    if(!allowed){nav?.classList.add("hidden");$("view-bot")?.classList.add("hidden");return;}
-    bind();
-  })().catch(error=>{console.error("Bot権限確認失敗",error);document.querySelector('.admin-nav [data-view="bot"]')?.classList.add("hidden");setStatus("Botの権限確認に失敗しました。再読み込みしてください。","error");});
+    try {
+      const allowed=await authorize();
+      if(!allowed){nav?.classList.add("hidden");$("view-bot")?.classList.add("hidden");return;}
+      bind();
+    } catch(error) {
+      console.error("Bot権限確認失敗",error);
+      setStatus("Botの権限確認に失敗しました: "+(error?.message||String(error)),"error");
+      if(nav) nav.title="権限確認エラー。画面のBotステータスを確認してください。";
+    }
+  })();
   window.addEventListener("beforeunload",()=>{if(intervalId)clearInterval(intervalId);if(realtimeTimer)clearTimeout(realtimeTimer);if(realtimeChannel)db.removeChannel(realtimeChannel);});
 })();
