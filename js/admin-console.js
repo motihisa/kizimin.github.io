@@ -108,7 +108,7 @@ async function execute(raw){
  if(a==="maintenance"){
   if(b==="status"){const {data,error}=await db.from("site_settings").select("maintenance_mode,maintenance_type,maintenance_reason").eq("id",true).maybeSingle();if(error)throw error;out("メンテナンス "+(data?.maintenance_mode?"ON":"OFF")+" · "+(data?.maintenance_type||"normal")+" · "+(data?.maintenance_reason||"理由未設定"));return;}
   if(!owner)throw Error("メンテナンス操作はオーナー専用です。");
-  if(b==="reason"){if(!extra.trim())throw Error("理由を入力してください。");const {error}=await db.rpc("admin_set_maintenance_reason",{p_reason:[c,...rest].join(" ")});if(error)throw error;out("メンテナンス理由を保存しました。","success");return;}
+  if(b==="reason"){const reason=[c,...rest].filter(Boolean).join(" ").trim();if(!reason)throw Error("理由を入力してください。");const {error}=await db.rpc("admin_set_maintenance_reason",{p_reason:reason});if(error)throw error;out("メンテナンス理由を保存しました。","success");return;}
   if(b==="on"||b==="off"){if(b==="on"){const {data,error}=await db.from("site_settings").select("maintenance_reason").eq("id",true).maybeSingle();if(error)throw error;if(!data?.maintenance_reason?.trim())throw Error("先に /kizimin maintenance reason \"理由\" で理由を設定してください。");}
    if(!confirm("メンテナンスを "+(b==="on"?"有効":"無効")+" にしますか？"))return;const {error}=await db.rpc("admin_set_maintenance_mode",{p_enabled:b==="on"});if(error)throw error;out("メンテナンスを "+(b==="on"?"ON":"OFF")+" にしました。","success");return;}
  }
