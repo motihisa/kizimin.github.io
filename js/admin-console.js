@@ -37,7 +37,7 @@ async function execute(raw){
  const [a,b,c,...rest]=t, target=b, value=c, extra=rest.join(" ");
  if(a==="help"){out("利用可能なコマンド:");[
  "/kizimin help","/kizimin status","/kizimin users [検索語]","/kizimin user <名前|ID>",
- "/kizimin user ban <名前|ID> <理由>","/kizimin user unban <名前|ID>","/kizimin user role <名前|ID> <user|moderator|admin|debugger>",
+ "/kizimin user ban <名前|ID> <理由>","/kizimin user suspend <名前|ID> <30m|24h|7d> <理由>","/kizimin user unban <名前|ID>","/kizimin user role <名前|ID> <user|moderator|admin|debugger>",
  "/kizimin articles [検索語]","/kizimin article status <記事ID> <draft|published|archived>","/kizimin article delete <記事ID>",
  "/kizimin comments [検索語]","/kizimin comment status <コメントID> <visible|hidden|deleted>","/kizimin comment delete <コメントID>",
  "/kizimin reports [open|all]","/kizimin report status <通報ID> <open|reviewing|resolved|dismissed>",
@@ -46,7 +46,7 @@ async function execute(raw){
  "/kizimin categories","/kizimin topic","/kizimin access [ユーザーID|パス]",
  "/kizimin audit [件数]","/kizimin roles [ユーザーID]",
  "/kizimin orgs [検索語]","/kizimin orgapps [pending|all]","/kizimin orgmembers <団体ID>",
- "/kizimin ops incidents|schedules|approvals","/kizimin filters",
+ "/kizimin ops incidents|schedules|approvals","/kizimin filters","/kizimin filter toggle <ID> <on|off>",
  "/kizimin article pin <記事ID> <on|off>","/kizimin article protect <記事ID> <理由>","/kizimin article unprotect <記事ID>",
  "/kizimin site settings","/kizimin bot config"
  ].forEach(x=>out("  "+x));return;}
@@ -66,6 +66,17 @@ async function execute(raw){
   data.forEach(x=>out((x.username||x.id)+" | "+(x.display_name||"-")+" | "+x.role+" | "+(x.account_status||"active")+" | "+x.id));return;
  }
  if(a==="user"){
+
+  if(b==="suspend"){
+   if(!["admin","owner"].includes(role))throw Error("一時停止は管理者・オーナー専用です。");
+   const who=c,duration=rest[0],reason=rest.slice(1).join(" ");if(!who||!duration||!reason)throw Error("形式: /kizimin user suspend <名前|ID> <30m|24h|7d> <理由>");
+   const match=duration.match(/^(\d+)(m|h|d)$/);if(!match)throw Error("期間は 30m / 24h / 7d の形式で指定してください。");
+   const amount=Number(match[1]),unit=match[2],ms=amount*(unit==="m"?60000:unit==="h"?3600000:86400000);if(amount<1||ms>30*86400000)throw Error("一時停止期間は1分以上30日以内です。");
+   const u=await profile(who);if(u.id==="9589135e-4f75-4913-b13f-35407eeedf3b")throw Error("オーナーアカウントは変更できません。");
+   if(!confirm(u.username+" を "+duration+" 一時停止しますか？\n理由: "+reason))return;
+   const {error}=await db.rpc("admin_set_account_status",{p_target_id:u.id,p_status:"suspended",p_reason:reason,p_expires_at:new Date(Date.now()+ms).toISOString()});if(error)throw error;
+   out(u.username+" を "+duration+" 一時停止しました。","success");return;
+  }
   if(b==="ban"||b==="unban"){
    const who=c,reason=extra;if(!who)throw Error("対象ユーザーを指定してください。");
    const u=await profile(who);if(u.id==="9589135e-4f75-4913-b13f-35407eeedf3b")throw Error("オーナーアカウントは変更できません。");
@@ -83,6 +94,11 @@ async function execute(raw){
   }
   const u=await profile(b);out("ユーザー: "+(u.display_name||u.username));out("ID: "+u.id);out("ユーザー名: "+u.username);out("ロール: "+u.role);out("状態: "+(u.account_status||"active"));out("制限理由: "+(u.ban_reason||"-"));out("解除日時: "+fmt(u.ban_expires_at));return;
  }
+
+ if(a==="filter"&&b==="toggle"){if(!["admin","owner"].includes(role))throw Error("フィルター変更は管理者・オーナー専用です。");if(!c||!["on","off"].includes(value))throw Error("フィルターIDと on/off を指定してください。");if(!confirm("フィルター #"+c+" を "+value.toUpperCase()+" にしますか？"))return;const {data,error}=await db.from("admin_abuse_filters").update({enabled:value==="on"}).eq("id",Number(c)).select("id").maybeSingle();if(error)throw error;if(!data)throw Error("フィルターが見つからないか変更権限がありません。");out("フィルターを更新しました。","success");return;}
+ if(a==="article"&&b==="pin"){if(!["admin","owner"].includes(role))throw Error("記事固定は管理者・オーナー専用です。");if(!c||!["on","off"].includes(value))throw Error("記事IDと on/off を指定してください。");if(!confirm("記事 "+c+" の固定状態を変更しますか？"))return;const {data,error}=await db.from("articles").update({is_pinned:value==="on"}).eq("id",c).select("id").maybeSingle();if(error)throw error;if(!data)throw Error("記事が見つからないか権限がありません。");out("記事固定を更新しました。","success");return;}
+ if(a==="article"&&b==="protect"){if(!["admin","owner"].includes(role))throw Error("記事保護は管理者・オーナー専用です。");const reason=[c,...rest].filter(Boolean).join(" ").trim();if(!c||!reason)throw Error("記事IDと保護理由を指定してください。");if(!confirm("記事 "+c+" を保護しますか？"))return;const {data:{session}}=await db.auth.getSession();const {error}=await db.from("article_protections").upsert({article_id:c,reason,protected_by:session.user.id},{onConflict:"article_id"});if(error)throw error;out("記事を保護しました。","success");return;}
+ if(a==="article"&&b==="unprotect"){if(!["admin","owner"].includes(role))throw Error("記事保護解除は管理者・オーナー専用です。");if(!c)throw Error("記事IDを指定してください。");if(!confirm("記事保護を解除しますか？"))return;const {error}=await db.from("article_protections").delete().eq("article_id",c);if(error)throw error;out("記事保護を解除しました。","success");return;}
  if(a==="articles"){
   let q=db.from("articles").select("id,title,status,created_at").order("created_at",{ascending:false}).limit(30);
   if(target)q=q.ilike("title","%"+target+"%");
