@@ -809,9 +809,24 @@
 
   async function loadRecentActivity() {
     const target=$("recent-activity-list"); if(!target)return;
-    const {data,error}=await supabase.from("admin_audit_events").select("id,event_type,target_type,target_id,summary,created_at,actor_id").order("created_at",{ascending:false}).limit(30);
-    if(error){target.textContent="最近の変更を読み込めません。ログ閲覧権限が必要です。";return;}
-    target.innerHTML=data?.length?'<div class="admin-log">'+data.map(e=>esc(date(e.created_at)+" / "+e.summary+" / 対象: "+(e.target_id||"-")+" / 実行者: "+(e.actor_id||"不明"))).join("\n")+'</div>':'最近の変更はありません。';
+    target.textContent="最近の変更を読み込んでいます...";
+    const [articles,roles,organizations]=await Promise.all([
+      supabase.from("admin_audit_events").select("id,event_type,target_type,target_id,summary,created_at,actor_id").order("created_at",{ascending:false}).limit(30),
+      supabase.from("role_change_audit").select("id,old_role,new_role,changed_at,changed_by,target_user_id").order("changed_at",{ascending:false}).limit(20),
+      supabase.from("organization_audit_logs").select("id,action,created_at,actor_id,organization_id,target_user_id,details").order("created_at",{ascending:false}).limit(20)
+    ]);
+    const rows=[];
+    if(!articles.error)(articles.data||[]).forEach(x=>rows.push({at:x.created_at,text:x.summary,actor:x.actor_id,target:x.target_id}));
+    if(!roles.error)(roles.data||[]).forEach(x=>rows.push({at:x.changed_at,text:"権限を変更: "+statusLabel(x.old_role)+" → "+statusLabel(x.new_role),actor:x.changed_by,target:x.target_user_id}));
+    if(!organizations.error)(organizations.data||[]).forEach(x=>rows.push({at:x.created_at,text:"団体操作: "+x.action,actor:x.actor_id,target:x.organization_id}));
+    rows.sort((a,b)=>new Date(b.at)-new Date(a.at));
+    const visible=rows.slice(0,50);
+    if(!visible.length){
+      const errors=[articles.error,roles.error,organizations.error].filter(Boolean);
+      target.textContent=errors.length?"最近の変更を読み込めません。ログ閲覧権限を確認してください。":"最近の変更はありません。";
+      return;
+    }
+    target.innerHTML=visible.map(e=>'<div>'+esc(date(e.at)+" / "+e.text+" / 対象: "+(e.target||"-")+" / 実行者: "+(e.actor||"不明"))+'</div>').join("");
   }
 
   async function deleteArticle(id, title, button) {
