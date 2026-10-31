@@ -31,9 +31,9 @@ async function loadRooms(){
 }
 async function loadAdmins(){
  const [{data,error},{data:owners,error:ownerError}]=await Promise.all([db.from("profiles").select("id,display_name,username,role").eq("role","admin").eq("account_status","active").order("display_name"),db.from("site_owners").select("user_id")]);
- if(error||ownerError){$("ac-people").textContent="メンバーを取得できません";return;}
+ if(error||ownerError){console.error("Admin Connect member query failed",{profiles:error,siteOwners:ownerError});$("ac-people").textContent="メンバーを取得できません: "+(error?.message||ownerError?.message||"不明なエラー");return;}
  const ownerIds=(owners||[]).map(x=>x.user_id);
- let ownerProfiles=[];if(ownerIds.length){const {data:op,error:oe}=await db.from("profiles").select("id,display_name,username,role,account_status").in("id",ownerIds);if(!oe)ownerProfiles=(op||[]).filter(p=>p.account_status==="active");}
+ let ownerProfiles=[];if(ownerIds.length){const {data:op,error:oe}=await db.from("profiles").select("id,display_name,username,role,account_status").in("id",ownerIds);if(oe){console.error("Admin Connect owner profile query failed",oe);$("ac-people").textContent="オーナー情報を取得できません: "+oe.message;return;}ownerProfiles=(op||[]).filter(p=>p.account_status==="active");}
  admins=[...(data||[]),...ownerProfiles].filter((p,i,arr)=>p.id!==uid&&arr.findIndex(x=>x.id===p.id)===i);
  $("ac-people").innerHTML=admins.map(p=>'<div class="ac-person"><i></i><span>'+esc(p.display_name||p.username||"管理者")+'</span></div>').join("")||'<small>ほかの管理者はいません</small>';
  $("ac-call-target").innerHTML='<option value="">通話相手を選択</option>'+admins.map(p=>'<option value="'+p.id+'">'+esc(p.display_name||p.username||"管理者")+'</option>').join("");
