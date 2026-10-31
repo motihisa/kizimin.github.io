@@ -568,8 +568,13 @@ async function execute(raw){
   if(b==="logs"){
    const n=Math.max(1,Math.min(100,Number(c)||30));
    const {data,error}=await db.from("admin_ai_conversations").select("id,conversation_id,actor_id,actor_role,prompt,answer,model,created_at").order("created_at",{ascending:false}).limit(n);
-   if(error)throw error;out("運営AI会話履歴 "+data.length+" 件");
-   data.forEach(x=>out(fmt(x.created_at)+" | "+x.actor_role+" | 管理者ID="+x.actor_id+" | 会話ID="+x.conversation_id+" | "+x.prompt.slice(0,120)));
+   if(error)throw error;
+   const ids=[...new Set(data.map(x=>x.actor_id))];
+   const {data:people,error:peopleError}=await db.from("profiles").select("id,display_name,username").in("id",ids);
+   if(peopleError)throw peopleError;
+   const names=new Map((people||[]).map(p=>[p.id,(p.display_name||p.username||p.id)]));
+   out("運営AI会話履歴 "+data.length+" 件");
+   data.forEach(x=>out(fmt(x.created_at)+" | "+(names.get(x.actor_id)||x.actor_id)+" | "+x.actor_role+" | 会話ID="+x.conversation_id+" | "+x.prompt.slice(0,120)));
    return;
   }
   if(b==="conversation"){
@@ -583,8 +588,13 @@ async function execute(raw){
   if(b==="search"){
    const q=[c,...rest].join(" ").trim();if(!q)throw Error("検索キーワードを入力してください。");
    const {data,error}=await db.from("admin_ai_conversations").select("conversation_id,actor_id,actor_role,prompt,answer,created_at").or("prompt.ilike.%"+q+"%,answer.ilike.%"+q+"%").order("created_at",{ascending:false}).limit(50);
-   if(error)throw error;out("検索結果 "+data.length+" 件");
-   data.forEach(x=>out(fmt(x.created_at)+" | "+x.actor_role+" | "+x.actor_id+" | "+x.conversation_id+" | "+x.prompt.slice(0,160)));
+   if(error)throw error;
+   const ids=[...new Set(data.map(x=>x.actor_id))];
+   const {data:people,error:peopleError}=await db.from("profiles").select("id,display_name,username").in("id",ids);
+   if(peopleError)throw peopleError;
+   const names=new Map((people||[]).map(p=>[p.id,(p.display_name||p.username||p.id)]));
+   out("検索結果 "+data.length+" 件");
+   data.forEach(x=>out(fmt(x.created_at)+" | "+(names.get(x.actor_id)||x.actor_id)+" | "+x.actor_role+" | "+x.conversation_id+" | "+x.prompt.slice(0,160)));
    return;
   }
   const {data,error}=await db.from("admin_ai_conversations").select("id,actor_id,conversation_id,created_at");
