@@ -30,9 +30,11 @@ async function loadRooms(){
  if(!roomId&&rooms[0]) await openRoom(rooms[0].id);
 }
 async function loadAdmins(){
- const {data,error}=await db.from("profiles").select("id,display_name,username,role").eq("role","admin").eq("account_status","active").order("display_name");
- if(error){$("ac-people").textContent="メンバーを取得できません";return;}
- admins=(data||[]).filter(p=>p.id!==uid);
+ const [{data,error},{data:owners,error:ownerError}]=await Promise.all([db.from("profiles").select("id,display_name,username,role").eq("role","admin").eq("account_status","active").order("display_name"),db.from("site_owners").select("user_id")]);
+ if(error||ownerError){$("ac-people").textContent="メンバーを取得できません";return;}
+ const ownerIds=(owners||[]).map(x=>x.user_id);
+ let ownerProfiles=[];if(ownerIds.length){const {data:op,error:oe}=await db.from("profiles").select("id,display_name,username,role,account_status").in("id",ownerIds);if(!oe)ownerProfiles=(op||[]).filter(p=>p.account_status==="active");}
+ admins=[...(data||[]),...ownerProfiles].filter((p,i,arr)=>p.id!==uid&&arr.findIndex(x=>x.id===p.id)===i);
  $("ac-people").innerHTML=admins.map(p=>'<div class="ac-person"><i></i><span>'+esc(p.display_name||p.username||"管理者")+'</span></div>').join("")||'<small>ほかの管理者はいません</small>';
  $("ac-call-target").innerHTML='<option value="">通話相手を選択</option>'+admins.map(p=>'<option value="'+p.id+'">'+esc(p.display_name||p.username||"管理者")+'</option>').join("");
 }
@@ -78,13 +80,13 @@ $("ac-compose").addEventListener("submit",async e=>{
 $("ac-new-room").onclick=async()=>{const name=prompt("チャット名を入力してください");if(!name?.trim())return;const {data,error}=await db.from("admin_connect_rooms").insert({name:name.trim(),room_type:"text"}).select().single();if(error){alert("作成に失敗しました: "+error.message);return;}await loadRooms();await openRoom(data.id);};
 function speak(text){if(!("speechSynthesis" in window))return;const u=new SpeechSynthesisUtterance(text);u.lang="ja-JP";speechSynthesis.speak(u);}
 async function subscribeSignals(){
- db.channel("admin-connect-signals-"+uid).on("postgres_changes",{event:"INSERT",schema:"public",table:"admin_connect_signals",filter:"recipient_id=eq."+uid},async p=>{await handleSignal(p.new);}).subscribe();
+ db.channel("admin-connect-signals-"+uid).on("postgres_changes",{event:"INSERT",schema:"public",table:"admin_connect_signals",filter:"recipient_id=eq."+uid},async p=>{await handleSignal(p.new);}).subscribe((state,error)=>{if(state==="SUBSCRIBED")status("通話待受中");else if(state==="CHANNEL_ERROR"||state==="TIMED_OUT")status("通話待受エラー: "+(error?.message||state));});
 }
-async function sendSignal(recipient,signal){const {error}=await db.from("admin_connect_signals").insert({room_id:roomId,sender_id:uid,recipient_id:recipient,signal});if(error)throw error;}
+async function sendSignal(recipient,signal){if(!roomId)throw Error("通話用チャットを先に選択してください。");const {error}=await db.from("admin_connect_signals").insert({room_id:roomId,sender_id:uid,recipient_id:recipient,signal});if(error)throw error;}
 async function makePeer(target,isVideo){
  pc=new RTCPeerConnection({iceServers:[{urls:"stun:stun.l.google.com:19302"}]});
  pc.onicecandidate=e=>{if(e.candidate)sendSignal(target,{type:"ice",candidate:e.candidate.toJSON()}).catch(console.error);};
- pc.ontrack=e=>{const stream=e.streams[0];$("ac-remote-video").srcObject=stream;$("ac-remote-audio").srcObject=stream;};
+ pc.ontrack=e=>{const stream=e.streams[0];const videoMode=$("ac-call-video").dataset.mode==="video";$("ac-remote-video").srcObject=videoMode?stream:null;$("ac-remote-audio").srcObject=videoMode?null:stream;};
  pc.onconnectionstatechange=()=>status("通話状態: "+pc.connectionState);
  let stream=await navigator.mediaDevices.getUserMedia({audio:true,video:isVideo});
  localStream=stream;
@@ -94,11 +96,12 @@ async function makePeer(target,isVideo){
   filter.type=effect==="robot"?"bandpass":"lowshelf";filter.frequency.value=effect==="low"?220:effect==="high"?2200:900;filter.gain.value=effect==="high"?12:effect==="low"?-10:0;
   source.connect(filter).connect(gain).connect(dest);dest.stream.getAudioTracks().forEach(t=>pc.addTrack(t,dest.stream));stream.getVideoTracks().forEach(t=>pc.addTrack(t,stream));
  }else stream.getTracks().forEach(t=>pc.addTrack(t,stream));
- $("ac-local-video").srcObject=stream;
+ $("ac-local-video").srcObject=isVideo?stream:null;
+ $("ac-remote-video").classList.toggle("is-visible",!!isVideo);$("ac-local-video").classList.toggle("is-visible",!!isVideo);$("ac-remote-audio").classList.toggle("is-audio",!isVideo);
  return pc;
 }
 $("ac-call-start").onclick=async()=>{
- const target=$("ac-call-target").value;if(!target){alert("通話相手を選択してください");return;}
+ const target=$("ac-call-target").value;if(!target){alert("通話相手を選択してください");return;}if(!roomId){alert("通話を開始する前に、左側からチャットルームを選択してください。");return;}
  try{$("ac-call-panel").classList.remove("hidden");status("発信中...");
   const isVideo=$("ac-call-video").dataset.mode==="video";await makePeer(target,isVideo);
   const offer=await pc.createOffer();await pc.setLocalDescription(offer);await sendSignal(target,{type:"offer",sdp:offer.sdp,video:isVideo});
@@ -115,12 +118,12 @@ async function handleSignal(row){
    await makePeer(row.sender_id,!!s.video);await pc.setRemoteDescription({type:"offer",sdp:s.sdp}); for(const candidate of pendingIce.splice(0)) await pc.addIceCandidate(candidate);
    const answer=await pc.createAnswer();await pc.setLocalDescription(answer);await sendSignal(row.sender_id,{type:"answer",sdp:answer.sdp});status("通話中");
   }else if(s.type==="answer"&&pc){await pc.setRemoteDescription({type:"answer",sdp:s.sdp}); for(const candidate of pendingIce.splice(0)) await pc.addIceCandidate(candidate); status("通話中");}
-  else if(s.type==="ice"&&pc){if(pc.remoteDescription) await pc.addIceCandidate(s.candidate); else pendingIce.push(s.candidate);}
+  else if(s.type==="ice"){if(pc?.remoteDescription) await pc.addIceCandidate(s.candidate); else pendingIce.push(s.candidate);}
   else if(s.type==="reject"){status("相手が応答しませんでした");cleanupCall();}
   else if(s.type==="hangup"){status("相手が通話を終了しました");cleanupCall();}
  }catch(e){console.error(e);status("通話接続エラー: "+e.message);cleanupCall();}
 }
-function cleanupCall(){pendingIce=[];if(pc){pc.close();pc=null;}if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null;}if(audioContext){audioContext.close();audioContext=null;}$("ac-local-video").srcObject=null;$("ac-remote-video").srcObject=null;$("ac-remote-audio").srcObject=null;}
+function cleanupCall(){pendingIce=[];if(pc){pc.close();pc=null;}if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null;}if(audioContext){audioContext.close();audioContext=null;}$("ac-local-video").srcObject=null;$("ac-remote-video").srcObject=null;$("ac-remote-audio").srcObject=null;$("ac-local-video").classList.remove("is-visible");$("ac-remote-video").classList.remove("is-visible");$("ac-remote-audio").classList.remove("is-audio");}
 $("ac-call-hangup").onclick=async()=>{const target=$("ac-call-target").value;if(target)await sendSignal(target,{type:"hangup"}).catch(()=>{});cleanupCall();status("通話を終了しました");};
 init();
 })();
