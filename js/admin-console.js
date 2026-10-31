@@ -210,8 +210,8 @@ async function execute(raw){
   if(error)throw error;if(!data?.length)throw Error("出力対象のログがありません。");
   const cols=["created_at","event_type","summary","target_type","target_id","actor_id"];
   const csv=[cols.join(","),...data.map(row=>cols.map(k=>'"'+String(row[k]??"").replace(/"/g,'""')+'"').join(","))].join("\r\n");
-  const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),link=document.createElement("a");
-  link.href=url;link.download="kizimin-admin-audit-"+new Date().toISOString().slice(0,10)+".csv";document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
+  const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"}),url=window.URL.createObjectURL(blob),link=document.createElement("a");
+  link.href=url;link.download="kizimin-admin-audit-"+new Date().toISOString().slice(0,10)+".csv";document.body.appendChild(link);link.click();link.remove();window.URL.revokeObjectURL(url);
   out("監査ログを "+data.length+" 件CSV出力しました。","success");return;
  }
  if(a==="audit"){const n=Math.max(1,Math.min(100,Number(target)||30));const {data,error}=await db.from("admin_audit_events").select("event_type,target_type,target_id,summary,created_at").order("created_at",{ascending:false}).limit(n);if(error)throw error;out("管理操作ログ "+data.length+" 件");data.forEach(x=>out(fmt(x.created_at)+" | "+x.event_type+" | "+x.summary+" | "+(x.target_type||"")+" "+(x.target_id||"")));return;}
@@ -322,12 +322,12 @@ async function execute(raw){
   const key="kizimin_admin_ops_tasks_v1";let tasks=[];try{const v=JSON.parse(localStorage.getItem(key)||"[]");tasks=Array.isArray(v)?v:[];}catch{}
   const action=c||"list";
   if(action==="list"){out("運営タスク "+tasks.length+" 件");tasks.forEach(t=>out(t.id+" | "+t.status+" | "+t.priority+" | "+t.title+" | "+(t.owner||"未指定")+" | "+(t.due||"期限なし")));return;}
-  if(action==="export"){const cols=["id","title","priority","owner","due","status","createdAt"];const csv=[cols.join(","),...tasks.map(t=>cols.map(k=>'"'+String(t[k]??"").replace(/"/g,'""')+'"').join(","))].join("\\r\\n");const url=URL.createObjectURL(new Blob(["\\uFEFF"+csv],{type:"text/csv;charset=utf-8"})),link=document.createElement("a");link.href=url;link.download="kizimin-ops-tasks.csv";link.click();URL.revokeObjectURL(url);out("運営タスク "+tasks.length+" 件をCSV出力しました。","success");return;}
+  if(action==="export"){const cols=["id","title","priority","owner","due","status","createdAt"];const csv=[cols.join(","),...tasks.map(t=>cols.map(k=>'"'+String(t[k]??"").replace(/"/g,'""')+'"').join(","))].join("\\r\\n");const url=window.URL.createObjectURL(new Blob(["\\uFEFF"+csv],{type:"text/csv;charset=utf-8"})),link=document.createElement("a");link.href=url;link.download="kizimin-ops-tasks.csv";link.click();window.URL.revokeObjectURL(url);out("運営タスク "+tasks.length+" 件をCSV出力しました。","success");return;}
   if(action==="add"){const title=rest[0],priority=rest[1]||"中",ownerName=rest[2]||"",due=rest[3]||"";if(!title)throw Error("形式: /kizimin ops tasks add <タイトル> [優先度] [担当] [YYYY-MM-DD]");tasks.unshift({id:Date.now().toString(36)+Math.random().toString(36).slice(2,7),title,priority,owner:ownerName,due,status:"未完了",createdAt:new Date().toISOString()});localStorage.setItem(key,JSON.stringify(tasks));out("運営タスクを追加しました。","success");return;}
   if(action==="done"||action==="delete"){const id=rest[0];if(!id)throw Error("タスクIDを指定してください。");const before=tasks.length;tasks=action==="done"?tasks.map(t=>t.id===id?{...t,status:t.status==="完了"?"未完了":"完了"}:t):tasks.filter(t=>t.id!==id);if(before===tasks.length&&action==="delete")throw Error("タスクが見つかりません。");localStorage.setItem(key,JSON.stringify(tasks));out(action==="done"?"タスク状態を切り替えました。":"タスクを削除しました。","success");return;}
   throw Error("tasks list / add / done / delete を指定してください。");
  }
- if(a==="security"&&b==="report"){if(!owner)throw Error("診断レポートはオーナー専用です。");if(!lastSecurityReport)throw Error("先に /kizimin security diagnose を実行してください。");const blob=new Blob([JSON.stringify(lastSecurityReport,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download="kizimin-security-report.json";link.click();URL.revokeObjectURL(url);out("セキュリティ診断レポートをJSON出力しました。","success");return;}
+ if(a==="security"&&b==="report"){if(!owner)throw Error("診断レポートはオーナー専用です。");if(!lastSecurityReport)throw Error("先に /kizimin security diagnose を実行してください。");const blob=new Blob([JSON.stringify(lastSecurityReport,null,2)],{type:"application/json"}),url=window.URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download="kizimin-security-report.json";link.click();window.URL.revokeObjectURL(url);out("セキュリティ診断レポートをJSON出力しました。","success");return;}
  if(a==="security"&&b==="diagnose"){
   if(!owner)throw Error("セキュリティ診断はサイトオーナー専用です。");
   const {data:{session},error:se}=await db.auth.getSession();if(se||!session?.user?.id||!session.user.email)throw Error("再認証に必要なログイン情報がありません。");
