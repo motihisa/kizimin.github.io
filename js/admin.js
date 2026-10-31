@@ -1461,7 +1461,6 @@
     setupAdminNavigation();
     const loaders = [
       ["ダッシュボード", loadDashboard],
-      ["メンテナンス設定", loadMaintenance],
     ];
     const results = await Promise.allSettled(loaders.map(([, loader]) => loader()));
     results.forEach((result, i) => {
