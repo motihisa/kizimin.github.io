@@ -61,7 +61,7 @@ const translateOutput=value=>{
 const out=(s,type="info")=>{const el=$("kcmd-output");if(!el)return;const line=document.createElement("div");line.className="kcmd-line "+type;line.textContent=translateOutput(s);el.appendChild(line);el.scrollTop=el.scrollHeight;};
 const fmt=s=>s?new Date(s).toLocaleString("ja-JP",{timeZone:"Asia/Tokyo"}):"-";
 let role="user",owner=false,ready=false;
-let pendingAttachRoom=null,callPc=null,callStream=null,callTarget=null,callRoomId=null,callIce=[],callChannel=null,connectMessageChannel=null,connectSpeakEnabled=false,lastSecurityReport=null;
+let lastSecurityReport=null;
 function tokenize(input){const a=[];input.replace(/"([^"]*)"|'([^']*)'|(\S+)/g,(_,d,s,w)=>a.push(d??s??w));return a;}
 async function init(){
  const {data:{session}}=await db.auth.getSession();if(!session?.user?.id)throw Error("ログインセッションがありません。");
@@ -70,48 +70,9 @@ async function init(){
  const {data:o,error:oe}=await db.rpc("is_site_owner");if(oe)throw oe;owner=o===true;role=owner?"owner":p.role;
  if(!owner&&!["admin","moderator"].includes(role))throw Error("コマンドコンソールは管理者・オーナー専用です。");
  $("kcmd-auth").textContent="認証済み · "+(outputTerms[role]||role);$("kcmd-auth").classList.add("ok");ready=true;
- if(["admin","owner"].includes(role))callSubscribe().catch(e=>console.warn("Admin Connect call listener unavailable",e));
  out("Kizimin Command Console 起動。/kizimin help でコマンド一覧を表示します。","success");
 }
 
-async function callSignal(recipient,signal){
- if(!callRoomId)throw Error("通話ルームが選択されていません。");
- const {data:{session},error}=await db.auth.getSession();if(error||!session?.user?.id)throw Error("ログイン状態を確認できません。");
- const {error:sendError}=await db.from("admin_connect_signals").insert({room_id:callRoomId,sender_id:session.user.id,recipient_id:recipient,signal});if(sendError)throw sendError;
-}
-async function callMakePeer(target){
- callPc=new RTCPeerConnection({iceServers:[{urls:"stun:stun.l.google.com:19302"}]});
- callPc.onicecandidate=e=>{if(e.candidate)callSignal(target,{type:"ice",candidate:e.candidate.toJSON()}).catch(err=>out("ICE送信失敗: "+err.message,"error"));};
- callPc.ontrack=e=>{const audio=$("kcmd-call-remote");if(audio){audio.srcObject=e.streams[0];audio.play().catch(()=>out("音声再生には画面上で再生操作が必要な場合があります。"));}};
- callPc.onconnectionstatechange=()=>out("通話状態: "+callPc?.connectionState);
- callStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
- callStream.getAudioTracks().forEach(track=>callPc.addTrack(track,callStream));
-}
-function callCleanup(){
- callIce=[];if(callPc){callPc.close();callPc=null;}if(callStream){callStream.getTracks().forEach(t=>t.stop());callStream=null;}
- const audio=$("kcmd-call-remote");if(audio)audio.srcObject=null;
-}
-async function callHandleSignal(row){
- const signal=row.signal;if(!signal)return;
- try{
-  if(signal.type==="offer"){
-   if(callPc)callCleanup();callRoomId=row.room_id;callTarget=row.sender_id;
-   if(!confirm("Admin Connectから音声通話の着信です。応答しますか？")){await callSignal(row.sender_id,{type:"reject"});return;}
-   await callMakePeer(row.sender_id);await callPc.setRemoteDescription({type:"offer",sdp:signal.sdp});
-   for(const candidate of callIce.splice(0))await callPc.addIceCandidate(candidate);
-   const answer=await callPc.createAnswer();await callPc.setLocalDescription(answer);await callSignal(row.sender_id,{type:"answer",sdp:answer.sdp});out("音声通話に接続しました。","success");
-  }else if(signal.type==="answer"&&callPc){
-   await callPc.setRemoteDescription({type:"answer",sdp:signal.sdp});for(const candidate of callIce.splice(0))await callPc.addIceCandidate(candidate);out("相手が応答しました。音声通話中です。","success");
-  }else if(signal.type==="ice"&&callPc){if(callPc.remoteDescription)await callPc.addIceCandidate(signal.candidate);else callIce.push(signal.candidate);}
-  else if(signal.type==="reject"){out("相手が通話を拒否しました。");callCleanup();}
-  else if(signal.type==="hangup"){out("相手が通話を終了しました。");callCleanup();}
- }catch(e){out("通話エラー: "+(e.message||e),"error");callCleanup();}
-}
-async function callSubscribe(){
- const {data:{session},error}=await db.auth.getSession();if(error||!session?.user?.id)return;
- if(callChannel)return;
- callChannel=db.channel("kizimin-command-call-"+session.user.id).on("postgres_changes",{event:"INSERT",schema:"public",table:"admin_connect_signals",filter:"recipient_id=eq."+session.user.id},payload=>callHandleSignal(payload.new)).subscribe();
-}
 async function requirePlatformAdmin(){if(!["admin","owner"].includes(role))throw Error("団体管理はプラットフォーム管理者専用です。");const {data,error}=await db.rpc("kizimin_is_platform_admin");if(error||data!==true)throw Error("プラットフォーム管理者権限を確認できません。");}
 async function profile(target){
  let q=db.from("profiles").select("id,username,display_name,role,account_status,ban_reason,ban_expires_at").limit(2);
@@ -240,15 +201,15 @@ async function execute(raw){
    "kizimin filter toggle <ID> <on|off>：フィルターを有効・無効にします。",
    "kizimin filter history [件数] / filterlogs [件数]：フィルターの変更履歴・検出ログを確認します。",
    "",
-   "【Admin Connect・運営・診断】",
-   "kizimin connect rooms：Admin Connectのルーム一覧を表示します。",
-   "kizimin connect create <ルーム名>：新しいルームを作成します。",
-   "kizimin connect messages <ルームID>：指定ルームのメッセージを表示します。",
-   "kizimin connect send <ルームID> <本文>：指定ルームへメッセージを送信します。",
-   "kizimin connect attach <ルームID>：指定ルームへ画像またはPDFを添付します。",
-   "kizimin connect listen <on|off>：リアルタイム受信の読み上げを有効・無効にします。",
-   "kizimin connect call start <ルームID> <管理者ユーザーID>：指定相手との通話を開始します。",
-   "kizimin connect call end：通話を終了します。",
+   
+   
+   
+   
+   
+   
+   
+   
+   
    "kizimin room info <ルームID>：ルームの基本情報を確認します。",
    "kizimin conversations [ユーザーID]：会話一覧を確認します。",
    "kizimin conversation stats <会話ID>：会話の統計情報を確認します。",
@@ -289,14 +250,14 @@ async function execute(raw){
  "/kizimin polls","/kizimin poll options <投票ID>","/kizimin challenges","/kizimin challenge entries <企画ID>",
  "/kizimin orgboard <団体ID>","/kizimin orgevents <団体ID>","/kizimin orgaudit <団体ID>",
  "/kizimin notifications [ユーザーID]","/kizimin ai usage [ユーザーID]","/kizimin site history [設定キー]",
- "/kizimin filterlogs [件数]","/kizimin connect rooms","/kizimin connect messages <ルームID>",
+ "/kizimin filterlogs [件数]",
  "/kizimin article likes <記事ID>","/kizimin poll results <投票ID>","/kizimin org info <団体ID>",
  "/kizimin insights","/kizimin articles popular","/kizimin articles recent",
  "/kizimin user interests <名前|ID>","/kizimin collections [ユーザーID]","/kizimin collection articles <コレクションID>",
  "/kizimin permissions [ロール]","/kizimin permission users <権限キー>",
  "/kizimin conversations [ユーザーID]","/kizimin conversation stats <会話ID>",
  "/kizimin topics [件数]","/kizimin role summary",
- "/kizimin org review <申請ID> <approve|reject> [理由]","/kizimin org status <団体ID> <approved|suspended> [理由]","/kizimin org audit [件数]","/kizimin connect create <ルーム名>","/kizimin connect send <ルームID> <本文>","/kizimin connect attach <ルームID>","/kizimin connect listen <on|off>","/kizimin connect call start <ルームID> <管理者ユーザーID>","/kizimin connect call end","/kizimin permissions set <ロール> <権限キー> <on|off>","/kizimin permission set <ユーザーID> <権限キー> <inherit|allow|deny>","/kizimin filters add <名前> <語句> <article|comment|both> <block|log> [理由]","/kizimin filters delete <ID>","/kizimin site theme get [項目]","/kizimin site theme set <項目> <値>","/kizimin ops stats","/kizimin ops report","/kizimin ops health","/kizimin ops tasks list|add|done|delete|export","/kizimin security diagnose","/kizimin security report","/kizimin email check <メールアドレス>"
+ "/kizimin org review <申請ID> <approve|reject> [理由]","/kizimin org status <団体ID> <approved|suspended> [理由]","/kizimin org audit [件数]","/kizimin permissions set <ロール> <権限キー> <on|off>","/kizimin permission set <ユーザーID> <権限キー> <inherit|allow|deny>","/kizimin filters add <名前> <語句> <article|comment|both> <block|log> [理由]","/kizimin filters delete <ID>","/kizimin site theme get [項目]","/kizimin site theme set <項目> <値>","/kizimin ops stats","/kizimin ops report","/kizimin ops health","/kizimin ops tasks list|add|done|delete|export","/kizimin security diagnose","/kizimin security report","/kizimin email check <メールアドレス>"
  ].forEach(x=>out("  "+x));return;}
  if(a==="status"){
   const [dash,maint]=await Promise.all([db.rpc("admin_dashboard_stats"),db.from("site_settings").select("maintenance_mode,maintenance_type,maintenance_reason").eq("id",true).maybeSingle()]);
@@ -462,35 +423,6 @@ async function execute(raw){
  if(a==="roles"){let q=db.from("role_change_audit").select("target_user_id,old_role,new_role,changed_at,changed_by").order("changed_at",{ascending:false}).limit(30);if(target)q=q.eq("target_user_id",target);const {data,error}=await q;if(error)throw error;out("権限変更履歴 "+data.length+" 件");data.forEach(x=>out(fmt(x.changed_at)+" | "+x.old_role+" → "+x.new_role+" | "+x.target_user_id));return;}
 
 
- if(a==="connect"&&b==="listen"){
-  if(!["admin","owner"].includes(role))throw Error("Admin Connectの受信監視は管理者専用です。");
-  if(!["on","off"].includes(c))throw Error("形式: /kizimin connect listen <on|off>");
-  if(c==="off"){if(connectMessageChannel){await db.removeChannel(connectMessageChannel);connectMessageChannel=null;}connectSpeakEnabled=false;out("Admin Connectの受信監視を停止しました。");return;}
-  if(connectMessageChannel){out("Admin Connectの受信監視はすでに有効です。");return;}
-  const {data:{session},error:se}=await db.auth.getSession();if(se||!session?.user?.id)throw Error("ログイン状態を確認できません。");
-  connectSpeakEnabled=true;
-  connectMessageChannel=db.channel("kizimin-command-connect-messages-"+session.user.id).on("postgres_changes",{event:"INSERT",schema:"public",table:"admin_connect_messages"},payload=>{
-   if(payload.new?.sender_id===session.user.id)return;
-   const body=String(payload.new?.body||"").slice(0,300);out("Admin Connect新着 | room="+payload.new.room_id+" | "+(body||"添付ファイル"));
-   if(connectSpeakEnabled&&body&&"speechSynthesis" in window){const utterance=new SpeechSynthesisUtterance(body);utterance.lang="ja-JP";window.speechSynthesis.speak(utterance);}
-  }).subscribe();
-  out("Admin Connectの新着監視を開始しました。音声読み上げも有効です。","success");return;
- }
- if(a==="connect"&&b==="attach"){
-  if(!["admin","owner"].includes(role))throw Error("Admin Connectの添付送信は管理者専用です。");
-  if(!c)throw Error("形式: /kizimin connect attach <ルームID>");
-  pendingAttachRoom=c;const picker=$("kcmd-attach-file");if(!picker)throw Error("添付ファイル入力欄がありません。");picker.value="";picker.click();out("画像またはPDFを選択してください。");return;
- }
- if(a==="connect"&&b==="call"){
-  if(!["admin","owner"].includes(role))throw Error("音声通話は管理者専用です。");
-  if(c==="end"){if(callTarget)await callSignal(callTarget,{type:"hangup"}).catch(()=>{});callCleanup();callTarget=null;callRoomId=null;out("音声通話を終了しました。","success");return;}
-  if(c!=="start"||!rest[0]||!rest[1])throw Error("形式: /kizimin connect call start <ルームID> <管理者ユーザーID> または /kizimin connect call end");
-  if(!navigator.mediaDevices?.getUserMedia)throw Error("このブラウザーではマイクを利用できません。HTTPS接続を確認してください。");
-  const room=rest[0],recipient=rest[1];const {data:user,error}=await db.from("profiles").select("id,role,account_status").eq("id",recipient).maybeSingle();if(error)throw error;if(!user||user.role!=="admin"||user.account_status!=="active")throw Error("通話相手は有効な管理者アカウントである必要があります。");
-  const {data:roomRow,error:roomError}=await db.from("admin_connect_rooms").select("id").eq("id",room).maybeSingle();if(roomError)throw roomError;if(!roomRow)throw Error("Admin Connectルームが見つかりません。");
-  if(callPc)callCleanup();callRoomId=room;callTarget=recipient;out("マイクへのアクセスを要求しています...");
-  await callMakePeer(recipient);const offer=await callPc.createOffer();await callPc.setLocalDescription(offer);await callSignal(recipient,{type:"offer",sdp:offer.sdp,video:false});out("音声通話を発信しました。相手の応答を待っています。","success");return;
- }
  if(a==="org"&&b==="review"){
   if(!["admin","owner"].includes(role))throw Error("団体申請の審査は管理者専用です。");
   const {data:platform,error:platformError}=await db.rpc("kizimin_is_platform_admin");if(platformError||platform!==true)throw Error("プラットフォーム管理者権限を確認できません。");
@@ -509,19 +441,6 @@ async function execute(raw){
   await requirePlatformAdmin();
   const n=Math.max(1,Math.min(100,Number(c)||30));const {data,error}=await db.from("organization_audit_logs").select("id,organization_id,actor_id,action,target_user_id,details,created_at").order("created_at",{ascending:false}).limit(n);
   if(error)throw error;out("団体操作履歴 "+data.length+" 件");data.forEach(x=>out(fmt(x.created_at)+" | "+x.action+" | org="+(x.organization_id||"申請")+" | "+x.actor_id+" | "+x.id));return;
- }
- if(a==="connect"&&b==="create"){
-  if(!["admin","owner"].includes(role))throw Error("Admin Connectのルーム作成は管理者専用です。");
-  const name=[c,...rest].join(" ").trim();if(!name||name.length>80)throw Error("ルーム名は1〜80文字で指定してください。");
-  if(!confirm("Admin Connectに「"+name+"」ルームを作成しますか？"))return;
-  const {data,error}=await db.from("admin_connect_rooms").insert({name,room_type:"text"}).select("id,name").single();if(error)throw error;out("ルームを作成しました: "+data.name+" | "+data.id,"success");return;
- }
- if(a==="connect"&&b==="send"){
-  if(!["admin","owner"].includes(role))throw Error("Admin Connectの送信は管理者専用です。");
-  const room=c,body=rest.join(" ").trim();if(!room||!body||body.length>5000)throw Error("形式: /kizimin connect send <ルームID> <メッセージ（5000文字以内）>");
-  if(!confirm("Admin Connectの指定ルームにメッセージを送信しますか？"))return;
-  const {data:{session},error:se}=await db.auth.getSession();if(se||!session?.user?.id)throw Error("ログイン状態を確認できません。");
-  const {error}=await db.from("admin_connect_messages").insert({room_id:room,sender_id:session.user.id,body,attachment_path:null,attachment_type:null});if(error)throw error;out("Admin Connectへ送信しました。","success");return;
  }
  if(a==="permissions"&&b==="set"){
   if(!owner)throw Error("ロール権限の変更はオーナー専用です。");
@@ -643,8 +562,8 @@ async function execute(raw){
  if(a==="ai"&&b==="usage"){let q=db.from("ai_usage_events").select("id,user_id,estimated_neurons,actual_neurons,status,created_at").order("created_at",{ascending:false}).limit(50);if(c)q=q.eq("user_id",c);const {data,error}=await q;if(error)throw error;out("AI利用履歴 "+data.length+" 件");data.forEach(x=>out(fmt(x.created_at)+" | "+x.status+" | 予測="+x.estimated_neurons+" | 実績="+x.actual_neurons+" | "+x.user_id));return;}
  if(a==="site"&&b==="history"){if(!owner)throw Error("サイト履歴はオーナー専用です。");let q=db.from("site_editor_history").select("id,setting_key,action,changed_by,changed_at").order("changed_at",{ascending:false}).limit(50);if(c)q=q.eq("setting_key",c);const {data,error}=await q;if(error)throw error;out("サイト編集履歴 "+data.length+" 件");data.forEach(x=>out(fmt(x.changed_at)+" | "+x.action+" | "+x.setting_key+" | "+x.changed_by));return;}
  if(a==="filterlogs"){const n=Math.max(1,Math.min(100,Number(target)||30));const {data,error}=await db.from("admin_abuse_filter_logs").select("id,filter_id,actor_id,target_type,target_id,action,matched_term,created_at").order("created_at",{ascending:false}).limit(n);if(error)throw error;out("フィルター検出ログ "+data.length+" 件");data.forEach(x=>out(fmt(x.created_at)+" | filter="+x.filter_id+" | "+x.action+" | "+x.target_type+" "+x.target_id+" | term="+x.matched_term));return;}
- if(a==="connect"&&b==="rooms"){if(!["admin","owner"].includes(role))throw Error("Admin Connectは管理者専用です。");const {data,error}=await db.from("admin_connect_rooms").select("id,name,room_type,created_by,created_at").order("created_at",{ascending:false}).limit(50);if(error)throw error;out("Admin Connectルーム "+data.length+" 件");data.forEach(x=>out(x.name+" | "+x.room_type+" | "+x.id));return;}
- if(a==="connect"&&b==="messages"){if(!["admin","owner"].includes(role))throw Error("Admin Connectメッセージは管理者専用です。");if(!c)throw Error("ルームIDを指定してください。");const {data,error}=await db.from("admin_connect_messages").select("id,sender_id,body,attachment_type,created_at").eq("room_id",c).order("created_at",{ascending:false}).limit(50);if(error)throw error;out("運営チャットメッセージ "+data.length+" 件");data.forEach(x=>out(fmt(x.created_at)+" | "+x.sender_id+" | "+String(x.body||"").slice(0,160)+" | "+(x.attachment_type||"")+" | "+x.id));return;}
+ 
+ 
 
  if(a==="article"&&b==="likes"){if(!c)throw Error("記事IDを指定してください。");const {data,error}=await db.from("article_likes").select("user_id,created_at").eq("article_id",c).order("created_at",{ascending:false}).limit(100);if(error)throw error;out("いいね "+data.length+" 件（最大100件）");data.forEach(x=>out(x.user_id+" | "+fmt(x.created_at)));return;}
  if(a==="poll"&&b==="results"){if(!c)throw Error("投票IDを指定してください。");const {data,error}=await db.from("community_poll_options").select("id,label,sort_order").eq("poll_id",c).order("sort_order");if(error)throw error;out("投票結果");for(const opt of data){const {count,error:ce}=await db.from("community_poll_votes").select("poll_id",{count:"exact",head:true}).eq("option_id",opt.id);if(ce)throw ce;out(opt.label+" : "+count+" 票");}return;}
@@ -735,33 +654,13 @@ async function execute(raw){
   const {data,error}=await db.from("admin_abuse_filter_logs").select("filter_id,actor_id,target_type,target_id,action,matched_term,created_at").order("created_at",{ascending:false}).limit(n);
   if(error)throw error;out("フィルター実行履歴 "+data.length+" 件");data.forEach(x=>out(fmt(x.created_at)+" | filter#"+x.filter_id+" | "+x.action+" | "+(x.matched_term||"-")+" | "+(x.target_type||"-")+":"+ (x.target_id||"-")));return;
  }
- if(a==="room"&&b==="info"){if(!["admin","owner"].includes(role))throw Error("Admin Connectルーム情報は管理者専用です。");
-  if(!c)throw Error("ルームIDを指定してください。");
-  const {data,error}=await db.from("admin_connect_rooms").select("id,name,room_type,created_by,created_at").eq("id",c).maybeSingle();
-  if(error)throw error;if(!data)throw Error("ルームが見つかりません。");
-  const {count,error:ce}=await db.from("admin_connect_messages").select("id",{count:"exact",head:true}).eq("room_id",c);
-  if(ce)throw ce;out("ルーム: "+data.name);out("種別: "+data.room_type);out("作成日時: "+fmt(data.created_at));out("メッセージ数: "+count);out("ID: "+data.id);return;
- }
-
  throw Error("不明なコマンドです。/kizimin help で一覧を確認してください。");
 }
 function bind(){
  const form=$("kcmd-form"),input=$("kcmd-input");if(!form||form.dataset.bound)return;form.dataset.bound="1";
  const history=[];let historyIndex=0;
  form.addEventListener("submit",async e=>{e.preventDefault();const raw=input.value.trim();if(!raw)return;if(history[history.length-1]!==raw){history.push(raw);if(history.length>100)history.shift();}historyIndex=history.length;out("> "+raw.replace(/^\/?kizimin\b/i,"/kizimin"),"command");input.value="";try{await execute(raw);}catch(err){console.error("[Kizimin Console]",err);out("エラー: "+(err?.message||String(err)),"error");}});
- $("kcmd-clear")?.addEventListener("click",()=>{$("kcmd-output").innerHTML="";});
- const picker=$("kcmd-attach-file");picker?.addEventListener("change",async()=>{
-  const file=picker.files?.[0],room=pendingAttachRoom;pendingAttachRoom=null;if(!file||!room)return;
-  const allowed=["image/jpeg","image/png","image/gif","image/webp","application/pdf"];
-  if(!allowed.includes(file.type)||file.size>10*1024*1024){out("添付できるのは10MB以下の画像またはPDFです。","error");return;}
-  try{const {data:{session},error:se}=await db.auth.getSession();if(se||!session?.user?.id)throw Error("ログイン状態を確認できません。");
-   const safe=file.name.replace(/[^a-zA-Z0-9._-]/g,"_").slice(-90),path=session.user.id+"/"+crypto.randomUUID()+"-"+safe;
-   const {error:uploadError}=await db.storage.from("admin-connect-files").upload(path,file,{contentType:file.type,upsert:false});if(uploadError)throw uploadError;
-   const {error}=await db.from("admin_connect_messages").insert({room_id:room,sender_id:session.user.id,body:"",attachment_path:path,attachment_type:file.type});if(error)throw error;
-   out("Admin Connectへ添付ファイルを送信しました: "+file.name,"success");
-  }catch(e){out("添付送信失敗: "+(e.message||e),"error");}
- });
- input.addEventListener("keydown",e=>{
+ $("kcmd-clear")?.addEventListener("click",()=>{$("kcmd-output").innerHTML="";});  input.addEventListener("keydown",e=>{
   if(e.key==="ArrowUp"){e.preventDefault();if(!history.length)return;historyIndex=Math.max(0,historyIndex-1);input.value=history[historyIndex];}
   else if(e.key==="ArrowDown"){e.preventDefault();if(!history.length)return;historyIndex=Math.min(history.length,historyIndex+1);input.value=history[historyIndex]||"";}
  });
