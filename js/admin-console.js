@@ -477,7 +477,8 @@ async function execute(raw){
 }
 function bind(){
  const form=$("kcmd-form"),input=$("kcmd-input");if(!form||form.dataset.bound)return;form.dataset.bound="1";
- form.addEventListener("submit",async e=>{e.preventDefault();const raw=input.value.trim();if(!raw)return;out("> "+raw,"command");input.value="";try{await execute(raw);}catch(err){console.error("[Kizimin Console]",err);out("エラー: "+(err?.message||String(err)),"error");}});
+ const history=[];let historyIndex=0;
+ form.addEventListener("submit",async e=>{e.preventDefault();const raw=input.value.trim();if(!raw)return;if(history[history.length-1]!==raw){history.push(raw);if(history.length>100)history.shift();}historyIndex=history.length;out("> "+raw,"command");input.value="";try{await execute(raw);}catch(err){console.error("[Kizimin Console]",err);out("エラー: "+(err?.message||String(err)),"error");}});
  $("kcmd-clear")?.addEventListener("click",()=>{$("kcmd-output").innerHTML="";});
  const picker=$("kcmd-attach-file");picker?.addEventListener("change",async()=>{
   const file=picker.files?.[0],room=pendingAttachRoom;pendingAttachRoom=null;if(!file||!room)return;
@@ -490,13 +491,10 @@ function bind(){
    out("Admin Connectへ添付ファイルを送信しました: "+file.name,"success");
   }catch(e){out("添付送信失敗: "+(e.message||e),"error");}
  });
-
- const history=[];let historyIndex=0;
  input.addEventListener("keydown",e=>{
   if(e.key==="ArrowUp"){e.preventDefault();if(!history.length)return;historyIndex=Math.max(0,historyIndex-1);input.value=history[historyIndex];}
   else if(e.key==="ArrowDown"){e.preventDefault();if(!history.length)return;historyIndex=Math.min(history.length,historyIndex+1);input.value=history[historyIndex]||"";}
  });
- form.addEventListener("submit",()=>{const raw=input.value.trim();if(raw&&history[history.length-1]!==raw){history.push(raw);if(history.length>100)history.shift();}historyIndex=history.length;});
 }
 document.addEventListener("DOMContentLoaded",()=>{bind();init().catch(e=>{console.error(e);$("kcmd-auth").textContent="認証失敗: "+(e.message||e);$("kcmd-auth").classList.add("error");});});
 })();
