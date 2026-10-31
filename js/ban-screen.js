@@ -148,7 +148,7 @@
     if (!state) return;
 
     const status = String(state.status || "").toLowerCase();
-    if (status === "banned" || status === "suspended") {
+    if (status === "banned" || status === "suspended" || status === "protected") {
       setGate({
         kind: status,
         reason: state.reason || state.ban_reason || "利用ルールに違反した可能性があるため、利用が制限されています。",
@@ -172,11 +172,18 @@
       title: "アカウントは一時停止中です",
       body: "管理者が停止を解除するまで、サイトを利用できません。",
       note: "内容に心当たりがない場合は、管理者にお問い合わせください。"
+    },
+    protected: {
+      label: "ACCOUNT PROTECTED",
+      title: "アカウントを保護しています",
+      body: "長期間利用が確認されなかったため、不正利用を防ぐ目的でアカウントを一時的に保護しています。",
+      note: "解除申請は問い合わせの件名に「アカウント保護の解除申請」と入力してください。登録メールアドレス宛てに確認連絡をお送りします。パスワードは絶対に入力・送信しないでください。"
     }
   };
 
   function accountCopy(kind) {
     const defaults = COPY[kind] || COPY.banned;
+    if (kind === "protected") return defaults;
     if (kind === "suspended") {
       return {
         label: siteTheme.suspendedLabel || defaults.label,
@@ -322,7 +329,7 @@
     ));
 
     const actions = el("div", "display:flex;flex-wrap:wrap;gap:8px;margin-top:24px;");
-    actions.appendChild(button(siteTheme.accountContactLabel || "お問い合わせ", function () { location.href = "contact.html"; }));
+    actions.appendChild(button(siteTheme.accountContactLabel || "お問い合わせ", function () { location.href = "inquiry.html"; }));
     card.appendChild(actions);
 
     overlay.appendChild(card);
