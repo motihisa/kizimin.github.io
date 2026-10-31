@@ -188,6 +188,10 @@ async function execute(raw){
    "kizimin insights：サイト利用状況の分析情報を表示します。",
    "kizimin notifications [ユーザーID]：通知情報を確認します。ユーザーIDを指定すると対象を絞れます。",
    "kizimin ai usage [ユーザーID]：AI利用量を確認します。",
+   "kizimin ai logs [件数]：運営AIの会話履歴を新しい順に表示します（オーナー専用）。",
+   "kizimin ai conversation <会話ID>：運営AIの会話全文を表示します（オーナー専用）。",
+   "kizimin ai search <キーワード>：運営AIの会話を検索します（オーナー専用）。",
+   "kizimin ai stats：運営AIの利用統計を表示します（オーナー専用）。",
    "kizimin access [ユーザーID|パス]：アクセス記録を確認します。",
    "",
    "【権限・フィルター】",
@@ -559,6 +563,36 @@ async function execute(raw){
  if(a==="orgevents"){await requirePlatformAdmin();if(!target)throw Error("団体IDを指定してください。");const {data,error}=await db.from("organization_events").select("id,title,location,starts_at,ends_at,created_by").eq("organization_id",target).order("starts_at",{ascending:false}).limit(50);if(error)throw error;out("団体イベント "+data.length+" 件");data.forEach(x=>out(x.title+" | "+fmt(x.starts_at)+" | "+(x.location||"場所未設定")+" | "+x.id));return;}
  if(a==="orgaudit"){await requirePlatformAdmin();if(!target)throw Error("団体IDを指定してください。");const {data,error}=await db.from("organization_audit_logs").select("id,actor_id,action,target_user_id,details,created_at").eq("organization_id",target).order("created_at",{ascending:false}).limit(50);if(error)throw error;out("団体操作ログ "+data.length+" 件");data.forEach(x=>out(fmt(x.created_at)+" | "+x.action+" | actor="+x.actor_id+" | target="+(x.target_user_id||"-")+" | "+x.id));return;}
  if(a==="notifications"){let q=db.from("notifications").select("id,recipient_id,type,title,created_at,read_at").order("created_at",{ascending:false}).limit(50);if(target)q=q.eq("recipient_id",target);const {data,error}=await q;if(error)throw error;out("通知 "+data.length+" 件");data.forEach(x=>out(fmt(x.created_at)+" | "+x.type+" | "+x.title+" | "+(x.read_at?"既読":"未読")+" | "+x.id));return;}
+ if(a==="ai"&&["logs","conversation","search","stats"].includes(b)){
+  if(!owner)throw Error("運営AIの会話監査ログはオーナー専用です。");
+  if(b==="logs"){
+   const n=Math.max(1,Math.min(100,Number(c)||30));
+   const {data,error}=await db.from("admin_ai_conversations").select("id,conversation_id,actor_id,actor_role,prompt,answer,model,created_at").order("created_at",{ascending:false}).limit(n);
+   if(error)throw error;out("運営AI会話履歴 "+data.length+" 件");
+   data.forEach(x=>out(fmt(x.created_at)+" | "+x.actor_role+" | 管理者ID="+x.actor_id+" | 会話ID="+x.conversation_id+" | "+x.prompt.slice(0,120)));
+   return;
+  }
+  if(b==="conversation"){
+   if(!c)throw Error("会話IDを指定してください。");
+   const {data,error}=await db.from("admin_ai_conversations").select("id,conversation_id,actor_id,actor_role,prompt,answer,model,created_at").eq("conversation_id",c).order("created_at",{ascending:true});
+   if(error)throw error;if(!data?.length)throw Error("会話が見つかりません。");
+   out("会話 "+c+" / "+data.length+" ターン");
+   data.forEach((x,i)=>{out("["+fmt(x.created_at)+"] "+x.actor_role+" / 管理者ID="+x.actor_id);out("質問: "+x.prompt);out("AI回答: "+x.answer);});
+   return;
+  }
+  if(b==="search"){
+   const q=[c,...rest].join(" ").trim();if(!q)throw Error("検索キーワードを入力してください。");
+   const {data,error}=await db.from("admin_ai_conversations").select("conversation_id,actor_id,actor_role,prompt,answer,created_at").or("prompt.ilike.%"+q+"%,answer.ilike.%"+q+"%").order("created_at",{ascending:false}).limit(50);
+   if(error)throw error;out("検索結果 "+data.length+" 件");
+   data.forEach(x=>out(fmt(x.created_at)+" | "+x.actor_role+" | "+x.actor_id+" | "+x.conversation_id+" | "+x.prompt.slice(0,160)));
+   return;
+  }
+  const {data,error}=await db.from("admin_ai_conversations").select("id,actor_id,conversation_id,created_at");
+  if(error)throw error;const users=new Set(data.map(x=>x.actor_id));const convs=new Set(data.map(x=>x.conversation_id));
+  out("運営AI統計");out("総メッセージ数: "+data.length);out("利用管理者数: "+users.size);out("会話数: "+convs.size);
+  if(data.length)out("最終利用: "+fmt(data.reduce((a,x)=>x.created_at>a?x.created_at:a,data[0].created_at)));
+  return;
+ }
  if(a==="ai"&&b==="usage"){let q=db.from("ai_usage_events").select("id,user_id,estimated_neurons,actual_neurons,status,created_at").order("created_at",{ascending:false}).limit(50);if(c)q=q.eq("user_id",c);const {data,error}=await q;if(error)throw error;out("AI利用履歴 "+data.length+" 件");data.forEach(x=>out(fmt(x.created_at)+" | "+x.status+" | 予測="+x.estimated_neurons+" | 実績="+x.actual_neurons+" | "+x.user_id));return;}
  if(a==="site"&&b==="history"){if(!owner)throw Error("サイト履歴はオーナー専用です。");let q=db.from("site_editor_history").select("id,setting_key,action,changed_by,changed_at").order("changed_at",{ascending:false}).limit(50);if(c)q=q.eq("setting_key",c);const {data,error}=await q;if(error)throw error;out("サイト編集履歴 "+data.length+" 件");data.forEach(x=>out(fmt(x.changed_at)+" | "+x.action+" | "+x.setting_key+" | "+x.changed_by));return;}
  if(a==="filterlogs"){const n=Math.max(1,Math.min(100,Number(target)||30));const {data,error}=await db.from("admin_abuse_filter_logs").select("id,filter_id,actor_id,target_type,target_id,action,matched_term,created_at").order("created_at",{ascending:false}).limit(n);if(error)throw error;out("フィルター検出ログ "+data.length+" 件");data.forEach(x=>out(fmt(x.created_at)+" | filter="+x.filter_id+" | "+x.action+" | "+x.target_type+" "+x.target_id+" | term="+x.matched_term));return;}
