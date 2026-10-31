@@ -83,39 +83,39 @@ async function subscribeSignals(){
  db.channel("admin-connect-signals-"+uid).on("postgres_changes",{event:"INSERT",schema:"public",table:"admin_connect_signals",filter:"recipient_id=eq."+uid},async p=>{await handleSignal(p.new);}).subscribe((state,error)=>{if(state==="SUBSCRIBED")status("通話待受中");else if(state==="CHANNEL_ERROR"||state==="TIMED_OUT")status("通話待受エラー: "+(error?.message||state));});
 }
 async function sendSignal(recipient,signal){if(!roomId)throw Error("通話用チャットを先に選択してください。");const {error}=await db.from("admin_connect_signals").insert({room_id:roomId,sender_id:uid,recipient_id:recipient,signal});if(error)throw error;}
-async function makePeer(target,isVideo){
+async function makePeer(target){
  pc=new RTCPeerConnection({iceServers:[{urls:"stun:stun.l.google.com:19302"}]});
  pc.onicecandidate=e=>{if(e.candidate)sendSignal(target,{type:"ice",candidate:e.candidate.toJSON()}).catch(console.error);};
- pc.ontrack=e=>{const stream=e.streams[0];const videoMode=$("ac-call-video").dataset.mode==="video";$("ac-remote-video").srcObject=videoMode?stream:null;$("ac-remote-audio").srcObject=videoMode?null:stream;};
+ pc.ontrack=e=>{$("ac-remote-audio").srcObject=e.streams[0];};
  pc.onconnectionstatechange=()=>status("通話状態: "+pc.connectionState);
- let stream=await navigator.mediaDevices.getUserMedia({audio:true,video:isVideo});
+ let stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
  localStream=stream;
  const effect=$("ac-voice-effect").value;
  if(effect!=="normal"&&window.AudioContext){
   audioContext=new AudioContext();const source=audioContext.createMediaStreamSource(stream),filter=audioContext.createBiquadFilter(),gain=audioContext.createGain(),dest=audioContext.createMediaStreamDestination();
   filter.type=effect==="robot"?"bandpass":"lowshelf";filter.frequency.value=effect==="low"?220:effect==="high"?2200:900;filter.gain.value=effect==="high"?12:effect==="low"?-10:0;
-  source.connect(filter).connect(gain).connect(dest);dest.stream.getAudioTracks().forEach(t=>pc.addTrack(t,dest.stream));stream.getVideoTracks().forEach(t=>pc.addTrack(t,stream));
+  source.connect(filter).connect(gain).connect(dest);dest.stream.getAudioTracks().forEach(t=>pc.addTrack(t,dest.stream));
  }else stream.getTracks().forEach(t=>pc.addTrack(t,stream));
- $("ac-local-video").srcObject=isVideo?stream:null;
- $("ac-remote-video").classList.toggle("is-visible",!!isVideo);$("ac-local-video").classList.toggle("is-visible",!!isVideo);$("ac-remote-audio").classList.toggle("is-audio",!isVideo);
+ 
+ $("ac-remote-audio").classList.add("is-audio");
  return pc;
 }
 $("ac-call-start").onclick=async()=>{
  const target=$("ac-call-target").value;if(!target){alert("通話相手を選択してください");return;}if(!roomId){alert("通話を開始する前に、左側からチャットルームを選択してください。");return;}
  try{$("ac-call-panel").classList.remove("hidden");status("発信中...");
-  const isVideo=$("ac-call-video").dataset.mode==="video";await makePeer(target,isVideo);
-  const offer=await pc.createOffer();await pc.setLocalDescription(offer);await sendSignal(target,{type:"offer",sdp:offer.sdp,video:isVideo});
+  await makePeer(target);
+  const offer=await pc.createOffer();await pc.setLocalDescription(offer);await sendSignal(target,{type:"offer",sdp:offer.sdp});
  }catch(e){status("通話を開始できません: "+e.message);cleanupCall();}
 };
-$("ac-call-audio").onclick=()=>{$("ac-call-panel").classList.remove("hidden");$("ac-call-video").dataset.mode="audio";status("音声通話の相手を選択してください");};
-$("ac-call-video").onclick=()=>{$("ac-call-panel").classList.remove("hidden");$("ac-call-video").dataset.mode="video";status("ビデオ通話の相手を選択してください");};
+$("ac-call-audio").onclick=()=>{$("ac-call-panel").classList.remove("hidden");status("音声通話の相手を選択してください");};
+
 async function handleSignal(row){
  const s=row.signal;if(!s)return; roomId=row.room_id;
  try{
   if(s.type==="offer"){
-   $("ac-call-panel").classList.remove("hidden");$("ac-call-video").dataset.mode=s.video?"video":"audio";$("ac-call-target").value=row.sender_id;
+   $("ac-call-panel").classList.remove("hidden");$("ac-call-target").value=row.sender_id;
    if(!confirm("管理者から音声通話の着信です。応答しますか？")){await sendSignal(row.sender_id,{type:"reject"});return;}
-   await makePeer(row.sender_id,!!s.video);await pc.setRemoteDescription({type:"offer",sdp:s.sdp}); for(const candidate of pendingIce.splice(0)) await pc.addIceCandidate(candidate);
+   await makePeer(row.sender_id);await pc.setRemoteDescription({type:"offer",sdp:s.sdp}); for(const candidate of pendingIce.splice(0)) await pc.addIceCandidate(candidate);
    const answer=await pc.createAnswer();await pc.setLocalDescription(answer);await sendSignal(row.sender_id,{type:"answer",sdp:answer.sdp});status("通話中");
   }else if(s.type==="answer"&&pc){await pc.setRemoteDescription({type:"answer",sdp:s.sdp}); for(const candidate of pendingIce.splice(0)) await pc.addIceCandidate(candidate); status("通話中");}
   else if(s.type==="ice"){if(pc?.remoteDescription) await pc.addIceCandidate(s.candidate); else pendingIce.push(s.candidate);}
@@ -123,7 +123,7 @@ async function handleSignal(row){
   else if(s.type==="hangup"){status("相手が通話を終了しました");cleanupCall();}
  }catch(e){console.error(e);status("通話接続エラー: "+e.message);cleanupCall();}
 }
-function cleanupCall(){pendingIce=[];if(pc){pc.close();pc=null;}if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null;}if(audioContext){audioContext.close();audioContext=null;}$("ac-local-video").srcObject=null;$("ac-remote-video").srcObject=null;$("ac-remote-audio").srcObject=null;$("ac-local-video").classList.remove("is-visible");$("ac-remote-video").classList.remove("is-visible");$("ac-remote-audio").classList.remove("is-audio");}
+function cleanupCall(){pendingIce=[];if(pc){pc.close();pc=null;}if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null;}if(audioContext){audioContext.close();audioContext=null;}$("ac-remote-audio").srcObject=null;$("ac-remote-audio").classList.remove("is-audio");}
 $("ac-call-hangup").onclick=async()=>{const target=$("ac-call-target").value;if(target)await sendSignal(target,{type:"hangup"}).catch(()=>{});cleanupCall();status("通話を終了しました");};
 init();
 })();
