@@ -12,7 +12,7 @@
 .admin-nav [data-view="users"],.admin-nav [data-view="articles"],.admin-nav [data-view="comments"],.admin-nav [data-view="reports"],.admin-nav [data-view="inquiries"],.admin-nav [data-view="notifications"],.admin-nav [data-view="bot"]{display:none!important}
 #view-users,#view-articles,#view-comments,#view-reports,#view-inquiries,#view-notifications,#view-bot,#maintenance-panel{display:none!important}
 </style>
-<style id="command-only-admin">.admin-view:not(#view-dashboard):not(#view-console){display:none!important}.admin-nav-label{margin-top:18px}</style></head>
+<style id="command-only-admin">.admin-view:not(#view-dashboard):not(#view-console){display:none!important}#view-dashboard #maintenance-panel{display:none!important}.admin-nav-label{margin-top:18px}</style></head>
 <body class="admin-page">
 <div id="admin-loading" class="admin-loading admin-panel"><strong>管理者権限を確認しています...</strong><p class="admin-muted">Supabaseで安全に確認しています。</p></div>
 <div id="admin-forbidden" class="admin-forbidden-wrap admin-panel hidden"><div class="admin-alert"><strong>管理画面へのアクセスが拒否されました。</strong><p id="admin-forbidden-reason"></p><p id="admin-forbidden-detail" class="admin-muted"></p></div><a class="admin-btn" href="index.html">ホームへ戻る</a></div>
