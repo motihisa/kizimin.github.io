@@ -19,14 +19,14 @@
   <div class="ac-sidebar-foot"><span class="ac-online-dot"></span> 管理者専用接続</div>
 </aside>
 <section class="ac-main">
-<header class="ac-header"><div><h2 id="ac-room-title">運営チャット</h2><p id="ac-room-subtitle">管理者間のリアルタイム連絡</p></div><div class="ac-header-actions"><label class="ac-tts"><input id="ac-tts" type="checkbox"> 読み上げ</label><button id="ac-call-audio" class="ac-btn">音声通話</button><button id="ac-call-video" class="ac-btn ac-primary">ビデオ通話</button></div></header>
+<header class="ac-header"><div><h2 id="ac-room-title">運営チャット</h2><p id="ac-room-subtitle">管理者間のリアルタイム連絡</p></div><div class="ac-header-actions"><label class="ac-tts"><input id="ac-tts" type="checkbox"> 読み上げ</label><button id="ac-call-audio" class="ac-btn">音声通話</button></div></header>
 <div id="ac-call-panel" class="ac-call-panel hidden">
   <div><strong id="ac-call-status">通話準備中</strong><p>相手を選択して通話を開始します。通話相手側もこのページを開いている必要があります。</p></div>
   <select id="ac-call-target" aria-label="通話相手"><option value="">通話相手を選択</option></select>
   <label>音声エフェクト<select id="ac-voice-effect"><option value="normal">通常</option><option value="low">低音風</option><option value="high">高音風</option><option value="robot">ロボット風</option></select></label>
   <button id="ac-call-start" class="ac-btn ac-primary">発信</button><button id="ac-call-hangup" class="ac-btn ac-danger">通話終了</button>
-  <video id="ac-remote-video" autoplay playsinline></video><audio id="ac-remote-audio" autoplay></audio>
-  <video id="ac-local-video" autoplay muted playsinline></video>
+<audio id="ac-remote-audio" autoplay></audio>
+
 </div>
 <div class="ac-messages" id="ac-messages"><div class="ac-empty">メッセージを読み込んでいます...</div></div>
 <form id="ac-compose" class="ac-compose">
