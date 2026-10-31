@@ -128,7 +128,7 @@ async function secure(action,extra={}){
 }
 async function execute(raw){
  if(!ready)throw Error("権限確認が完了していません。");
- const t=tokenize(raw.trim().replace(/^\/kizimin\s*/i,""));if(!t.length)return;
+ const t=tokenize(raw.trim().replace(/^\/?kizimin\s*/i,""));if(!t.length)return;
  const [a,b,c,...rest]=t, target=b, value=c, extra=rest.join(" ");
  if(a==="help"){out("利用可能なコマンド:");[
  "/kizimin help","/kizimin status","/kizimin whoami","/kizimin activity [件数]","/kizimin filter history [件数]","/kizimin room info <ルームID>","/kizimin users [検索語]","/kizimin user <名前|ID>",
@@ -577,7 +577,7 @@ async function execute(raw){
 function bind(){
  const form=$("kcmd-form"),input=$("kcmd-input");if(!form||form.dataset.bound)return;form.dataset.bound="1";
  const history=[];let historyIndex=0;
- form.addEventListener("submit",async e=>{e.preventDefault();const raw=input.value.trim();if(!raw)return;if(history[history.length-1]!==raw){history.push(raw);if(history.length>100)history.shift();}historyIndex=history.length;out("> "+raw,"command");input.value="";try{await execute(raw);}catch(err){console.error("[Kizimin Console]",err);out("エラー: "+(err?.message||String(err)),"error");}});
+ form.addEventListener("submit",async e=>{e.preventDefault();const raw=input.value.trim();if(!raw)return;if(history[history.length-1]!==raw){history.push(raw);if(history.length>100)history.shift();}historyIndex=history.length;out("> "+raw.replace(/^\/?kizimin\b/i,"/kizimin"),"command");input.value="";try{await execute(raw);}catch(err){console.error("[Kizimin Console]",err);out("エラー: "+(err?.message||String(err)),"error");}});
  $("kcmd-clear")?.addEventListener("click",()=>{$("kcmd-output").innerHTML="";});
  const picker=$("kcmd-attach-file");picker?.addEventListener("change",async()=>{
   const file=picker.files?.[0],room=pendingAttachRoom;pendingAttachRoom=null;if(!file||!room)return;
