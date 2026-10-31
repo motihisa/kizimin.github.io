@@ -102,7 +102,7 @@ async function execute(raw){
  "/kizimin permissions [ロール]","/kizimin permission users <権限キー>",
  "/kizimin conversations [ユーザーID]","/kizimin conversation stats <会話ID>",
  "/kizimin topics [件数]","/kizimin role summary",
- "/kizimin org review <申請ID> <approve|reject> [理由]","/kizimin org status <団体ID> <approved|suspended> [理由]","/kizimin org audit [件数]","/kizimin connect create <ルーム名>","/kizimin connect send <ルームID> <本文>","/kizimin connect attach <ルームID>","/kizimin connect listen <on|off>","/kizimin connect call start <ルームID> <管理者ユーザーID>","/kizimin connect call end","/kizimin permissions set <ロール> <権限キー> <on|off>","/kizimin permission set <ユーザーID> <権限キー> <inherit|allow|deny>","/kizimin filters add <名前> <語句> <article|comment|both> <block|log> [理由]","/kizimin filters delete <ID>","/kizimin site theme get [項目]","/kizimin site theme set <項目> <値>","/kizimin ops stats","/kizimin ops health","/kizimin ops tasks list|add|done|delete|export","/kizimin security diagnose","/kizimin security report","/kizimin email check <メールアドレス>"
+ "/kizimin org review <申請ID> <approve|reject> [理由]","/kizimin org status <団体ID> <approved|suspended> [理由]","/kizimin org audit [件数]","/kizimin connect create <ルーム名>","/kizimin connect send <ルームID> <本文>","/kizimin connect attach <ルームID>","/kizimin connect listen <on|off>","/kizimin connect call start <ルームID> <管理者ユーザーID>","/kizimin connect call end","/kizimin permissions set <ロール> <権限キー> <on|off>","/kizimin permission set <ユーザーID> <権限キー> <inherit|allow|deny>","/kizimin filters add <名前> <語句> <article|comment|both> <block|log> [理由]","/kizimin filters delete <ID>","/kizimin site theme get [項目]","/kizimin site theme set <項目> <値>","/kizimin ops stats","/kizimin ops report","/kizimin ops health","/kizimin ops tasks list|add|done|delete|export","/kizimin security diagnose","/kizimin security report","/kizimin email check <メールアドレス>"
  ].forEach(x=>out("  "+x));return;}
  if(a==="status"){
   const [dash,maint]=await Promise.all([db.rpc("admin_dashboard_stats"),db.from("site_settings").select("maintenance_mode,maintenance_type,maintenance_reason").eq("id",true).maybeSingle()]);
@@ -346,6 +346,17 @@ async function execute(raw){
   if(!["admin","owner","moderator"].includes(role))throw Error("運営統計の閲覧権限がありません。");
   const checks=[["ユーザー","profiles"],["記事","articles"],["アクセスログ","access_logs"],["コメント","comments"],["通報","reports"],["問い合わせ","inquiries"]];
   out("運営統計");for(const [label,table] of checks){const {count,error}=await db.from(table).select("*",{count:"exact",head:true});out(label+": "+(error?"取得失敗 ("+error.message+")":count+" 件"),error?"error":"success");}return;
+ }
+
+ if(a==="ops"&&b==="report"){
+  if(!["admin","owner","moderator"].includes(role))throw Error("運営レポートの作成権限がありません。");
+  const tables=[["users","profiles"],["articles","articles"],["comments","comments"],["access_logs","access_logs"],["reports","reports"],["inquiries","inquiries"]];
+  const statistics={};for(const [label,table] of tables){const {count,error}=await db.from(table).select("*",{count:"exact",head:true});statistics[label]=error?{error:error.message}:count;}
+  const {data:maintenance,error:me}=await db.from("site_settings").select("maintenance_mode,maintenance_type,maintenance_reason").eq("id",true).maybeSingle();
+  if(me)statistics.maintenance={error:me.message};else statistics.maintenance=maintenance||null;
+  const tasksKey="kizimin_admin_ops_tasks_v1";let tasks=[];try{const v=JSON.parse(localStorage.getItem(tasksKey)||"[]");tasks=Array.isArray(v)?v:[];}catch{}
+  const report={product:"Kizimin",generated_at:new Date().toISOString(),role,statistics,handover_tasks:tasks,limitations:["RLSで参照できないデータは含まれません。","引き継ぎタスクはこのブラウザー内に保存されています。","本レポートは読み取り専用です。"]};
+  const blob=new Blob([JSON.stringify(report,null,2)],{type:"application/json"}),url=window.URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download="kizimin-operations-report.json";link.click();window.URL.revokeObjectURL(url);out("運営レポートをJSON出力しました。","success");return;
  }
  if(a==="ops"&&b==="health"){
   if(!["admin","owner","moderator"].includes(role))throw Error("サイト診断の閲覧権限がありません。");
