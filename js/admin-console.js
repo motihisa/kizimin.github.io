@@ -5,7 +5,58 @@ const KEY="sb_publishable_JSnuaf48KMeQ4sodofBg8A_RGlhFHpf";
 const db=window.supabase.createClient(URL,KEY);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const out=(s,type="info")=>{const el=$("kcmd-output");if(!el)return;const line=document.createElement("div");line.className="kcmd-line "+type;line.textContent=s;el.appendChild(line);el.scrollTop=el.scrollHeight;};
+const outputTerms={
+ owner:"オーナー",admin:"管理者",moderator:"モデレーター",user:"一般ユーザー",debugger:"デバッガー",
+ active:"有効",inactive:"無効",suspended:"一時停止中",banned:"BAN中",
+ draft:"下書き",published:"公開済み",archived:"アーカイブ済み",
+ visible:"表示",hidden:"非表示",deleted:"削除済み",
+ open:"未対応",reviewing:"対応中",resolved:"解決済み",dismissed:"却下",closed:"終了",
+ normal:"通常",emergency:"緊急",other:"その他",
+ private:"非公開",public:"公開",group:"グループ",
+ article:"記事",comment:"コメント",both:"両方",block:"ブロック",log:"記録",
+ allow:"許可",deny:"拒否",inherit:"継承",
+ pending:"審査待ち",approved:"承認済み",rejected:"却下",
+ completed:"完了",failed:"失敗",success:"成功",error:"エラー",
+ running:"実行中",stopped:"停止中",queued:"待機中",live:"稼働中",
+ id:"ID",user_id:"ユーザーID",recipient_id:"受信者ID",sender_id:"送信者ID",
+ name:"名前",email:"メールアドレス",subject:"件名",message:"本文",status:"状態",
+ role:"権限",account_status:"アカウント状態",ban_reason:"制限理由",
+ ban_expires_at:"制限解除日時",admin_note:"管理メモ",created_at:"作成日時",
+ updated_at:"更新日時",resolved_at:"解決日時",changed_at:"変更日時",
+ target_user_id:"対象ユーザーID",old_role:"変更前の権限",new_role:"変更後の権限",
+ event_type:"操作種別",target_type:"対象種別",target_id:"対象ID",summary:"概要",
+ organization_type:"団体種別",organization_name:"団体名",applicant_id:"申請者ID",
+ review_reason:"審査理由",room_type:"ルーム種別",room_id:"ルームID",
+ attachment_type:"添付ファイル種別",attachment_path:"添付ファイル保存先",
+ applies_to:"適用対象",action:"動作",enabled:"有効状態",term:"検出語句",
+ permission_key:"権限キー",allowed:"許可状態",setting_key:"設定キー",
+ generated_at:"生成日時",scope:"対象範囲",mode:"診断方式",limitations:"診断上の制限",
+ title:"タイトル",description:"説明",slug:"URL識別子",visibility:"公開範囲",
+ view_count:"閲覧数",like_count:"いいね数",author_id:"投稿者ID",
+ category_id:"カテゴリID",organization_id:"団体ID",published_at:"公開日時",
+ starts_at:"開始日時",ends_at:"終了日時",closes_at:"締切日時",
+ creator_id:"作成者ID",created_by:"作成者ID",changed_by:"変更者ID",
+ location:"場所",post_type:"投稿種別",is_pinned:"固定状態",
+ actual_neurons:"実消費量",estimated_neurons:"推定消費量",
+ total:"合計",count:"件数",reason:"理由",priority:"優先度",owner:"担当者",
+ due:"期限",user_count:"ユーザー数",messages:"メッセージ数"
+};
+const translateOutput=value=>{
+ let text=String(value??"");
+ if(text.includes("/kizimin "))return text;
+ text=text.replace(/\b(owner|admin|moderator|user|debugger|active|inactive|suspended|banned|draft|published|archived|visible|hidden|deleted|open|reviewing|resolved|dismissed|closed|normal|emergency|other|private|public|group|article|comment|both|block|log|allow|deny|inherit|pending|approved|rejected|completed|failed|success|error|running|stopped|queued|live|true|false|on|off)\b/gi,word=>{
+  const lower=word.toLowerCase();
+  if(lower==="true")return "はい";if(lower==="false")return "いいえ";
+  if(lower==="on")return "有効";if(lower==="off")return "無効";
+  return outputTerms[lower]||word;
+ });
+ for(const [key,label] of Object.entries(outputTerms)){
+  if(key==="owner")continue;
+  text=text.replace(new RegExp("(^|[|\\s])"+key+"(?=\\s*[:=|])","g"),"$1"+label);
+ }
+ return text;
+};
+const out=(s,type="info")=>{const el=$("kcmd-output");if(!el)return;const line=document.createElement("div");line.className="kcmd-line "+type;line.textContent=translateOutput(s);el.appendChild(line);el.scrollTop=el.scrollHeight;};
 const fmt=s=>s?new Date(s).toLocaleString("ja-JP",{timeZone:"Asia/Tokyo"}):"-";
 let role="user",owner=false,ready=false;
 let pendingAttachRoom=null,callPc=null,callStream=null,callTarget=null,callRoomId=null,callIce=[],callChannel=null,connectMessageChannel=null,connectSpeakEnabled=false,lastSecurityReport=null;
@@ -16,7 +67,7 @@ async function init(){
  if(error)throw error;if(!p||p.account_status&&p.account_status!=="active")throw Error("有効な管理者プロフィールを確認できません。");
  const {data:o,error:oe}=await db.rpc("is_site_owner");if(oe)throw oe;owner=o===true;role=owner?"owner":p.role;
  if(!owner&&!["admin","moderator"].includes(role))throw Error("コマンドコンソールは管理者・オーナー専用です。");
- $("kcmd-auth").textContent="認証済み · "+role;$("kcmd-auth").classList.add("ok");ready=true;
+ $("kcmd-auth").textContent="認証済み · "+(outputTerms[role]||role);$("kcmd-auth").classList.add("ok");ready=true;
  if(["admin","owner"].includes(role))callSubscribe().catch(e=>console.warn("Admin Connect call listener unavailable",e));
  out("Kizimin Command Console 起動。/kizimin help でコマンド一覧を表示します。","success");
 }
