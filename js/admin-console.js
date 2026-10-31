@@ -175,6 +175,117 @@ async function execute(raw){
  }
  if(a==="audit"){const n=Math.max(1,Math.min(100,Number(target)||30));const {data,error}=await db.from("admin_audit_events").select("event_type,target_type,target_id,summary,created_at").order("created_at",{ascending:false}).limit(n);if(error)throw error;out("管理操作ログ "+data.length+" 件");data.forEach(x=>out(fmt(x.created_at)+" | "+x.event_type+" | "+x.summary+" | "+(x.target_type||"")+" "+(x.target_id||"")));return;}
  if(a==="roles"){let q=db.from("role_change_audit").select("target_user_id,old_role,new_role,changed_at,changed_by").order("changed_at",{ascending:false}).limit(30);if(target)q=q.eq("target_user_id",target);const {data,error}=await q;if(error)throw error;out("権限変更履歴 "+data.length+" 件");data.forEach(x=>out(fmt(x.changed_at)+" | "+x.old_role+" → "+x.new_role+" | "+x.target_user_id));return;}
+ if(a==="org"&&b==="review"){
+  if(!["admin","owner"].includes(role))throw Error("団体申請の審査は管理者専用です。");
+  const {data:platform,error:platformError}=await db.rpc("kizimin_is_platform_admin");if(platformError||platform!==true)throw Error("プラットフォーム管理者権限を確認できません。");
+  const id=c,decision=rest[0],reason=rest.slice(1).join(" ");if(!id||!["approve","reject"].includes(decision))throw Error("形式: /kizimin org review <申請ID> <approve|reject> [理由]");
+  if(!confirm("団体申請 "+id+" を "+(decision==="approve"?"承認":"却下")+"しますか？"))return;
+  const {error}=await db.rpc("kizimin_review_organization_application",{p_application_id:id,p_decision:decision,p_reason:reason});if(error)throw error;out("団体申請を"+(decision==="approve"?"承認":"却下")+"しました。","success");return;
+ }
+ if(a==="org"&&b==="status"){
+  if(!["admin","owner"].includes(role))throw Error("団体状態の変更は管理者専用です。");
+  const {data:platform,error:platformError}=await db.rpc("kizimin_is_platform_admin");if(platformError||platform!==true)throw Error("プラットフォーム管理者権限を確認できません。");
+  const id=c,next=rest[0],reason=rest.slice(1).join(" ")||"コマンドコンソールから変更";if(!id||!["approved","suspended"].includes(next))throw Error("形式: /kizimin org status <団体ID> <approved|suspended> [理由]");
+  if(!confirm("団体 "+id+" の状態を "+next+" に変更しますか？"))return;
+  const {error}=await db.rpc("kizimin_set_organization_status",{p_organization_id:id,p_status:next,p_reason:reason});if(error)throw error;out("団体状態を "+next+" に変更しました。","success");return;
+ }
+ if(a==="org"&&b==="audit"){
+  if(!["admin","owner"].includes(role))throw Error("団体監査ログは管理者専用です。");
+  const n=Math.max(1,Math.min(100,Number(c)||30));const {data,error}=await db.from("organization_audit_logs").select("id,organization_id,actor_id,action,target_user_id,details,created_at").order("created_at",{ascending:false}).limit(n);
+  if(error)throw error;out("団体操作履歴 "+data.length+" 件");data.forEach(x=>out(fmt(x.created_at)+" | "+x.action+" | org="+(x.organization_id||"申請")+" | "+x.actor_id+" | "+x.id));return;
+ }
+ if(a==="connect"&&b==="create"){
+  if(!["admin","owner"].includes(role))throw Error("Admin Connectのルーム作成は管理者専用です。");
+  const name=[c,...rest].join(" ").trim();if(!name||name.length>80)throw Error("ルーム名は1〜80文字で指定してください。");
+  if(!confirm("Admin Connectに「"+name+"」ルームを作成しますか？"))return;
+  const {data,error}=await db.from("admin_connect_rooms").insert({name,room_type:"text"}).select("id,name").single();if(error)throw error;out("ルームを作成しました: "+data.name+" | "+data.id,"success");return;
+ }
+ if(a==="connect"&&b==="send"){
+  if(!["admin","owner"].includes(role))throw Error("Admin Connectの送信は管理者専用です。");
+  const room=c,body=rest.join(" ").trim();if(!room||!body||body.length>5000)throw Error("形式: /kizimin connect send <ルームID> <メッセージ（5000文字以内）>");
+  if(!confirm("Admin Connectの指定ルームにメッセージを送信しますか？"))return;
+  const {data:{session},error:se}=await db.auth.getSession();if(se||!session?.user?.id)throw Error("ログイン状態を確認できません。");
+  const {error}=await db.from("admin_connect_messages").insert({room_id:room,sender_id:session.user.id,body,attachment_path:null,attachment_type:null});if(error)throw error;out("Admin Connectへ送信しました。","success");return;
+ }
+ if(a==="permissions"&&b==="set"){
+  if(!owner)throw Error("ロール権限の変更はオーナー専用です。");
+  const targetRole=c,key=rest[0],state=rest[1];if(!["user","moderator","admin","debugger"].includes(targetRole)||!key||!["on","off"].includes(state))throw Error("形式: /kizimin permissions set <user|moderator|admin|debugger> <権限キー> <on|off>");
+  if(!confirm(targetRole+" の "+key+" を "+(state==="on"?"許可":"禁止")+"しますか？"))return;
+  const {error}=await db.rpc("admin_set_role_permission",{p_role:targetRole,p_permission_key:key,p_allowed:state==="on"});if(error)throw error;out("ロール権限を更新しました。","success");return;
+ }
+ if(a==="permission"&&b==="set"){
+  if(!owner)throw Error("ユーザー別権限の変更はオーナー専用です。");
+  const userId=c,key=rest[0],state=rest[1];if(!userId||!key||!["inherit","allow","deny"].includes(state))throw Error("形式: /kizimin permission set <ユーザーID> <権限キー> <inherit|allow|deny>");
+  if(!confirm("ユーザー "+userId+" の "+key+" を "+state+" に変更しますか？"))return;
+  const {error}=await db.rpc("admin_set_user_permission",{p_target_id:userId,p_permission_key:key,p_value:state});if(error)throw error;out("ユーザー別権限を更新しました。","success");return;
+ }
+ if(a==="filters"&&b==="add"){
+  if(!["admin","owner"].includes(role))throw Error("フィルター追加は管理者専用です。");
+  const name=c,term=rest[0],applies=rest[1],action=rest[2],reason=rest.slice(3).join(" ");if(!name||!term||term.length<2||!["article","comment","both"].includes(applies)||!["block","log"].includes(action))throw Error("形式: /kizimin filters add <名前> <検出語句> <article|comment|both> <block|log> [理由]");
+  const {data:{session},error:se}=await db.auth.getSession();if(se||!session?.user?.id)throw Error("ログイン状態を確認できません。");
+  if(!confirm("不正利用フィルターを追加しますか？\n"+name+" / "+term+" / "+applies+" / "+action))return;
+  const {error}=await db.from("admin_abuse_filters").insert({name,term,applies_to:applies,action,reason,created_by:session.user.id});if(error)throw error;out("フィルターを追加しました。","success");return;
+ }
+ if(a==="filters"&&b==="delete"){
+  if(!["admin","owner"].includes(role))throw Error("フィルター削除は管理者専用です。");if(!c)throw Error("フィルターIDを指定してください。");
+  if(!confirm("フィルター #"+c+" を削除しますか？"))return;const {data,error}=await db.from("admin_abuse_filters").delete().eq("id",c).select("id").maybeSingle();if(error)throw error;if(!data)throw Error("削除できませんでした。対象がないか権限がありません。");out("フィルターを削除しました。","success");return;
+ }
+ if(a==="site"&&b==="theme"&&c==="get"){
+  if(!owner)throw Error("サイト編集設定はオーナー専用です。");
+  const {data,error}=await db.from("site_editor_settings").select("setting_value,updated_at").eq("setting_key","site_theme").maybeSingle();if(error)throw error;if(!data){out("カスタムテーマは未設定です。");return;}
+  const field=rest[0];if(field){if(!(field in (data.setting_value||{})))throw Error("その設定項目はありません。");out(field+": "+JSON.stringify(data.setting_value[field]));}else{out("サイトテーマ設定");Object.entries(data.setting_value||{}).forEach(([k,v])=>out(k+" = "+JSON.stringify(v)));}out("最終更新: "+fmt(data.updated_at));return;
+ }
+ if(a==="site"&&b==="theme"&&c==="set"){
+  if(!owner)throw Error("サイト編集設定の変更はオーナー専用です。");
+  const field=rest[0],raw=rest.slice(1).join(" ");if(!field||!raw)throw Error("形式: /kizimin site theme set <項目> <値>");
+  const allowed=["brandName","heroTitle","heroDescription","announcementTitle","announcementBody","showAnnouncements","maintenanceBrand","maintenanceTitle","maintenanceDescription","maintenanceReasonTitle","maintenanceReasonBody","maintenanceFooter","maintenanceDemoLabel","maintenanceNormalLabel","maintenanceEmergencyLabel","maintenanceOtherLabel","maintenanceBgColor","maintenanceCardColor","maintenanceAccentColor","maintenanceTextColor","banLabel","banTitle","banBody","banNote","suspendedLabel","suspendedTitle","suspendedBody","suspendedNote","accountReasonLabel","accountExpiryLabel","accountContactLabel","accountBgColor","accountCardColor","accountAccentColor","accountTextColor","termsContent","privacyContent","accentColor","backgroundColor","textColor","cardRadius","showHero","showDaily","showPopular","showCategories","showDiscovery","showPolls","showChallenges","showQA","showLibrary"];
+  if(!allowed.includes(field))throw Error("変更できない項目名です。/kizimin site theme get で確認してください。");
+  let value=raw;if(raw==="on")value=true;else if(raw==="off")value=false;else if(/^-?\d+(\.\d+)?$/.test(raw))value=Number(raw);
+  if(["cardRadius"].includes(field)){if(typeof value!=="number"||value<0||value>32)throw Error("cardRadiusは0〜32の数値です。");}
+  else if(/^show|^showAnnouncements/.test(field)){if(typeof value!=="boolean")throw Error("表示設定は on または off で指定してください。");}
+  else if(/Color$/.test(field)){if(typeof value!=="string"||!/^#[0-9a-f]{6}$/i.test(value))throw Error("色は #RRGGBB 形式で指定してください。");}
+  else if(typeof value!=="string"||value.length>30000)throw Error("この項目は文字列で、30000文字以内にしてください。");
+  const {data:{session},error:se}=await db.auth.getSession();if(se||!session?.user?.id)throw Error("ログイン状態を確認できません。");
+  const {data:current,error}=await db.from("site_editor_settings").select("setting_value").eq("setting_key","site_theme").maybeSingle();if(error)throw error;
+  const next={...(current?.setting_value||{}),[field]:value};
+  if(!confirm("サイトテーマの "+field+" を変更しますか？"))return;
+  const {error:saveError}=await db.from("site_editor_settings").upsert({setting_key:"site_theme",setting_value:next,updated_by:session.user.id,updated_at:new Date().toISOString()},{onConflict:"setting_key"});if(saveError)throw saveError;out("サイトテーマを保存しました。公開ページへの反映を確認してください。","success");return;
+ }
+ if(a==="ops"&&b==="stats"){
+  if(!["admin","owner","moderator"].includes(role))throw Error("運営統計の閲覧権限がありません。");
+  const checks=[["ユーザー","profiles"],["記事","articles"],["アクセスログ","access_logs"],["コメント","comments"],["通報","reports"],["問い合わせ","inquiries"]];
+  out("運営統計");for(const [label,table] of checks){const {count,error}=await db.from(table).select("*",{count:"exact",head:true});out(label+": "+(error?"取得失敗 ("+error.message+")":count+" 件"),error?"error":"success");}return;
+ }
+ if(a==="ops"&&b==="health"){
+  if(!["admin","owner","moderator"].includes(role))throw Error("サイト診断の閲覧権限がありません。");
+  const checks=[["プロフィール","profiles"],["記事","articles"],["コメント","comments"],["通報","reports"],["問い合わせ","inquiries"],["サイト設定","site_settings"]];
+  for(const [label,table] of checks){const {error}=await db.from(table).select("id",{head:true}).limit(1);out(label+": "+(error?"異常 / "+error.message:"正常 / 読み取り成功"),error?"error":"success");}out("この診断は読み取り専用で、サイト全体の完全監査ではありません。");return;
+ }
+ if(a==="ops"&&b==="tasks"){
+  const key="kizimin_admin_ops_tasks_v1";let tasks=[];try{const v=JSON.parse(localStorage.getItem(key)||"[]");tasks=Array.isArray(v)?v:[];}catch{}
+  const action=c||"list";
+  if(action==="list"){out("運営タスク "+tasks.length+" 件");tasks.forEach(t=>out(t.id+" | "+t.status+" | "+t.priority+" | "+t.title+" | "+(t.owner||"未指定")+" | "+(t.due||"期限なし")));return;}
+  if(action==="add"){const title=rest[0],priority=rest[1]||"中",ownerName=rest[2]||"",due=rest[3]||"";if(!title)throw Error("形式: /kizimin ops tasks add <タイトル> [優先度] [担当] [YYYY-MM-DD]");tasks.unshift({id:Date.now().toString(36)+Math.random().toString(36).slice(2,7),title,priority,owner:ownerName,due,status:"未完了",createdAt:new Date().toISOString()});localStorage.setItem(key,JSON.stringify(tasks));out("運営タスクを追加しました。","success");return;}
+  if(action==="done"||action==="delete"){const id=rest[0];if(!id)throw Error("タスクIDを指定してください。");const before=tasks.length;tasks=action==="done"?tasks.map(t=>t.id===id?{...t,status:t.status==="完了"?"未完了":"完了"}:t):tasks.filter(t=>t.id!==id);if(before===tasks.length&&action==="delete")throw Error("タスクが見つかりません。");localStorage.setItem(key,JSON.stringify(tasks));out(action==="done"?"タスク状態を切り替えました。":"タスクを削除しました。","success");return;}
+  throw Error("tasks list / add / done / delete を指定してください。");
+ }
+ if(a==="security"&&b==="diagnose"){
+  if(!owner)throw Error("セキュリティ診断はサイトオーナー専用です。");
+  const {data:{session},error:se}=await db.auth.getSession();if(se||!session?.user?.id||!session.user.email)throw Error("再認証に必要なログイン情報がありません。");
+  const password=prompt("セキュリティ診断を実行するため、サイトオーナーのパスワードを再入力してください。入力内容は保存しません。");if(!password)return;
+  const {data:reauth,error:re}=await db.auth.signInWithPassword({email:session.user.email,password});if(re||reauth?.user?.id!==session.user.id)throw Error("本人確認に失敗しました。診断は実行していません。");
+  const {data:ownerAgain,error:oe}=await db.rpc("is_site_owner");if(oe||ownerAgain!==true)throw Error("再認証後のオーナー権限確認に失敗しました。");
+  out("読み取り専用セキュリティ診断を開始");
+  const checks=[["トップページ","/"],["ログインページ","/login.html"],["管理画面HTML","/admin.html"],["診断ページ","/pentest.html"],["robots.txt","/robots.txt"]];
+  for(const [label,path] of checks){try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),6000);let res;try{res=await fetch(location.origin+path,{method:"GET",mode:"same-origin",credentials:"omit",cache:"no-store",redirect:"follow",signal:controller.signal});}finally{clearTimeout(timer);}out(label+": HTTP "+res.status+" "+(res.ok?"応答あり":"要確認"),res.ok?"success":"error");if(path==="/"){for(const h of ["Content-Security-Policy","X-Content-Type-Options","X-Frame-Options","Strict-Transport-Security","Referrer-Policy"])out(h+": "+(res.headers.get(h)||"ブラウザーから確認できず"));}}catch(e){out(label+": "+(e.name==="AbortError"?"タイムアウト":"通信確認不可"),"error");}}
+  const {data:{session:after},error:ae}=await db.auth.getSession(),{data:stillOwner,error:oe2}=await db.rpc("is_site_owner");if(ae||oe2||after?.user?.id!==session.user.id||stillOwner!==true)throw Error("診断後の本人確認に失敗しました。");out("診断完了。RLS・Edge Functions・秘密情報・全入力欄の脆弱性を保証するものではありません。","success");return;
+ }
+ if(a==="email"&&b==="check"){
+  if(!owner)throw Error("メールチェッカーはサイトオーナー専用です。");
+  const address=[c,...rest].join("").trim();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)||address.length>254)throw Error("形式: /kizimin email check <メールアドレス>");
+  const {data,error}=await db.functions.invoke("owner-email-checker",{body:{email:address}});if(error)throw error;if(data?.error)throw Error("メール判定に失敗しました: "+data.error);const r=data?.result;if(!r)throw Error("判定結果を取得できませんでした。");
+  out("メールドメイン判定（メールボックスの存在を保証しません）");out("ドメインDNS: "+(r.domain_resolves===true?"確認済":r.domain_resolves===false?"未確認":"判定不能"));out("MX: "+(r.mx_found===true?"あり":r.mx_found===false?"なし":"判定不能"));out("SPF: "+(r.spf_found===true?"あり":r.spf_found===false?"なし":"判定不能"));out("DMARC: "+(r.dmarc_found===true?"あり":r.dmarc_found===false?"なし":"判定不能"));out("使い捨てドメイン: "+(r.disposable==="yes"?"公開リストで検出":r.disposable==="no"?"未検出":"判定不能"));out("複数SPF: "+(r.spf_multiple===true?"疑いあり":r.spf_multiple===false?"未検出":"判定不能"));return;
+ }
  if(a==="orgs"){let q=db.from("organizations").select("id,name,organization_type,status,created_at").order("created_at",{ascending:false}).limit(50);if(target)q=q.ilike("name","%"+target+"%");const {data,error}=await q;if(error)throw error;out("団体 "+data.length+" 件");data.forEach(x=>out(x.name+" | "+x.organization_type+" | "+x.status+" | "+x.id));return;}
  if(a==="orgapps"){let q=db.from("organization_applications").select("id,organization_name,organization_type,status,applicant_id,review_reason").order("created_at",{ascending:false}).limit(50);if(target&&target!=="all")q=q.eq("status",target);const {data,error}=await q;if(error)throw error;out("団体申請 "+data.length+" 件");data.forEach(x=>out(x.organization_name+" | "+x.status+" | "+x.applicant_id+" | "+x.id));return;}
  if(a==="orgmembers"){if(!target)throw Error("団体IDを指定してください。");const {data,error}=await db.from("organization_members").select("id,user_id,role,status").eq("organization_id",target).order("created_at",{ascending:false}).limit(100);if(error)throw error;out("団体メンバー "+data.length+" 人");data.forEach(x=>out(x.user_id+" | "+x.role+" | "+x.status+" | "+x.id));return;}
@@ -302,117 +413,6 @@ async function execute(raw){
   if(ce)throw ce;out("ルーム: "+data.name);out("種別: "+data.room_type);out("作成日時: "+fmt(data.created_at));out("メッセージ数: "+count);out("ID: "+data.id);return;
  }
 
- if(a==="org"&&b==="review"){
-  if(!["admin","owner"].includes(role))throw Error("団体申請の審査は管理者専用です。");
-  const {data:platform,error:platformError}=await db.rpc("kizimin_is_platform_admin");if(platformError||platform!==true)throw Error("プラットフォーム管理者権限を確認できません。");
-  const id=c,decision=rest[0],reason=rest.slice(1).join(" ");if(!id||!["approve","reject"].includes(decision))throw Error("形式: /kizimin org review <申請ID> <approve|reject> [理由]");
-  if(!confirm("団体申請 "+id+" を "+(decision==="approve"?"承認":"却下")+"しますか？"))return;
-  const {error}=await db.rpc("kizimin_review_organization_application",{p_application_id:id,p_decision:decision,p_reason:reason});if(error)throw error;out("団体申請を"+(decision==="approve"?"承認":"却下")+"しました。","success");return;
- }
- if(a==="org"&&b==="status"){
-  if(!["admin","owner"].includes(role))throw Error("団体状態の変更は管理者専用です。");
-  const {data:platform,error:platformError}=await db.rpc("kizimin_is_platform_admin");if(platformError||platform!==true)throw Error("プラットフォーム管理者権限を確認できません。");
-  const id=c,next=rest[0],reason=rest.slice(1).join(" ")||"コマンドコンソールから変更";if(!id||!["approved","suspended"].includes(next))throw Error("形式: /kizimin org status <団体ID> <approved|suspended> [理由]");
-  if(!confirm("団体 "+id+" の状態を "+next+" に変更しますか？"))return;
-  const {error}=await db.rpc("kizimin_set_organization_status",{p_organization_id:id,p_status:next,p_reason:reason});if(error)throw error;out("団体状態を "+next+" に変更しました。","success");return;
- }
- if(a==="org"&&b==="audit"){
-  if(!["admin","owner"].includes(role))throw Error("団体監査ログは管理者専用です。");
-  const n=Math.max(1,Math.min(100,Number(c)||30));const {data,error}=await db.from("organization_audit_logs").select("id,organization_id,actor_id,action,target_user_id,details,created_at").order("created_at",{ascending:false}).limit(n);
-  if(error)throw error;out("団体操作履歴 "+data.length+" 件");data.forEach(x=>out(fmt(x.created_at)+" | "+x.action+" | org="+(x.organization_id||"申請")+" | "+x.actor_id+" | "+x.id));return;
- }
- if(a==="connect"&&b==="create"){
-  if(!["admin","owner"].includes(role))throw Error("Admin Connectのルーム作成は管理者専用です。");
-  const name=[c,...rest].join(" ").trim();if(!name||name.length>80)throw Error("ルーム名は1〜80文字で指定してください。");
-  if(!confirm("Admin Connectに「"+name+"」ルームを作成しますか？"))return;
-  const {data,error}=await db.from("admin_connect_rooms").insert({name,room_type:"text"}).select("id,name").single();if(error)throw error;out("ルームを作成しました: "+data.name+" | "+data.id,"success");return;
- }
- if(a==="connect"&&b==="send"){
-  if(!["admin","owner"].includes(role))throw Error("Admin Connectの送信は管理者専用です。");
-  const room=c,body=rest.join(" ").trim();if(!room||!body||body.length>5000)throw Error("形式: /kizimin connect send <ルームID> <メッセージ（5000文字以内）>");
-  if(!confirm("Admin Connectの指定ルームにメッセージを送信しますか？"))return;
-  const {data:{session},error:se}=await db.auth.getSession();if(se||!session?.user?.id)throw Error("ログイン状態を確認できません。");
-  const {error}=await db.from("admin_connect_messages").insert({room_id:room,sender_id:session.user.id,body,attachment_path:null,attachment_type:null});if(error)throw error;out("Admin Connectへ送信しました。","success");return;
- }
- if(a==="permissions"&&b==="set"){
-  if(!owner)throw Error("ロール権限の変更はオーナー専用です。");
-  const targetRole=c,key=rest[0],state=rest[1];if(!["user","moderator","admin","debugger"].includes(targetRole)||!key||!["on","off"].includes(state))throw Error("形式: /kizimin permissions set <user|moderator|admin|debugger> <権限キー> <on|off>");
-  if(!confirm(targetRole+" の "+key+" を "+(state==="on"?"許可":"禁止")+"しますか？"))return;
-  const {error}=await db.rpc("admin_set_role_permission",{p_role:targetRole,p_permission_key:key,p_allowed:state==="on"});if(error)throw error;out("ロール権限を更新しました。","success");return;
- }
- if(a==="permission"&&b==="set"){
-  if(!owner)throw Error("ユーザー別権限の変更はオーナー専用です。");
-  const userId=c,key=rest[0],state=rest[1];if(!userId||!key||!["inherit","allow","deny"].includes(state))throw Error("形式: /kizimin permission set <ユーザーID> <権限キー> <inherit|allow|deny>");
-  if(!confirm("ユーザー "+userId+" の "+key+" を "+state+" に変更しますか？"))return;
-  const {error}=await db.rpc("admin_set_user_permission",{p_target_id:userId,p_permission_key:key,p_value:state});if(error)throw error;out("ユーザー別権限を更新しました。","success");return;
- }
- if(a==="filters"&&b==="add"){
-  if(!["admin","owner"].includes(role))throw Error("フィルター追加は管理者専用です。");
-  const name=c,term=rest[0],applies=rest[1],action=rest[2],reason=rest.slice(3).join(" ");if(!name||!term||term.length<2||!["article","comment","both"].includes(applies)||!["block","log"].includes(action))throw Error("形式: /kizimin filters add <名前> <検出語句> <article|comment|both> <block|log> [理由]");
-  const {data:{session},error:se}=await db.auth.getSession();if(se||!session?.user?.id)throw Error("ログイン状態を確認できません。");
-  if(!confirm("不正利用フィルターを追加しますか？\n"+name+" / "+term+" / "+applies+" / "+action))return;
-  const {error}=await db.from("admin_abuse_filters").insert({name,term,applies_to:applies,action,reason,created_by:session.user.id});if(error)throw error;out("フィルターを追加しました。","success");return;
- }
- if(a==="filters"&&b==="delete"){
-  if(!["admin","owner"].includes(role))throw Error("フィルター削除は管理者専用です。");if(!c)throw Error("フィルターIDを指定してください。");
-  if(!confirm("フィルター #"+c+" を削除しますか？"))return;const {data,error}=await db.from("admin_abuse_filters").delete().eq("id",c).select("id").maybeSingle();if(error)throw error;if(!data)throw Error("削除できませんでした。対象がないか権限がありません。");out("フィルターを削除しました。","success");return;
- }
- if(a==="site"&&b==="theme"&&c==="get"){
-  if(!owner)throw Error("サイト編集設定はオーナー専用です。");
-  const {data,error}=await db.from("site_editor_settings").select("setting_value,updated_at").eq("setting_key","site_theme").maybeSingle();if(error)throw error;if(!data){out("カスタムテーマは未設定です。");return;}
-  const field=rest[0];if(field){if(!(field in (data.setting_value||{})))throw Error("その設定項目はありません。");out(field+": "+JSON.stringify(data.setting_value[field]));}else{out("サイトテーマ設定");Object.entries(data.setting_value||{}).forEach(([k,v])=>out(k+" = "+JSON.stringify(v)));}out("最終更新: "+fmt(data.updated_at));return;
- }
- if(a==="site"&&b==="theme"&&c==="set"){
-  if(!owner)throw Error("サイト編集設定の変更はオーナー専用です。");
-  const field=rest[0],raw=rest.slice(1).join(" ");if(!field||!raw)throw Error("形式: /kizimin site theme set <項目> <値>");
-  const allowed=["brandName","heroTitle","heroDescription","announcementTitle","announcementBody","showAnnouncements","maintenanceBrand","maintenanceTitle","maintenanceDescription","maintenanceReasonTitle","maintenanceReasonBody","maintenanceFooter","maintenanceDemoLabel","maintenanceNormalLabel","maintenanceEmergencyLabel","maintenanceOtherLabel","maintenanceBgColor","maintenanceCardColor","maintenanceAccentColor","maintenanceTextColor","banLabel","banTitle","banBody","banNote","suspendedLabel","suspendedTitle","suspendedBody","suspendedNote","accountReasonLabel","accountExpiryLabel","accountContactLabel","accountBgColor","accountCardColor","accountAccentColor","accountTextColor","termsContent","privacyContent","accentColor","backgroundColor","textColor","cardRadius","showHero","showDaily","showPopular","showCategories","showDiscovery","showPolls","showChallenges","showQA","showLibrary"];
-  if(!allowed.includes(field))throw Error("変更できない項目名です。/kizimin site theme get で確認してください。");
-  let value=raw;if(raw==="on")value=true;else if(raw==="off")value=false;else if(/^-?\d+(\.\d+)?$/.test(raw))value=Number(raw);
-  if(["cardRadius"].includes(field)){if(typeof value!=="number"||value<0||value>32)throw Error("cardRadiusは0〜32の数値です。");}
-  else if(/^show|^showAnnouncements/.test(field)){if(typeof value!=="boolean")throw Error("表示設定は on または off で指定してください。");}
-  else if(/Color$/.test(field)){if(typeof value!=="string"||!/^#[0-9a-f]{6}$/i.test(value))throw Error("色は #RRGGBB 形式で指定してください。");}
-  else if(typeof value!=="string"||value.length>30000)throw Error("この項目は文字列で、30000文字以内にしてください。");
-  const {data:{session},error:se}=await db.auth.getSession();if(se||!session?.user?.id)throw Error("ログイン状態を確認できません。");
-  const {data:current,error}=await db.from("site_editor_settings").select("setting_value").eq("setting_key","site_theme").maybeSingle();if(error)throw error;
-  const next={...(current?.setting_value||{}),[field]:value};
-  if(!confirm("サイトテーマの "+field+" を変更しますか？"))return;
-  const {error:saveError}=await db.from("site_editor_settings").upsert({setting_key:"site_theme",setting_value:next,updated_by:session.user.id,updated_at:new Date().toISOString()},{onConflict:"setting_key"});if(saveError)throw saveError;out("サイトテーマを保存しました。公開ページへの反映を確認してください。","success");return;
- }
- if(a==="ops"&&b==="stats"){
-  if(!["admin","owner","moderator"].includes(role))throw Error("運営統計の閲覧権限がありません。");
-  const checks=[["ユーザー","profiles"],["記事","articles"],["アクセスログ","access_logs"],["コメント","comments"],["通報","reports"],["問い合わせ","inquiries"]];
-  out("運営統計");for(const [label,table] of checks){const {count,error}=await db.from(table).select("*",{count:"exact",head:true});out(label+": "+(error?"取得失敗 ("+error.message+")":count+" 件"),error?"error":"success");}return;
- }
- if(a==="ops"&&b==="health"){
-  if(!["admin","owner","moderator"].includes(role))throw Error("サイト診断の閲覧権限がありません。");
-  const checks=[["プロフィール","profiles"],["記事","articles"],["コメント","comments"],["通報","reports"],["問い合わせ","inquiries"],["サイト設定","site_settings"]];
-  for(const [label,table] of checks){const {error}=await db.from(table).select("id",{head:true}).limit(1);out(label+": "+(error?"異常 / "+error.message:"正常 / 読み取り成功"),error?"error":"success");}out("この診断は読み取り専用で、サイト全体の完全監査ではありません。");return;
- }
- if(a==="ops"&&b==="tasks"){
-  const key="kizimin_admin_ops_tasks_v1";let tasks=[];try{const v=JSON.parse(localStorage.getItem(key)||"[]");tasks=Array.isArray(v)?v:[];}catch{}
-  const action=c||"list";
-  if(action==="list"){out("運営タスク "+tasks.length+" 件");tasks.forEach(t=>out(t.id+" | "+t.status+" | "+t.priority+" | "+t.title+" | "+(t.owner||"未指定")+" | "+(t.due||"期限なし")));return;}
-  if(action==="add"){const title=rest[0],priority=rest[1]||"中",ownerName=rest[2]||"",due=rest[3]||"";if(!title)throw Error("形式: /kizimin ops tasks add <タイトル> [優先度] [担当] [YYYY-MM-DD]");tasks.unshift({id:Date.now().toString(36)+Math.random().toString(36).slice(2,7),title,priority,owner:ownerName,due,status:"未完了",createdAt:new Date().toISOString()});localStorage.setItem(key,JSON.stringify(tasks));out("運営タスクを追加しました。","success");return;}
-  if(action==="done"||action==="delete"){const id=rest[0];if(!id)throw Error("タスクIDを指定してください。");const before=tasks.length;tasks=action==="done"?tasks.map(t=>t.id===id?{...t,status:t.status==="完了"?"未完了":"完了"}:t):tasks.filter(t=>t.id!==id);if(before===tasks.length&&action==="delete")throw Error("タスクが見つかりません。");localStorage.setItem(key,JSON.stringify(tasks));out(action==="done"?"タスク状態を切り替えました。":"タスクを削除しました。","success");return;}
-  throw Error("tasks list / add / done / delete を指定してください。");
- }
- if(a==="security"&&b==="diagnose"){
-  if(!owner)throw Error("セキュリティ診断はサイトオーナー専用です。");
-  const {data:{session},error:se}=await db.auth.getSession();if(se||!session?.user?.id||!session.user.email)throw Error("再認証に必要なログイン情報がありません。");
-  const password=prompt("セキュリティ診断を実行するため、サイトオーナーのパスワードを再入力してください。入力内容は保存しません。");if(!password)return;
-  const {data:reauth,error:re}=await db.auth.signInWithPassword({email:session.user.email,password});if(re||reauth?.user?.id!==session.user.id)throw Error("本人確認に失敗しました。診断は実行していません。");
-  const {data:ownerAgain,error:oe}=await db.rpc("is_site_owner");if(oe||ownerAgain!==true)throw Error("再認証後のオーナー権限確認に失敗しました。");
-  out("読み取り専用セキュリティ診断を開始");
-  const checks=[["トップページ","/"],["ログインページ","/login.html"],["管理画面HTML","/admin.html"],["診断ページ","/pentest.html"],["robots.txt","/robots.txt"]];
-  for(const [label,path] of checks){try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),6000);let res;try{res=await fetch(location.origin+path,{method:"GET",mode:"same-origin",credentials:"omit",cache:"no-store",redirect:"follow",signal:controller.signal});}finally{clearTimeout(timer);}out(label+": HTTP "+res.status+" "+(res.ok?"応答あり":"要確認"),res.ok?"success":"error");if(path==="/"){for(const h of ["Content-Security-Policy","X-Content-Type-Options","X-Frame-Options","Strict-Transport-Security","Referrer-Policy"])out(h+": "+(res.headers.get(h)||"ブラウザーから確認できず"));}}catch(e){out(label+": "+(e.name==="AbortError"?"タイムアウト":"通信確認不可"),"error");}}
-  const {data:{session:after},error:ae}=await db.auth.getSession(),{data:stillOwner,error:oe2}=await db.rpc("is_site_owner");if(ae||oe2||after?.user?.id!==session.user.id||stillOwner!==true)throw Error("診断後の本人確認に失敗しました。");out("診断完了。RLS・Edge Functions・秘密情報・全入力欄の脆弱性を保証するものではありません。","success");return;
- }
- if(a==="email"&&b==="check"){
-  if(!owner)throw Error("メールチェッカーはサイトオーナー専用です。");
-  const address=[c,...rest].join("").trim();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)||address.length>254)throw Error("形式: /kizimin email check <メールアドレス>");
-  const {data,error}=await db.functions.invoke("owner-email-checker",{body:{email:address}});if(error)throw error;if(data?.error)throw Error("メール判定に失敗しました: "+data.error);const r=data?.result;if(!r)throw Error("判定結果を取得できませんでした。");
-  out("メールドメイン判定（メールボックスの存在を保証しません）");out("ドメインDNS: "+(r.domain_resolves===true?"確認済":r.domain_resolves===false?"未確認":"判定不能"));out("MX: "+(r.mx_found===true?"あり":r.mx_found===false?"なし":"判定不能"));out("SPF: "+(r.spf_found===true?"あり":r.spf_found===false?"なし":"判定不能"));out("DMARC: "+(r.dmarc_found===true?"あり":r.dmarc_found===false?"なし":"判定不能"));out("使い捨てドメイン: "+(r.disposable==="yes"?"公開リストで検出":r.disposable==="no"?"未検出":"判定不能"));out("複数SPF: "+(r.spf_multiple===true?"疑いあり":r.spf_multiple===false?"未検出":"判定不能"));return;
- }
  throw Error("不明なコマンドです。/kizimin help で一覧を確認してください。");
 }
 function bind(){
