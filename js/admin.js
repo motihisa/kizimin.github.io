@@ -1462,11 +1462,6 @@
     const loaders = [
       ["ダッシュボード", loadDashboard],
       ["メンテナンス設定", loadMaintenance],
-      ["ユーザー", loadUsers],
-      ["記事", loadArticles],
-      ["コメント", loadComments],
-      ["通報", loadReports],
-      ["問い合わせ", loadInquiries],
     ];
     const results = await Promise.allSettled(loaders.map(([, loader]) => loader()));
     results.forEach((result, i) => {
