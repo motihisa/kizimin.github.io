@@ -13,11 +13,15 @@ async function init(){
  const {data:{session},error}=await db.auth.getSession();
  if(error||!session?.user?.id){showDenied();return;}
  uid=session.user.id;
- const {data:profile,error:pe}=await db.from("profiles").select("role,account_status,display_name,username").eq("id",uid).maybeSingle();
- if(pe||!profile||profile.account_status==="banned"||profile.account_status==="suspended"||profile.role!=="admin"){
-   const {data:owner}=await db.from("site_owners").select("user_id").eq("user_id",uid).maybeSingle();
-   if(!owner){showDenied();return;}
- }
+ const [{data:profile,error:pe},{data:isOwner,error:ownerError}]=await Promise.all([
+   db.from("profiles").select("role,account_status,display_name,username").eq("id",uid).maybeSingle(),
+   db.rpc("is_site_owner")
+ ]);
+ // 権限確認に失敗した場合は必ず拒否。一般ユーザー・モデレーター・デバッカーは利用不可。
+ if(pe||ownerError||!profile){showDenied();return;}
+ const owner=isOwner===true;
+ const activeAdmin=profile.role==="admin"&&(!profile.account_status||profile.account_status==="active");
+ if(!owner&&!activeAdmin){showDenied();return;}
  $("ac-loading").classList.add("hidden");$("ac-app").classList.remove("hidden");
  await loadRooms(); await loadAdmins(); subscribeSignals();
 }
