@@ -145,7 +145,8 @@ async function execute(raw){
    "",
    "【ユーザー】",
    "kizimin users [検索語]：ユーザー一覧を表示します。検索語を付けると絞り込めます。",
-   "kizimin user <名前|ID>：指定ユーザーの情報を確認します。",
+   "kizimin user <名前|ID>：指定ユーザーの情報（登録メールアドレスを含む）を確認します。",
+   "kizimin user email <名前|ID>：指定ユーザーの登録メールアドレスだけを確認します。",
    "kizimin user ban <名前|ID> <理由>：理由を記録してユーザーをBANします。",
    "kizimin user suspend <名前|ID> <30m|24h|7d> <理由>：指定時間だけ一時停止します。30mは30分、24hは24時間、7dは7日です。",
    "kizimin user unban <名前|ID>：指定ユーザーのBANを解除します。",
@@ -266,7 +267,7 @@ async function execute(raw){
   return;
  }
  if(a==="help"){out("利用可能なコマンド:");[
- "/kizimin help","/kizimin status","/kizimin whoami","/kizimin activity [件数]","/kizimin filter history [件数]","/kizimin room info <ルームID>","/kizimin users [検索語]","/kizimin user <名前|ID>",
+ "/kizimin help","/kizimin status","/kizimin whoami","/kizimin activity [件数]","/kizimin filter history [件数]","/kizimin room info <ルームID>","/kizimin users [検索語]","/kizimin user <名前|ID>","/kizimin user email <名前|ID>",
  "/kizimin user ban <名前|ID> <理由>","/kizimin user suspend <名前|ID> <30m|24h|7d> <理由>","/kizimin user unban <名前|ID>","/kizimin user role <名前|ID> <user|moderator|admin|debugger>",
  "/kizimin articles [検索語]","/kizimin article status <記事ID> <draft|published|archived>","/kizimin article delete <記事ID>",
  "/kizimin comments [検索語]","/kizimin comment status <コメントID> <visible|hidden|deleted>","/kizimin comment delete <コメントID>",
@@ -335,7 +336,13 @@ async function execute(raw){
    const {error}=await db.rpc("admin_change_profile_role",{p_target_id:u.id,p_new_role:value});if(error)throw error;
    out(u.username+" のロールを "+value+" に変更しました。","success");return;
   }
-  const u=await profile(b);out("ユーザー: "+(u.display_name||u.username));out("ID: "+u.id);out("ユーザー名: "+u.username);out("ロール: "+u.role);out("状態: "+(u.account_status||"active"));out("制限理由: "+(u.ban_reason||"-"));out("解除日時: "+fmt(u.ban_expires_at));return;
+  if(b==="email"){
+    if(!c)throw Error("ユーザー名またはIDを指定してください。");
+    const u=await profile(c);const details=await secure("admin_user_details",{user_id:u.id});
+    out(u.username+" の登録メールアドレス: "+(details.email||"未登録・非公開"));
+    return;
+   }
+   const u=await profile(b);const details=await secure("admin_user_details",{user_id:u.id});out("ユーザー: "+(u.display_name||u.username));out("ID: "+u.id);out("ユーザー名: "+u.username);out("メールアドレス: "+(details.email||"未登録・非公開"));out("ロール: "+u.role);out("状態: "+(u.account_status||"active"));out("制限理由: "+(u.ban_reason||"-"));out("解除日時: "+fmt(u.ban_expires_at));return;
  }
 
  if(a==="filter"&&b==="toggle"){if(!["admin","owner"].includes(role))throw Error("フィルター変更は管理者・オーナー専用です。");if(!c||!["on","off"].includes(value))throw Error("フィルターIDと on/off を指定してください。");if(!confirm("フィルター #"+c+" を "+value.toUpperCase()+" にしますか？"))return;const {data,error}=await db.from("admin_abuse_filters").update({enabled:value==="on"}).eq("id",Number(c)).select("id").maybeSingle();if(error)throw error;if(!data)throw Error("フィルターが見つからないか変更権限がありません。");out("フィルターを更新しました。","success");return;}
