@@ -17,7 +17,7 @@ async function init(){
  const {data:o,error:oe}=await db.rpc("is_site_owner");if(oe)throw oe;owner=o===true;role=owner?"owner":p.role;
  if(!owner&&!["admin","moderator"].includes(role))throw Error("コマンドコンソールは管理者・オーナー専用です。");
  $("kcmd-auth").textContent="認証済み · "+role;$("kcmd-auth").classList.add("ok");ready=true;
- callSubscribe().catch(e=>console.warn("Admin Connect call listener unavailable",e));
+ if(["admin","owner"].includes(role))callSubscribe().catch(e=>console.warn("Admin Connect call listener unavailable",e));
  out("Kizimin Command Console 起動。/kizimin help でコマンド一覧を表示します。","success");
 }
 
