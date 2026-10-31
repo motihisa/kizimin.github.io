@@ -81,8 +81,8 @@ async function execute(raw){
  "/kizimin user ban <名前|ID> <理由>","/kizimin user suspend <名前|ID> <30m|24h|7d> <理由>","/kizimin user unban <名前|ID>","/kizimin user role <名前|ID> <user|moderator|admin|debugger>",
  "/kizimin articles [検索語]","/kizimin article status <記事ID> <draft|published|archived>","/kizimin article delete <記事ID>",
  "/kizimin comments [検索語]","/kizimin comment status <コメントID> <visible|hidden|deleted>","/kizimin comment delete <コメントID>",
- "/kizimin reports [open|all]","/kizimin report status <通報ID> <open|reviewing|resolved|dismissed>",
- "/kizimin inquiries [open|all]","/kizimin inquiry status <問い合わせID> <open|reviewing|resolved|closed|dismissed>",
+ "/kizimin reports [open|all]","/kizimin report status <通報ID> <open|reviewing|resolved|dismissed> [管理メモ]","/kizimin report reply <通報ID> <返信内容>",
+ "/kizimin inquiries [open|all]","/kizimin inquiry status <問い合わせID> <open|reviewing|resolved|closed|dismissed> [管理メモ]","/kizimin inquiry info <問い合わせID>","/kizimin inquiry reply <問い合わせID> <返信内容>",
  "/kizimin maintenance status|on|off|reason <理由>","/kizimin bot status|run|stop",
  "/kizimin categories","/kizimin topic","/kizimin access [ユーザーID|パス]",
  "/kizimin audit [件数]","/kizimin audit page <ページ> [件数]","/kizimin export audit [件数]","/kizimin roles [ユーザーID]",
@@ -169,17 +169,36 @@ async function execute(raw){
   if(b==="delete"){if(!["admin","moderator","owner"].includes(role))throw Error("コメント削除権限がありません。");if(!c)throw Error("コメントIDを指定してください。");if(!confirm("コメント "+c+" を完全削除しますか？"))return;await secure("comment_delete",{comment_id:c});out("コメントを削除しました。","success");return;}
   if(b==="status"){if(!c||!["visible","hidden","deleted"].includes(value))throw Error("コメントIDと visible/hidden/deleted を指定してください。");await secure("comment_status",{comment_id:c,status:value});out("コメント状態を "+value+" に変更しました。","success");return;}
  }
+
+ if(a==="report"&&b==="reply"){
+  if(!["admin","owner"].includes(role))throw Error("通報への返信は管理者専用です。");
+  const message=rest.join(" ").trim();if(!c||!message||message.length>4000)throw Error("形式: /kizimin report reply <通報ID> <返信内容（4000文字以内）>");
+  if(!confirm("通報者へサイト内通知で返信しますか？"))return;
+  await secure("admin_case_reply",{case_type:"report",case_id:c,reply:message});out("通報者へ返信を送信しました。","success");return;
+ }
  if(a==="reports"){
   const {data,error}=await db.from("reports").select("id,reason,status,created_at").order("created_at",{ascending:false}).limit(30);if(error)throw error;const rows=target==="open"?data.filter(x=>["open","reviewing"].includes(x.status)):data;out("通報 "+rows.length+" 件");rows.forEach(x=>out(x.status+" | "+String(x.reason||"").slice(0,100)+" | "+x.id));return;
  }
  if(a==="report"&&b==="status"){
-  if(!["open","reviewing","resolved","dismissed"].includes(value))throw Error("状態は open/reviewing/resolved/dismissed です。");const {error}=await db.from("reports").update({status:value,resolved_at:["resolved","dismissed"].includes(value)?new Date().toISOString():null}).eq("id",c);if(error)throw error;out("通報状態を更新しました。","success");return;
+  if(!["open","reviewing","resolved","dismissed"].includes(value))throw Error("状態は open/reviewing/resolved/dismissed です。");if(!c)throw Error("通報IDを指定してください。");const update={status:value,resolved_at:["resolved","dismissed"].includes(value)?new Date().toISOString():null};const note=rest.join(" ");if(note)update.admin_note=note;const {error}=await db.from("reports").update(update).eq("id",c);if(error)throw error;out("通報状態を更新しました。","success");return;
+ }
+
+ if(a==="inquiry"&&b==="reply"){
+  if(!["admin","owner"].includes(role))throw Error("問い合わせへの返信は管理者専用です。");
+  const message=rest.join(" ").trim();if(!c||!message||message.length>4000)throw Error("形式: /kizimin inquiry reply <問い合わせID> <返信内容（4000文字以内）>");
+  if(!confirm("問い合わせ本人へサイト内通知で返信しますか？"))return;
+  await secure("admin_case_reply",{case_type:"inquiry",case_id:c,reply:message});out("問い合わせ本人へ返信を送信しました。","success");return;
+ }
+ if(a==="inquiry"&&b==="info"){
+  if(!["admin","owner"].includes(role))throw Error("問い合わせ内容は管理者専用です。");if(!c)throw Error("問い合わせIDを指定してください。");
+  const {data,error}=await db.from("inquiries").select("id,user_id,name,email,subject,message,status,admin_note,created_at,resolved_at").eq("id",Number(c)).maybeSingle();if(error)throw error;if(!data)throw Error("問い合わせが見つかりません。");
+  Object.entries(data).forEach(([k,v])=>out(k+": "+(v??"-")));return;
  }
  if(a==="inquiries"){
   const {data,error}=await db.from("inquiries").select("id,subject,message,status,created_at").order("created_at",{ascending:false}).limit(30);if(error)throw error;const rows=target==="open"?data.filter(x=>["open","reviewing"].includes(x.status)):data;out("問い合わせ "+rows.length+" 件");rows.forEach(x=>out(x.status+" | "+x.subject+" | "+x.id));return;
  }
  if(a==="inquiry"&&b==="status"){
-  if(!["open","reviewing","resolved","closed","dismissed"].includes(value))throw Error("状態を確認してください。");const {error}=await db.rpc("admin_update_inquiry_by_id",{p_inquiry_id:Number(c),p_status:value,p_admin_note:""});if(error)throw error;out("問い合わせ状態を更新しました。","success");return;
+  if(!["open","reviewing","resolved","closed","dismissed"].includes(value))throw Error("状態を確認してください。");if(!c)throw Error("問い合わせIDを指定してください。");let note=rest.join(" ");if(!note){const {data,error:readError}=await db.from("inquiries").select("admin_note").eq("id",Number(c)).maybeSingle();if(readError)throw readError;if(!data)throw Error("問い合わせが見つかりません。");note=data.admin_note||"";}const {error}=await db.rpc("admin_update_inquiry_by_id",{p_inquiry_id:Number(c),p_status:value,p_admin_note:note});if(error)throw error;out("問い合わせ状態を更新しました。","success");return;
  }
  if(a==="maintenance"){
   if(b==="status"){const {data,error}=await db.from("site_settings").select("maintenance_mode,maintenance_type,maintenance_reason").eq("id",true).maybeSingle();if(error)throw error;out("メンテナンス "+(data?.maintenance_mode?"ON":"OFF")+" · "+(data?.maintenance_type||"normal")+" · "+(data?.maintenance_reason||"理由未設定"));return;}
