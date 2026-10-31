@@ -8,7 +8,7 @@ const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&g
 const out=(s,type="info")=>{const el=$("kcmd-output");if(!el)return;const line=document.createElement("div");line.className="kcmd-line "+type;line.textContent=s;el.appendChild(line);el.scrollTop=el.scrollHeight;};
 const fmt=s=>s?new Date(s).toLocaleString("ja-JP",{timeZone:"Asia/Tokyo"}):"-";
 let role="user",owner=false,ready=false;
-let pendingAttachRoom=null,callPc=null,callStream=null,callTarget=null,callRoomId=null,callIce=[],callChannel=null,lastSecurityReport=null;
+let pendingAttachRoom=null,callPc=null,callStream=null,callTarget=null,callRoomId=null,callIce=[],callChannel=null,connectMessageChannel=null,connectSpeakEnabled=false,lastSecurityReport=null;
 function tokenize(input){const a=[];input.replace(/"([^"]*)"|'([^']*)'|(\S+)/g,(_,d,s,w)=>a.push(d??s??w));return a;}
 async function init(){
  const {data:{session}}=await db.auth.getSession();if(!session?.user?.id)throw Error("ログインセッションがありません。");
@@ -102,7 +102,7 @@ async function execute(raw){
  "/kizimin permissions [ロール]","/kizimin permission users <権限キー>",
  "/kizimin conversations [ユーザーID]","/kizimin conversation stats <会話ID>",
  "/kizimin topics [件数]","/kizimin role summary",
- "/kizimin org review <申請ID> <approve|reject> [理由]","/kizimin org status <団体ID> <approved|suspended> [理由]","/kizimin org audit [件数]","/kizimin connect create <ルーム名>","/kizimin connect send <ルームID> <本文>","/kizimin connect attach <ルームID>","/kizimin connect call start <ルームID> <管理者ユーザーID>","/kizimin connect call end","/kizimin permissions set <ロール> <権限キー> <on|off>","/kizimin permission set <ユーザーID> <権限キー> <inherit|allow|deny>","/kizimin filters add <名前> <語句> <article|comment|both> <block|log> [理由]","/kizimin filters delete <ID>","/kizimin site theme get [項目]","/kizimin site theme set <項目> <値>","/kizimin ops stats","/kizimin ops health","/kizimin ops tasks list|add|done|delete|export","/kizimin security diagnose","/kizimin security report","/kizimin email check <メールアドレス>"
+ "/kizimin org review <申請ID> <approve|reject> [理由]","/kizimin org status <団体ID> <approved|suspended> [理由]","/kizimin org audit [件数]","/kizimin connect create <ルーム名>","/kizimin connect send <ルームID> <本文>","/kizimin connect attach <ルームID>","/kizimin connect listen <on|off>","/kizimin connect call start <ルームID> <管理者ユーザーID>","/kizimin connect call end","/kizimin permissions set <ロール> <権限キー> <on|off>","/kizimin permission set <ユーザーID> <権限キー> <inherit|allow|deny>","/kizimin filters add <名前> <語句> <article|comment|both> <block|log> [理由]","/kizimin filters delete <ID>","/kizimin site theme get [項目]","/kizimin site theme set <項目> <値>","/kizimin ops stats","/kizimin ops health","/kizimin ops tasks list|add|done|delete|export","/kizimin security diagnose","/kizimin security report","/kizimin email check <メールアドレス>"
  ].forEach(x=>out("  "+x));return;}
  if(a==="status"){
   const [dash,maint]=await Promise.all([db.rpc("admin_dashboard_stats"),db.from("site_settings").select("maintenance_mode,maintenance_type,maintenance_reason").eq("id",true).maybeSingle()]);
@@ -217,6 +217,21 @@ async function execute(raw){
  if(a==="audit"){const n=Math.max(1,Math.min(100,Number(target)||30));const {data,error}=await db.from("admin_audit_events").select("event_type,target_type,target_id,summary,created_at").order("created_at",{ascending:false}).limit(n);if(error)throw error;out("管理操作ログ "+data.length+" 件");data.forEach(x=>out(fmt(x.created_at)+" | "+x.event_type+" | "+x.summary+" | "+(x.target_type||"")+" "+(x.target_id||"")));return;}
  if(a==="roles"){let q=db.from("role_change_audit").select("target_user_id,old_role,new_role,changed_at,changed_by").order("changed_at",{ascending:false}).limit(30);if(target)q=q.eq("target_user_id",target);const {data,error}=await q;if(error)throw error;out("権限変更履歴 "+data.length+" 件");data.forEach(x=>out(fmt(x.changed_at)+" | "+x.old_role+" → "+x.new_role+" | "+x.target_user_id));return;}
 
+
+ if(a==="connect"&&b==="listen"){
+  if(!["admin","owner"].includes(role))throw Error("Admin Connectの受信監視は管理者専用です。");
+  if(!["on","off"].includes(c))throw Error("形式: /kizimin connect listen <on|off>");
+  if(c==="off"){if(connectMessageChannel){await db.removeChannel(connectMessageChannel);connectMessageChannel=null;}connectSpeakEnabled=false;out("Admin Connectの受信監視を停止しました。");return;}
+  if(connectMessageChannel){out("Admin Connectの受信監視はすでに有効です。");return;}
+  const {data:{session},error:se}=await db.auth.getSession();if(se||!session?.user?.id)throw Error("ログイン状態を確認できません。");
+  connectSpeakEnabled=true;
+  connectMessageChannel=db.channel("kizimin-command-connect-messages-"+session.user.id).on("postgres_changes",{event:"INSERT",schema:"public",table:"admin_connect_messages"},payload=>{
+   if(payload.new?.sender_id===session.user.id)return;
+   const body=String(payload.new?.body||"").slice(0,300);out("Admin Connect新着 | room="+payload.new.room_id+" | "+(body||"添付ファイル"));
+   if(connectSpeakEnabled&&body&&"speechSynthesis" in window){const utterance=new SpeechSynthesisUtterance(body);utterance.lang="ja-JP";window.speechSynthesis.speak(utterance);}
+  }).subscribe();
+  out("Admin Connectの新着監視を開始しました。音声読み上げも有効です。","success");return;
+ }
  if(a==="connect"&&b==="attach"){
   if(!["admin","owner"].includes(role))throw Error("Admin Connectの添付送信は管理者専用です。");
   if(!c)throw Error("形式: /kizimin connect attach <ルームID>");
