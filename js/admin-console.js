@@ -8,7 +8,7 @@ const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&g
 const out=(s,type="info")=>{const el=$("kcmd-output");if(!el)return;const line=document.createElement("div");line.className="kcmd-line "+type;line.textContent=s;el.appendChild(line);el.scrollTop=el.scrollHeight;};
 const fmt=s=>s?new Date(s).toLocaleString("ja-JP",{timeZone:"Asia/Tokyo"}):"-";
 let role="user",owner=false,ready=false;
-let pendingAttachRoom=null,callPc=null,callStream=null,callTarget=null,callRoomId=null,callIce=[],callChannel=null;
+let pendingAttachRoom=null,callPc=null,callStream=null,callTarget=null,callRoomId=null,callIce=[],callChannel=null,lastSecurityReport=null;
 function tokenize(input){const a=[];input.replace(/"([^"]*)"|'([^']*)'|(\S+)/g,(_,d,s,w)=>a.push(d??s??w));return a;}
 async function init(){
  const {data:{session}}=await db.auth.getSession();if(!session?.user?.id)throw Error("ログインセッションがありません。");
@@ -77,7 +77,7 @@ async function execute(raw){
  const t=tokenize(raw.trim().replace(/^\/kizimin\s*/i,""));if(!t.length)return;
  const [a,b,c,...rest]=t, target=b, value=c, extra=rest.join(" ");
  if(a==="help"){out("利用可能なコマンド:");[
- "/kizimin help","/kizimin status"," /kizimin whoami","/kizimin activity [件数]","/kizimin filter history [件数]","/kizimin room info <ルームID>","/kizimin users [検索語]","/kizimin user <名前|ID>",
+ "/kizimin help","/kizimin status","/kizimin whoami","/kizimin activity [件数]","/kizimin filter history [件数]","/kizimin room info <ルームID>","/kizimin users [検索語]","/kizimin user <名前|ID>",
  "/kizimin user ban <名前|ID> <理由>","/kizimin user suspend <名前|ID> <30m|24h|7d> <理由>","/kizimin user unban <名前|ID>","/kizimin user role <名前|ID> <user|moderator|admin|debugger>",
  "/kizimin articles [検索語]","/kizimin article status <記事ID> <draft|published|archived>","/kizimin article delete <記事ID>",
  "/kizimin comments [検索語]","/kizimin comment status <コメントID> <visible|hidden|deleted>","/kizimin comment delete <コメントID>",
@@ -102,7 +102,7 @@ async function execute(raw){
  "/kizimin permissions [ロール]","/kizimin permission users <権限キー>",
  "/kizimin conversations [ユーザーID]","/kizimin conversation stats <会話ID>",
  "/kizimin topics [件数]","/kizimin role summary",
- "/kizimin org review <申請ID> <approve|reject> [理由]","/kizimin org status <団体ID> <approved|suspended> [理由]","/kizimin org audit [件数]","/kizimin connect create <ルーム名>","/kizimin connect send <ルームID> <本文>","/kizimin connect attach <ルームID>","/kizimin connect call start <ルームID> <管理者ユーザーID>","/kizimin connect call end","/kizimin permissions set <ロール> <権限キー> <on|off>","/kizimin permission set <ユーザーID> <権限キー> <inherit|allow|deny>","/kizimin filters add <名前> <語句> <article|comment|both> <block|log> [理由]","/kizimin filters delete <ID>","/kizimin site theme get [項目]","/kizimin site theme set <項目> <値>","/kizimin ops stats","/kizimin ops health","/kizimin ops tasks list|add|done|delete","/kizimin security diagnose","/kizimin email check <メールアドレス>"
+ "/kizimin org review <申請ID> <approve|reject> [理由]","/kizimin org status <団体ID> <approved|suspended> [理由]","/kizimin org audit [件数]","/kizimin connect create <ルーム名>","/kizimin connect send <ルームID> <本文>","/kizimin connect attach <ルームID>","/kizimin connect call start <ルームID> <管理者ユーザーID>","/kizimin connect call end","/kizimin permissions set <ロール> <権限キー> <on|off>","/kizimin permission set <ユーザーID> <権限キー> <inherit|allow|deny>","/kizimin filters add <名前> <語句> <article|comment|both> <block|log> [理由]","/kizimin filters delete <ID>","/kizimin site theme get [項目]","/kizimin site theme set <項目> <値>","/kizimin ops stats","/kizimin ops health","/kizimin ops tasks list|add|done|delete|export","/kizimin security diagnose","/kizimin security report","/kizimin email check <メールアドレス>"
  ].forEach(x=>out("  "+x));return;}
  if(a==="status"){
   const [dash,maint]=await Promise.all([db.rpc("admin_dashboard_stats"),db.from("site_settings").select("maintenance_mode,maintenance_type,maintenance_reason").eq("id",true).maybeSingle()]);
@@ -322,10 +322,12 @@ async function execute(raw){
   const key="kizimin_admin_ops_tasks_v1";let tasks=[];try{const v=JSON.parse(localStorage.getItem(key)||"[]");tasks=Array.isArray(v)?v:[];}catch{}
   const action=c||"list";
   if(action==="list"){out("運営タスク "+tasks.length+" 件");tasks.forEach(t=>out(t.id+" | "+t.status+" | "+t.priority+" | "+t.title+" | "+(t.owner||"未指定")+" | "+(t.due||"期限なし")));return;}
+  if(action==="export"){const cols=["id","title","priority","owner","due","status","createdAt"];const csv=[cols.join(","),...tasks.map(t=>cols.map(k=>'"'+String(t[k]??"").replace(/"/g,'""')+'"').join(","))].join("\\r\\n");const url=URL.createObjectURL(new Blob(["\\uFEFF"+csv],{type:"text/csv;charset=utf-8"})),link=document.createElement("a");link.href=url;link.download="kizimin-ops-tasks.csv";link.click();URL.revokeObjectURL(url);out("運営タスク "+tasks.length+" 件をCSV出力しました。","success");return;}
   if(action==="add"){const title=rest[0],priority=rest[1]||"中",ownerName=rest[2]||"",due=rest[3]||"";if(!title)throw Error("形式: /kizimin ops tasks add <タイトル> [優先度] [担当] [YYYY-MM-DD]");tasks.unshift({id:Date.now().toString(36)+Math.random().toString(36).slice(2,7),title,priority,owner:ownerName,due,status:"未完了",createdAt:new Date().toISOString()});localStorage.setItem(key,JSON.stringify(tasks));out("運営タスクを追加しました。","success");return;}
   if(action==="done"||action==="delete"){const id=rest[0];if(!id)throw Error("タスクIDを指定してください。");const before=tasks.length;tasks=action==="done"?tasks.map(t=>t.id===id?{...t,status:t.status==="完了"?"未完了":"完了"}:t):tasks.filter(t=>t.id!==id);if(before===tasks.length&&action==="delete")throw Error("タスクが見つかりません。");localStorage.setItem(key,JSON.stringify(tasks));out(action==="done"?"タスク状態を切り替えました。":"タスクを削除しました。","success");return;}
   throw Error("tasks list / add / done / delete を指定してください。");
  }
+ if(a==="security"&&b==="report"){if(!owner)throw Error("診断レポートはオーナー専用です。");if(!lastSecurityReport)throw Error("先に /kizimin security diagnose を実行してください。");const blob=new Blob([JSON.stringify(lastSecurityReport,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download="kizimin-security-report.json";link.click();URL.revokeObjectURL(url);out("セキュリティ診断レポートをJSON出力しました。","success");return;}
  if(a==="security"&&b==="diagnose"){
   if(!owner)throw Error("セキュリティ診断はサイトオーナー専用です。");
   const {data:{session},error:se}=await db.auth.getSession();if(se||!session?.user?.id||!session.user.email)throw Error("再認証に必要なログイン情報がありません。");
@@ -333,9 +335,10 @@ async function execute(raw){
   const {data:reauth,error:re}=await db.auth.signInWithPassword({email:session.user.email,password});if(re||reauth?.user?.id!==session.user.id)throw Error("本人確認に失敗しました。診断は実行していません。");
   const {data:ownerAgain,error:oe}=await db.rpc("is_site_owner");if(oe||ownerAgain!==true)throw Error("再認証後のオーナー権限確認に失敗しました。");
   out("読み取り専用セキュリティ診断を開始");
-  const checks=[["トップページ","/"],["ログインページ","/login.html"],["管理画面HTML","/admin.html"],["診断ページ","/pentest.html"],["robots.txt","/robots.txt"]];
-  for(const [label,path] of checks){try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),6000);let res;try{res=await fetch(location.origin+path,{method:"GET",mode:"same-origin",credentials:"omit",cache:"no-store",redirect:"follow",signal:controller.signal});}finally{clearTimeout(timer);}out(label+": HTTP "+res.status+" "+(res.ok?"応答あり":"要確認"),res.ok?"success":"error");if(path==="/"){for(const h of ["Content-Security-Policy","X-Content-Type-Options","X-Frame-Options","Strict-Transport-Security","Referrer-Policy"])out(h+": "+(res.headers.get(h)||"ブラウザーから確認できず"));}}catch(e){out(label+": "+(e.name==="AbortError"?"タイムアウト":"通信確認不可"),"error");}}
-  const {data:{session:after},error:ae}=await db.auth.getSession(),{data:stillOwner,error:oe2}=await db.rpc("is_site_owner");if(ae||oe2||after?.user?.id!==session.user.id||stillOwner!==true)throw Error("診断後の本人確認に失敗しました。");out("診断完了。RLS・Edge Functions・秘密情報・全入力欄の脆弱性を保証するものではありません。","success");return;
+  const results=[],checks=[["トップページ","/"],["ログインページ","/login.html"],["管理画面HTML","/admin.html"],["診断ページ","/pentest.html"],["robots.txt","/robots.txt"]];
+  for(const [label,path] of checks){try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),6000);let res;try{res=await fetch(location.origin+path,{method:"GET",mode:"same-origin",credentials:"omit",cache:"no-store",redirect:"follow",signal:controller.signal});}finally{clearTimeout(timer);}const item={name:label,path,status:res.status,ok:res.ok};results.push(item);out(label+": HTTP "+res.status+" "+(res.ok?"応答あり":"要確認"),res.ok?"success":"error");if(path==="/"){item.headers={};for(const h of ["Content-Security-Policy","X-Content-Type-Options","X-Frame-Options","Strict-Transport-Security","Referrer-Policy"]){item.headers[h]=res.headers.get(h)||null;out(h+": "+(item.headers[h]||"ブラウザーから確認できず"));}}}catch(e){results.push({name:label,path,error:e.name==="AbortError"?"timeout":"network"});out(label+": "+(e.name==="AbortError"?"タイムアウト":"通信確認不可"),"error");}}
+  const {data:{session:after},error:ae}=await db.auth.getSession(),{data:stillOwner,error:oe2}=await db.rpc("is_site_owner");if(ae||oe2||after?.user?.id!==session.user.id||stillOwner!==true)throw Error("診断後の本人確認に失敗しました。");
+  lastSecurityReport={product:"Kizimin",generated_at:new Date().toISOString(),scope:location.origin,mode:"read-only",results,limitations:["RLS、Edge Functions、秘密情報、全入力欄の脆弱性は検査していません。","この診断は脆弱性不存在を保証しません。"]};out("診断完了。/kizimin security report でJSONを保存できます。","success");return;
  }
  if(a==="email"&&b==="check"){
   if(!owner)throw Error("メールチェッカーはサイトオーナー専用です。");
