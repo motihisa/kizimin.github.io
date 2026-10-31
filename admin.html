@@ -12,34 +12,16 @@
 .admin-nav [data-view="users"],.admin-nav [data-view="articles"],.admin-nav [data-view="comments"],.admin-nav [data-view="reports"],.admin-nav [data-view="inquiries"],.admin-nav [data-view="notifications"],.admin-nav [data-view="bot"]{display:none!important}
 #view-users,#view-articles,#view-comments,#view-reports,#view-inquiries,#view-notifications,#view-bot,#maintenance-panel{display:none!important}
 </style>
-</head>
+<style id="command-only-admin">.admin-view:not(#view-dashboard):not(#view-console){display:none!important}.admin-nav-label{margin-top:18px}</style></head>
 <body class="admin-page">
 <div id="admin-loading" class="admin-loading admin-panel"><strong>管理者権限を確認しています...</strong><p class="admin-muted">Supabaseで安全に確認しています。</p></div>
 <div id="admin-forbidden" class="admin-forbidden-wrap admin-panel hidden"><div class="admin-alert"><strong>管理画面へのアクセスが拒否されました。</strong><p id="admin-forbidden-reason"></p><p id="admin-forbidden-detail" class="admin-muted"></p></div><a class="admin-btn" href="index.html">ホームへ戻る</a></div>
 <div id="admin-app" class="admin-shell hidden">
 <aside class="admin-sidebar"><div class="admin-brand">Kizimin<small>ADMIN CONSOLE</small></div><nav class="admin-nav" aria-label="管理メニュー">
-<div class="admin-nav-label">概要</div>
+<div class="admin-nav-label">メイン</div>
 <button class="active" data-view="dashboard"><span>▦</span>ダッシュボード</button>
 <button data-view="console" class="kcmd-nav"><span>⌘</span>コマンドコンソール</button>
-<div class="admin-nav-label">ユーザー・コンテンツ</div>
-<button class="nav-users" data-view="users" hidden aria-hidden="true"><span class="nav-icon">●</span><span class="nav-label">ユーザー管理</span></button>
-<button data-view="articles" hidden aria-hidden="true"><span>▤</span>記事</button>
-<button data-view="comments" hidden aria-hidden="true"><span>◌</span>コメント</button>
-<a href="admin-organizations.html" class="admin-nav-link">🏢 団体管理</a>
-<a href="admin-connect.html" class="admin-nav-link">💬 Admin Connect</a>
-<div class="admin-nav-label">サポート・通知</div>
-<button data-view="reports" hidden aria-hidden="true"><span>!</span>通報</button>
-<button data-view="inquiries" hidden aria-hidden="true"><span>✉</span>問い合わせ</button>
-<button data-view="notifications" hidden aria-hidden="true"><span>🔔</span>通知送信</button>
-<div class="admin-nav-label">セキュリティ・自動化</div>
-<button data-view="permissions"><span>⚙</span>権限設定</button>
-<button data-view="bot" hidden aria-hidden="true"><span>🤖</span>複合型Bot</button>
-<button data-view="abuse-filters"><span>⛨</span>不正利用フィルター</button>
-<a href="pentest.html" class="admin-nav-link owner-only-pentest-tool hidden">🛡️ セキュリティ診断</a>
-<div class="admin-nav-label">サイト・システム設定</div>
-<a href="admin-site-editor.html" class="admin-nav-link">🎨 サイト編集</a>
-<a href="admin-operations.html" class="admin-nav-link">🧰 運営ツール</a>
-<a href="admin-email-checker.html" class="admin-nav-link owner-only-email-tool hidden">✉ メールチェッカー</a>
+<div class="admin-nav-label">アカウント</div>
 <a href="account.html" class="admin-nav-link">👤 アカウント設定</a>
 </nav><div class="admin-sidebar-bottom"><a href="index.html">← サイトへ戻る</a></div></aside>
 <main class="admin-main"><header class="admin-topbar"><div><h1 id="admin-view-title">ダッシュボード</h1><p id="admin-view-subtitle">Kiziminの状態をまとめて確認します。</p></div><div class="admin-top-actions"><button id="admin-refresh" class="admin-btn primary">↻ 更新</button></div></header>
