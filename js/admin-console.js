@@ -7,7 +7,7 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const outputTerms={
  owner:"オーナー",admin:"管理者",moderator:"モデレーター",user:"一般ユーザー",debugger:"デバッガー",
- active:"有効",inactive:"無効",suspended:"一時停止中",banned:"BAN中",
+ active:"有効",inactive:"無効",suspended:"一時停止中",banned:"BAN中",protected:"アカウント保護",
  draft:"下書き",published:"公開済み",archived:"アーカイブ済み",
  visible:"表示",hidden:"非表示",deleted:"削除済み",
  open:"未対応",reviewing:"対応中",resolved:"解決済み",dismissed:"却下",closed:"終了",
@@ -147,6 +147,10 @@ async function execute(raw){
    "kizimin users [検索語]：ユーザー一覧を表示します。検索語を付けると絞り込めます。",
    "kizimin user <名前|ID>：指定ユーザーの情報（登録メールアドレスを含む）を確認します。",
    "kizimin user email <名前|ID>：指定ユーザーの登録メールアドレスだけを確認します。",
+   "kizimin user protect <名前|ID>：対象ユーザーをアカウント保護状態にします。オーナーは対象外です。",
+   "kizimin user unprotect <名前|ID>：アカウント保護状態を解除します。",
+   "kizimin protection status：自動保護の設定・対象人数・スケジュールを確認します。",
+   "kizimin protection run：無活動期間を超えたアカウントの保護処理を手動実行します。",
    "kizimin user ban <名前|ID> <理由>：理由を記録してユーザーをBANします。",
    "kizimin user suspend <名前|ID> <30m|24h|7d> <理由>：指定時間だけ一時停止します。30mは30分、24hは24時間、7dは7日です。",
    "kizimin user unban <名前|ID>：指定ユーザーのBANを解除します。",
@@ -267,7 +271,7 @@ async function execute(raw){
   return;
  }
  if(a==="help"){out("利用可能なコマンド:");[
- "/kizimin help","/kizimin status","/kizimin whoami","/kizimin activity [件数]","/kizimin filter history [件数]","/kizimin room info <ルームID>","/kizimin users [検索語]","/kizimin user <名前|ID>","/kizimin user email <名前|ID>",
+ "/kizimin help","/kizimin status","/kizimin whoami","/kizimin activity [件数]","/kizimin filter history [件数]","/kizimin room info <ルームID>","/kizimin users [検索語]","/kizimin user <名前|ID>","/kizimin user email <名前|ID>","/kizimin user protect <名前|ID>","/kizimin user unprotect <名前|ID>","/kizimin protection status","/kizimin protection run",
  "/kizimin user ban <名前|ID> <理由>","/kizimin user suspend <名前|ID> <30m|24h|7d> <理由>","/kizimin user unban <名前|ID>","/kizimin user role <名前|ID> <user|moderator|admin|debugger>",
  "/kizimin articles [検索語]","/kizimin article status <記事ID> <draft|published|archived>","/kizimin article delete <記事ID>",
  "/kizimin comments [検索語]","/kizimin comment status <コメントID> <visible|hidden|deleted>","/kizimin comment delete <コメントID>",
@@ -311,6 +315,15 @@ async function execute(raw){
  }
  if(a==="user"){
 
+  if(b==="protect"||b==="unprotect"){
+   if(!["admin","owner"].includes(role))throw Error("アカウント保護の操作は管理者・オーナー専用です。");
+   if(!c)throw Error("対象ユーザーを指定してください。");
+   const u=await profile(c);
+   if(!confirm(u.username+" のアカウント保護を"+(b==="protect"?"有効化":"解除")+"しますか？"))return;
+   const {error}=await db.rpc("admin_set_account_protection",{p_target_id:u.id,p_protected:b==="protect"});
+   if(error)throw error;
+   out(u.username+" のアカウント保護を"+(b==="protect"?"有効化":"解除")+"しました。","success");return;
+  }
   if(b==="suspend"){
    if(!["admin","owner"].includes(role))throw Error("一時停止は管理者・オーナー専用です。");
    const who=c,duration=rest[0],reason=rest.slice(1).join(" ");if(!who||!duration||!reason)throw Error("形式: /kizimin user suspend <名前|ID> <30m|24h|7d> <理由>");
@@ -395,6 +408,22 @@ async function execute(raw){
  }
  if(a==="inquiry"&&b==="status"){
   if(!["open","reviewing","resolved","closed","dismissed"].includes(value))throw Error("状態を確認してください。");if(!c)throw Error("問い合わせIDを指定してください。");let note=rest.join(" ");if(!note){const {data,error:readError}=await db.from("inquiries").select("admin_note").eq("id",Number(c)).maybeSingle();if(readError)throw readError;if(!data)throw Error("問い合わせが見つかりません。");note=data.admin_note||"";}const {error}=await db.rpc("admin_update_inquiry_by_id",{p_inquiry_id:Number(c),p_status:value,p_admin_note:note});if(error)throw error;out("問い合わせ状態を更新しました。","success");return;
+ }
+ if(a==="protection"){
+  if(!["admin","owner"].includes(role))throw Error("自動アカウント保護の操作は管理者・オーナー専用です。");
+  if(b==="status"){
+   const {data,error}=await db.rpc("admin_account_protection_status");if(error)throw error;
+   out("アカウント自動保護の状態");
+   out("一般ユーザー: 30日 / デバッカー: 21日 / モデレーター: 14日 / 管理者: 7日 / オーナー: 対象外");
+   out("有効アカウント: "+data.active+" / 保護中: "+data.protected+" / オーナー例外: "+data.owner_exemptions);
+   out("自動実行スケジュール: "+(data.cron_scheduled?"登録済み":"未登録"));return;
+  }
+  if(b==="run"){
+   if(!confirm("無活動期間を超えたアカウントを保護状態に変更します。実行しますか？"))return;
+   const {data,error}=await db.rpc("admin_run_account_protection");if(error)throw error;
+   out("自動保護処理が完了しました。新たに保護したアカウント: "+data+" 件","success");return;
+  }
+  throw Error("protection status / run を指定してください。");
  }
  if(a==="maintenance"){
   if(b==="status"){const {data,error}=await db.from("site_settings").select("maintenance_mode,maintenance_type,maintenance_reason").eq("id",true).maybeSingle();if(error)throw error;out("メンテナンス "+(data?.maintenance_mode?"ON":"OFF")+" · "+(data?.maintenance_type||"normal")+" · "+(data?.maintenance_reason||"理由未設定"));return;}
