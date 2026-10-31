@@ -38,12 +38,14 @@ const outputTerms={
  creator_id:"作成者ID",created_by:"作成者ID",changed_by:"変更者ID",
  location:"場所",post_type:"投稿種別",is_pinned:"固定状態",
  actual_neurons:"実消費量",estimated_neurons:"推定消費量",
- total:"合計",count:"件数",reason:"理由",priority:"優先度",owner:"担当者",
+ total:"合計",count:"件数",reason:"理由",priority:"優先度",assignee:"担当者",
  due:"期限",user_count:"ユーザー数",messages:"メッセージ数"
 };
 const translateOutput=value=>{
  let text=String(value??"");
  if(text.includes("/kizimin "))return text;
+ const errorTranslations=[[/duplicate key value violates unique constraint/i,"同じデータが既に登録されています。"],[/new row violates row-level security policy/i,"この操作を実行する権限がありません（データベースの行単位セキュリティ）。"],[/row-level security policy/i,"データベースのアクセス制限により拒否されました。"],[/permission denied/i,"この操作を実行する権限がありません。"],[/invalid input syntax for type uuid/i,"ユーザーIDまたはデータIDの形式が正しくありません。"],[/violates foreign key constraint/i,"関連するデータが存在するため、この操作を完了できません。"],[/violates check constraint/i,"入力値が許可された条件を満たしていません。"],[/JWT expired|token is expired/i,"ログインの有効期限が切れています。再ログインしてください。"],[/Failed to fetch|NetworkError/i,"サーバーに接続できませんでした。通信状態を確認してください。"]];
+ for(const [pattern,japanese] of errorTranslations){if(pattern.test(text))return japanese;}
  text=text.replace(/\b(owner|admin|moderator|user|debugger|active|inactive|suspended|banned|draft|published|archived|visible|hidden|deleted|open|reviewing|resolved|dismissed|closed|normal|emergency|other|private|public|group|article|comment|both|block|log|allow|deny|inherit|pending|approved|rejected|completed|failed|success|error|running|stopped|queued|live|true|false|on|off)\b/gi,word=>{
   const lower=word.toLowerCase();
   if(lower==="true")return "はい";if(lower==="false")return "いいえ";
